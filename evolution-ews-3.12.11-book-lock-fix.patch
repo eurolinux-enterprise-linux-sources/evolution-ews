@@ -1,0 +1,24 @@
+diff -up evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c.book-lock-fix evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c
+--- evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c.book-lock-fix	2014-11-06 14:30:58.000000000 +0100
++++ evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c	2015-05-15 08:39:14.892519501 +0200
+@@ -4149,8 +4149,10 @@ e_book_backend_ews_set_locale (EBookBack
+ 
+ 	PRIV_LOCK (ebews->priv);
+ 
+-	if (!e_book_sqlite_lock (ebews->priv->summary, EBSQL_LOCK_WRITE, cancellable, error))
++	if (!e_book_sqlite_lock (ebews->priv->summary, EBSQL_LOCK_WRITE, cancellable, error)) {
++		PRIV_UNLOCK (ebews->priv);
+ 		return FALSE;
++	}
+ 
+ 	if (e_book_sqlite_set_locale (ebews->priv->summary, locale, cancellable, error) &&
+ 	    ebews_bump_revision (ebews, error))
+@@ -4163,7 +4165,7 @@ e_book_backend_ews_set_locale (EBookBack
+ 		ebews->priv->locale = g_strdup (locale);
+ 	}
+ 
+-	PRIV_LOCK (ebews->priv);
++	PRIV_UNLOCK (ebews->priv);
+ 
+ 	return success;
+ }

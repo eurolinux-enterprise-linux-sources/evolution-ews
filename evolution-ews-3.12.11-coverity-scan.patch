@@ -1,0 +1,51 @@
+diff -up evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c.coverity-scan evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c
+--- evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c.coverity-scan	2015-05-21 22:26:36.684877286 +0200
++++ evolution-ews-3.12.11/src/addressbook/e-book-backend-ews.c	2015-05-21 22:26:36.686877288 +0200
+@@ -2720,7 +2720,10 @@ ebews_start_gal_sync (gpointer data)
+ 	if (!ret)
+ 		goto exit;
+ 
+-	e_book_sqlite_set_key_value (priv->summary, "etag", etag ? etag : "", NULL);
++	ret = e_book_sqlite_set_key_value (priv->summary, "etag", etag ? etag : "", NULL);
++	if (!ret)
++		goto exit;
++
+ 	if (e_book_sqlite_set_key_value (priv->summary, "oab-filename",
+ 					 uncompressed_filename, NULL)) {
+ 		/* Don't let it get deleted */
+diff -up evolution-ews-3.12.11/src/addressbook/ews-oab-decoder.c.coverity-scan evolution-ews-3.12.11/src/addressbook/ews-oab-decoder.c
+--- evolution-ews-3.12.11/src/addressbook/ews-oab-decoder.c.coverity-scan	2014-09-17 20:19:02.000000000 +0200
++++ evolution-ews-3.12.11/src/addressbook/ews-oab-decoder.c	2015-05-21 22:26:36.687877289 +0200
+@@ -956,7 +956,7 @@ exit:
+ 	if (!contact)
+ 		return ret;
+ 
+-	if (dset->addr) {
++	if (dset && dset->addr) {
+ 		e_contact_set (contact, E_CONTACT_ADDRESS_WORK, dset->addr);
+ 		e_contact_address_free (dset->addr);
+ 	}
+diff -up evolution-ews-3.12.11/src/server/e-ews-folder.c.coverity-scan evolution-ews-3.12.11/src/server/e-ews-folder.c
+--- evolution-ews-3.12.11/src/server/e-ews-folder.c.coverity-scan	2014-11-19 19:06:36.000000000 +0100
++++ evolution-ews-3.12.11/src/server/e-ews-folder.c	2015-05-21 22:26:36.687877289 +0200
+@@ -521,7 +521,7 @@ e_ews_folder_utils_escape_name (const gc
+ 	if (!count)
+ 		return g_strdup (folder_name);
+ 
+-	res = g_malloc0 (sizeof (gchar *) * (1 + ii + (2 * count)));
++	res = g_malloc0 (sizeof (gchar) * (1 + ii + (2 * count)));
+ 	for (ii = 0, jj = 0; folder_name[ii]; ii++, jj++) {
+ 		if (folder_name[ii] == '\\') {
+ 			res[jj] = '\\';
+diff -up evolution-ews-3.12.11/src/server/e-ews-notification.c.coverity-scan evolution-ews-3.12.11/src/server/e-ews-notification.c
+--- evolution-ews-3.12.11/src/server/e-ews-notification.c.coverity-scan	2014-10-30 19:32:37.000000000 +0100
++++ evolution-ews-3.12.11/src/server/e-ews-notification.c	2015-05-21 22:26:36.687877289 +0200
+@@ -148,7 +148,7 @@ static EEwsConnection *
+ e_ews_notification_get_connection (const EEwsNotification *notification)
+ {
+ 	g_return_val_if_fail (E_IS_EWS_NOTIFICATION (notification), NULL);
+-	g_return_val_if_fail (notification->priv == NULL, NULL);
++	g_return_val_if_fail (notification->priv != NULL, NULL);
+ 
+ 	return notification->priv->connection;
+ }

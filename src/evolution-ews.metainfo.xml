@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="addon">
+	<id>evolution-ews</id>
+	<extends>evolution.desktop</extends>
+	<name>Exchange Web Services</name>
+	<name xml:lang="as">ৱেব সেৱাসমূহ অদল বদল কৰক</name>
+	<name xml:lang="bg">Уеб услуги на Exchange</name>
+	<name xml:lang="cs">Webové služby Exchange</name>
+	<name xml:lang="da">Exchange Web-tjenester</name>
+	<name xml:lang="de">Exchange-Webdienste</name>
+	<name xml:lang="el">Υπηρεσίες ιστού Exchange</name>
+	<name xml:lang="en_GB">Exchange Web Services</name>
+	<name xml:lang="es">Servicios web Exchange</name>
+	<name xml:lang="eu">Exchange web-zerbitzuak</name>
+	<name xml:lang="fr">Exchange Web Services</name>
+	<name xml:lang="gl">Servizos web Exchange</name>
+	<name xml:lang="gu">ઍક્સચેન્જ વેબ સેવાઓ</name>
+	<name xml:lang="hu">Exchange webszolgáltatások</name>
+	<name xml:lang="id">Layanan Web Exchange</name>
+	<name xml:lang="ja">Exchange Web Services</name>
+	<name xml:lang="kn">ಎಕ್ಸ್‌ಚೇಂಜ್ ವೆಬ್ ಸರ್ವಿಸಸ್</name>
+	<name xml:lang="lt">Exchange Web Services</name>
+	<name xml:lang="lv">Exchange Web Services</name>
+	<name xml:lang="mr">एक्सचेंज वेब सर्व्हिसेस्</name>
+	<name xml:lang="or">ଏକ୍ସଚେଞ୍ଜ ୱେବ ସର୍ଭିସଗୁଡ଼ିକ</name>
+	<name xml:lang="pl">Exchange Web Services</name>
+	<name xml:lang="pt_BR">Web services do Exchange</name>
+	<name xml:lang="sl">Spletna storitev Exchange</name>
+	<name xml:lang="sr">Веб услуге размене</name>
+	<name xml:lang="sr@latin">Veb usluge razmene</name>
+	<name xml:lang="ta">Exchange வலை சேவைகள்</name>
+	<name xml:lang="te">వినిమయ వెబ్ సేవలు</name>
+	<name xml:lang="zh_CN">Exchange 网络服务</name>
+	<summary>For accessing Exchange servers using Web Services</summary>
+	<summary xml:lang="as">ৱেব সেৱাসমূহ ব্যৱহাৰ কৰি অদল বদল চাৰ্ভাৰসমূহ অভিগম কৰিবলে</summary>
+	<summary xml:lang="bg">За достъп до Exchange сървъри през уеб услуги</summary>
+	<summary xml:lang="cs">Pro přístup k serverům Exchange pomocí webových služeb</summary>
+	<summary xml:lang="da">For adgang til Exchangeservere der bruger internettjenester</summary>
+	<summary xml:lang="de">Für den Zugriff auf Exchange-Server über Webdienste</summary>
+	<summary xml:lang="el">για πρόσβαση διακομιστών Exchange χρησιμοποιώντας υπηρεσίες ιστού</summary>
+	<summary xml:lang="en_GB">For accessing Exchange servers using Web Services</summary>
+	<summary xml:lang="es">Para acceder a servidores Exchange usando servicios web</summary>
+	<summary xml:lang="eu">Exchange zerbitzarietara atzitzea, web-zerbitzuak erabiliz</summary>
+	<summary xml:lang="fr">Pour accéder aux serveurs Exchange en utilisant Web Services</summary>
+	<summary xml:lang="gl">Para acceder a servidor Exchange usando servizos web</summary>
+	<summary xml:lang="gu">વેબ સેવાઓની મદદથી ઍક્સચેન્જ સર્વરોને વાપરવા માટે</summary>
+	<summary xml:lang="hu">Exchange kiszolgálók eléréséhez webszolgáltatások használatával</summary>
+	<summary xml:lang="id">Untuk mengakses server Exchange memakai Layanan Web</summary>
+	<summary xml:lang="ja">Web サービスを使用して Exchange サーバーにアクセスする</summary>
+	<summary xml:lang="kn">ವೆಬ್‌ ಸರ್ವಿಸಸ್ ಬಳಸಿಕೊಂಡು ಎಕ್ಸ್‌ಚೇಂಜ್ ಪೂರೈಕೆಗಣಕಗಳನ್ನು ನಿಲುಕಿಸಿಕೊಳ್ಳಲು</summary>
+	<summary xml:lang="lt">Exchange serverių pasiekimui naudojant internetines tarnybas</summary>
+	<summary xml:lang="lv">Lai piekļūtu Exchange serveriem, izmantojot Web Services</summary>
+	<summary xml:lang="mr">वेब सर्व्हिसेसचा वापर करून एक्सचेंज सर्व्हर्सकरीता प्रवेश प्राप्त करण्यासाठी</summary>
+	<summary xml:lang="or">ୱେବ ସର୍ଭିସଗୁଡ଼ିକୁ ବ୍ୟବହାର କରି ଏକ୍ସଚେଞ୍ଜ ସର୍ଭରଗୁଡ଼ିକୁ ଅଭିଗମ୍ୟ କରିବା ପାଇଁ</summary>
+	<summary xml:lang="pl">Dostęp do serwerów Exchange używając Web Services</summary>
+	<summary xml:lang="pt_BR">Para acessar servidores Exchange usando Web services</summary>
+	<summary xml:lang="sl">Za dostop do strežnikov Exchange preko spletnih storitev</summary>
+	<summary xml:lang="sr">За приступање серверима размене употребоом веб услуга</summary>
+	<summary xml:lang="sr@latin">Za pristupanje serverima razmene upotreboom veb usluga</summary>
+	<summary xml:lang="ta">வலை சேவைகளைப் பயன்படுத்தி Exchange சேவையகங்களை அணுகுவதற்கு</summary>
+	<summary xml:lang="te">ఇచ్చిపుచ్చుకొనే సేవికలను వెబ్ సేవలను వుపయోగించి వాడుకొనుటకు</summary>
+	<url type="homepage">https://live.gnome.org/Apps/Evolution</url>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>LGPL</project_license>
+	<updatecontact>evolution-hackers_at_gnome.org</updatecontact>
+</component>

@@ -1,0 +1,5122 @@
+Index: new/po/es.po
+===================================================================
+--- new.orig/po/es.po
++++ new/po/es.po
+@@ -343,7 +343,8 @@ msgstr ""
+ #: ../src/camel/camel-ews-store.c:3147
+ #, c-format
+ msgid "Cannot subscribe folder '%s', folder not found"
+-msgstr "No se puede suscribir a la carpeta «%s», no se ha encontrado la carpeta"
++msgstr ""
++"No se puede suscribir a la carpeta «%s», no se ha encontrado la carpeta"
+ 
+ #: ../src/camel/camel-ews-store.c:3238
+ msgid "Cannot unsubscribe EWS folders in offline mode"
+@@ -769,8 +770,8 @@ msgid ""
+ "Folder '%s' not found. Either it does not exist or you do not have "
+ "permission to access it."
+ msgstr ""
+-"No se encontró la carpeta «%s». O no existe o no tiene permiso para acceder a "
+-"ella."
++"No se encontró la carpeta «%s». O no existe o no tiene permiso para acceder "
++"a ella."
+ 
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:373
+ msgid "Cannot add folder, cannot determine folder's type"
+@@ -817,7 +818,8 @@ msgstr "Tareas"
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:537
+ #, c-format
+ msgid "Testing availability of folder '%s' of user '%s', please wait..."
+-msgstr "Probando la disponibilidad de la carpeta «%s» del usuario «%s», espere…"
++msgstr ""
++"Probando la disponibilidad de la carpeta «%s» del usuario «%s», espere…"
+ 
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:614
+ msgid "Subscribe to folder of other EWS user..."
+@@ -1107,8 +1109,8 @@ msgstr "Falló al obtener la configuraci
+ #: ../src/configuration/module-ews-configuration.error.xml.h:6
+ msgid "Your Exchange account \"{0}\" has the status set as \"Out of Office\"."
+ msgstr ""
+-"Su cuenta de Exchange «{0}» tiene establecido el estado de «Estoy fuera de la "
+-"oficina»."
++"Su cuenta de Exchange «{0}» tiene establecido el estado de «Estoy fuera de "
++"la oficina»."
+ 
+ #: ../src/server/e-ews-connection.c:530
+ msgid "Operation Cancelled"
+@@ -1199,21 +1201,18 @@ msgstr "CreateItem falló al devolver el
+ #~ msgstr ""
+ #~ "No se pueden listar las carpetas disponibles para suscripción de la "
+ #~ "cuenta de servicios web de Exchange, utilice en su lugar la opción de "
+-#~ "menú de contexto «Suscribir a una carpeta de otro usuario» encima del nodo "
+-#~ "de cuenta en el árbol de carpetas."
++#~ "menú de contexto «Suscribir a una carpeta de otro usuario» encima del "
++#~ "nodo de cuenta en el árbol de carpetas."
+ 
+ #~ msgid "Insufficient memory"
+ #~ msgstr "Memoria insuficiente"
+ 
+ #, fuzzy
+-#~| msgctxt "PermissionsLevel"
+-#~| msgid "Owner"
+ #~ msgctxt "ForeignFolder"
+ #~ msgid "Owner"
+ #~ msgstr "Propietario"
+ 
+ #, fuzzy
+-#~| msgid "Folder %s does not exist"
+ #~ msgid "Folder '%s' not found"
+ #~ msgstr "La carpeta %s no existe"
+ 
+Index: new/po/fr.po
+===================================================================
+--- new.orig/po/fr.po
++++ new/po/fr.po
+@@ -13,6 +13,7 @@ msgstr ""
+ "PO-Revision-Date: 2012-06-06 19:41+0100\n"
+ "Last-Translator: Pierre Henry <pierrehenry73@yahoo.fr>\n"
+ "Language-Team: GNOME French Team <gnomefr@traduc.org>\n"
++"Language: \n"
+ "MIME-Version: 1.0\n"
+ "Content-Type: text/plain; charset=UTF-8\n"
+ "Content-Transfer-Encoding: 8bit\n"
+Index: new/po/it.po
+===================================================================
+--- /dev/null
++++ new/po/it.po
+@@ -0,0 +1,1225 @@
++# Italian translations for evolution-ews package.
++# Copyright (C) 2015 THE evolution-ews'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the evolution-ews package.
++# Automatically generated, 2015.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: evolution-ews 3.12.11\n"
++"Report-Msgid-Bugs-To: \n"
++"POT-Creation-Date: 2015-05-14 18:11+0900\n"
++"PO-Revision-Date: 2015-05-14 18:11+0900\n"
++"Last-Translator: Automatically generated\n"
++"Language-Team: none\n"
++"Language: it\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++"Plural-Forms: nplurals=2; plural=(n != 1);\n"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../evolution-ews.metainfo.xml.in.h:1 ../src/camel/camel-ews-provider.c:77
++msgid "Exchange Web Services"
++msgstr "Scambia servizi web"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../evolution-ews.metainfo.xml.in.h:2 ../src/camel/camel-ews-provider.c:79
++msgid "For accessing Exchange servers using Web Services"
++msgstr "Per l'accesso ai server Exchange usando i servizi web"
++
++# auto translated by TM merge from project: evolution-data-server, version: 3.8.4, DocId: evolution-data-server-3.8
++#: ../src/addressbook/e-book-backend-ews.c:1445
++msgid "The backend does not support bulk additions"
++msgstr "Il backend non supporta le aggiunte in serie"
++
++#: ../src/addressbook/e-book-backend-ews.c:1484
++#: ../src/addressbook/e-book-backend-ews.c:1838
++msgid ""
++"Cannot save contact list, it's only supported on EWS Server 2010 or later"
++msgstr ""
++
++# auto translated by TM merge from project: evolution-data-server, version: 3.8.4, DocId: evolution-data-server-3.8
++#: ../src/addressbook/e-book-backend-ews.c:1797
++msgid "The backend does not support bulk modifications"
++msgstr "Il backend non supporta le modifiche in serie"
++
++#: ../src/addressbook/e-book-backend-ews.c:2009
++msgid "Wait till syncing is done"
++msgstr "Attendi fino a quando la sincronizzazione è terminata"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/addressbook/e-book-backend-ews.c:2486
++#, c-format
++msgid "Downloading contacts in %s %d%% completed... "
++msgstr "Download dei contatti in %s %d%% completato..."
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/addressbook/e-book-backend-ews.c:3081
++msgid "Syncing contacts..."
++msgstr "Sincronizzazione dei contatti in corso..."
++
++# auto translated by TM merge from project: system-config-printer, version: 1.1.16-23, DocId: system-config-printer
++#: ../src/addressbook/e-book-backend-ews.c:3257
++#: ../src/configuration/e-ews-search-user.c:365
++msgid "Searching..."
++msgstr "Ricerca in corso..."
++
++#: ../src/calendar/e-cal-backend-ews.c:1268
++msgid "EWS does not support bulk removals"
++msgstr "EWS non supporta le rimozioni in serie"
++
++#: ../src/calendar/e-cal-backend-ews.c:1446
++msgid "Unknown error"
++msgstr ""
++
++#: ../src/calendar/e-cal-backend-ews.c:1661
++msgid "EWS does not support bulk additions"
++msgstr "EWS non supporta le aggiunte in serie"
++
++#: ../src/calendar/e-cal-backend-ews.c:1866
++msgid "EWS does not support bulk modifications"
++msgstr "EWS non supporta le modifiche in serie"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:379
++#, c-format
++msgid "Unable to open mimecontent temporary file!"
++msgstr "Impossibile aprire il file temporaneo mimecontent!"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:387
++#, c-format
++msgid "Unable to generate parser from mimecontent!"
++msgstr "Impossibile generare l'analizzatore da mimecontent!"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:396
++#, c-format
++msgid "Unable to parse meeting request mimecontent!"
++msgstr "Impossibile analizzare il mimecontent delle richieste di riunione!"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:455
++#, c-format
++msgid "Unable to create cache file"
++msgstr "Impossibile creare il file cache"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-folder.c:559 ../src/camel/camel-ews-folder.c:650
++#, c-format
++msgid "Unable to create cache path"
++msgstr "Impossibile creare il percorso per la cache"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:660
++#, c-format
++msgid "Failed to move message cache file"
++msgstr "Tentativo di spostare il file cache del messaggio fallito"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-folder.c:1364
++#, c-format
++msgid "Could not load summary for %s"
++msgstr "Impossibile caricare il riepilogo per %s"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:1868
++#, c-format
++msgid "Cant perform actions on the folder while in offline mode"
++msgstr "Impossibile eseguire azioni sulla cartella durante la modalità offline"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:47
++msgid "Checking for new mail"
++msgstr "Controllo per nuova posta"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:49
++msgid "C_heck for new messages in all folders"
++msgstr "C_ontrollare i nuovi messaggi in tutte le cartelle"
++
++#: ../src/camel/camel-ews-provider.c:51
++msgid "_Listen for server change notifications"
++msgstr ""
++
++# auto translated by TM merge from project: RHN Satellite UI, version: 5.5, DocId: java/code/src/com/redhat/rhn/frontend/strings/jsp/StringResource
++#: ../src/camel/camel-ews-provider.c:54
++msgid "Options"
++msgstr "Opzioni"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:56
++msgid "_Apply filters to new messages in Inbox on this server"
++msgstr "A_pplicare filtri ai nuovi messaggi in «In arrivo» su questo server"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:58
++msgid "Check new messages for _Junk contents"
++msgstr "Controllare contenuti in_desiderati nei nuovi messaggi"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-provider.c:60
++msgid "Only check for Junk messages in the IN_BOX folder"
++msgstr "Controllare i messa_ggi indesiderati solo nella cartella «In arrivo»"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-provider.c:62
++msgid "Automatically synchroni_ze remote mail locally"
++msgstr "Sincroni_zzare localmente la posta remota in modo automatico"
++
++# auto translated by TM merge from project: RHN Satellite UI, version: 5.5, DocId: java/code/src/com/redhat/rhn/frontend/strings/nav/StringResource
++#: ../src/camel/camel-ews-provider.c:65
++msgid "Connection"
++msgstr "Connessione"
++
++#. Translators: '%s' is preplaced with a widget, where "
++#. * user can select how long the timeout should be.
++#: ../src/camel/camel-ews-provider.c:69
++#, c-format
++msgid "Connection _timeout (in seconds) %s"
++msgstr "_Sadenza connessione (in secondi) %s"
++
++#: ../src/camel/camel-ews-provider.c:94
++msgid "NTLM"
++msgstr "NTLM"
++
++#: ../src/camel/camel-ews-provider.c:96
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with NTLM authentication."
++msgstr ""
++"Questa opzione consente di connettersi al server Exchange utilizzando "
++"l'autenticazione NTLM con password non cifrata."
++
++#: ../src/camel/camel-ews-provider.c:104
++msgid "Basic"
++msgstr "Di base"
++
++#: ../src/camel/camel-ews-provider.c:106
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with Basic authentication."
++msgstr ""
++"Questa opzione consente di connettersi al server Exchange utilizzando "
++"l'autenticazione Di base con password non cifrata."
++
++#: ../src/camel/camel-ews-provider.c:114
++msgid "Kerberos"
++msgstr ""
++
++#: ../src/camel/camel-ews-provider.c:116
++msgid ""
++"This option will connect to the Exchange server using a Kerberos/GSSAPI "
++"authentication."
++msgstr ""
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:332
++#, c-format
++msgid "Session has no storage path"
++msgstr "La sessione non ha alcun percorso storage"
++
++#: ../src/camel/camel-ews-store.c:369
++#, c-format
++msgctxt "PublicFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:498
++#, c-format
++msgctxt "ForeignFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:639
++msgid "Checking \"Out of Office\" settings"
++msgstr ""
++
++#: ../src/camel/camel-ews-store.c:1434
++msgid "Updating foreign folder structure"
++msgstr "Aggiornamento struttura cartella esterna"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/camel/camel-ews-store.c:1967
++#, c-format
++msgid "No such folder: %s"
++msgstr "Cartella inesistente: %s"
++
++#: ../src/camel/camel-ews-store.c:2279
++msgid "Cannot list EWS public folders in offline mode"
++msgstr "Impossibile elencare le cartelle pubbliche EWS in modalità offline."
++
++#: ../src/camel/camel-ews-store.c:2352
++msgid "Cannot find any EWS public folders"
++msgstr "Impossibile trovare cartelle pubbliche EWS"
++
++#: ../src/camel/camel-ews-store.c:2461
++#, c-format
++msgid "Cannot create folder '%s', folder already exists"
++msgstr "Impossibile creare la cartella '%s', la cartella esiste già"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:2476
++#, c-format
++msgid "Parent folder %s does not exist"
++msgstr "La cartella genitore %s non esiste"
++
++#: ../src/camel/camel-ews-store.c:2486
++#, c-format
++msgid ""
++"Cannot create folder under '%s', it is used for folders of other users only"
++msgstr ""
++"Impossibile creare la cartella in '%s' poichè viene utilizzata solo per le "
++"cartelle di altri utenti"
++
++#: ../src/camel/camel-ews-store.c:2496
++#, c-format
++msgid "Cannot create folder under '%s', it is used for public folders only"
++msgstr ""
++"Impossibile creare la cartella in '%s' poichè viene utilizzata solo per le "
++"cartelle pubbliche"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/camel/camel-ews-store.c:2600
++#, c-format
++msgid "Folder does not exist"
++msgstr "La cartella non esiste"
++
++#: ../src/camel/camel-ews-store.c:2610
++#, c-format
++msgid "Cannot remove folder '%s', it is used for folders of other users only"
++msgstr ""
++"Impossibile rimuovere la cartella in '%s' poichè viene utilizzata solo per "
++"le cartelle di altri utenti"
++
++#: ../src/camel/camel-ews-store.c:2621
++#, c-format
++msgid "Cannot remove folder '%s', it is used for public folders only"
++msgstr ""
++"Impossibile rimuovere la cartella '%s' poichè viene utilizzata solo per le "
++"cartelle pubbliche"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:2777
++#, c-format
++msgid "Folder %s does not exist"
++msgstr "La cartella %s non esiste"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:2787
++#, c-format
++msgid "No change key record for folder %s"
++msgstr "Nessuna informazione per lo scambio della chiave per la cartella %s"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:2829
++#, c-format
++msgid "Cannot both rename and move a folder at the same time"
++msgstr "Impossibile rinominare e spostare una cartella contemporaneamente"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:2865
++#, c-format
++msgid "Cannot find folder ID for parent folder %s"
++msgstr "Impossibile trovare l'ID della cartella per la cartella genitore %s"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/camel/camel-ews-store.c:2915 ../src/camel/camel-ews-transport.c:69
++#, c-format
++msgid "Exchange server %s"
++msgstr "Server Exchange %s"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-store.c:2918
++#, c-format
++msgid "Exchange service for %s on %s"
++msgstr "Servizio Exchange per %s su %s"
++
++#: ../src/camel/camel-ews-store.c:2962
++#, c-format
++msgid "Could not locate Trash folder"
++msgstr "Impossibile individuare la cartella cestino"
++
++#: ../src/camel/camel-ews-store.c:3022
++#, c-format
++msgid "Could not locate Junk folder"
++msgstr "Impossibile individuare la cartella di posta indesiderata"
++
++#: ../src/camel/camel-ews-store.c:3212
++msgid "Cannot subscribe EWS folders in offline mode"
++msgstr ""
++"Impossibile effettuare la sottoscrizione alle cartelle EWS in modalità "
++"offline"
++
++#: ../src/camel/camel-ews-store.c:3235
++#, c-format
++msgid "Cannot subscribe folder '%s', no public folder available"
++msgstr ""
++"Impossibile effettuare la sottoscrizione della cartella '%s', nessuna "
++"cartella pubblica disponibile"
++
++#: ../src/camel/camel-ews-store.c:3245
++#, c-format
++msgid "Cannot subscribe folder '%s', folder not found"
++msgstr ""
++"Impossibile effettuare la sottoscrizione della cartella '%s', cartella non "
++"trovata"
++
++#: ../src/camel/camel-ews-store.c:3336
++msgid "Cannot unsubscribe EWS folders in offline mode"
++msgstr ""
++"Impossibile rimuovere la sottoscrizione alle cartelle EWS in modalità offline"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/camel/camel-ews-store.c:3453
++#, c-format
++msgid "You must be working online to complete this operation"
++msgstr "È necessario non essere fuori rete per completare questa operazione"
++
++#: ../src/camel/camel-ews-store.c:3497
++msgid "Unsetting the \"Out of Office\" status"
++msgstr ""
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-transport.c:72
++#, c-format
++msgid "Exchange mail delivery via %s"
++msgstr "Consegna posta Exchange tramite %s"
++
++#: ../src/camel/camel-ews-transport.c:119
++msgid "Cannot send message with no From address"
++msgstr "Impossibile inviare il messaggio senza l'indirizzo del mettente"
++
++#: ../src/camel/camel-ews-transport.c:125
++msgid "Exchange server cannot send message with multiple From addresses"
++msgstr ""
++"Il server Exchange non è in grado di inviare un messaggio con indirizzi "
++"multipli del mittente"
++
++#: ../src/camel/camel-ews-transport.c:136
++msgid "Failed to read From address"
++msgstr "Lettura indirizzo mittente fallita"
++
++#: ../src/camel/camel-ews-transport.c:148
++#, c-format
++msgid ""
++"Exchange server cannot send message as '%s', when the account was configured "
++"for address '%s'"
++msgstr ""
++"Il server Exchange non è in grado di inviare messaggi come '%s'  quando "
++"l'account è configurato per l'indirizzo '%s'"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/camel/camel-ews-transport.c:162
++#, c-format
++msgid "Service not connected"
++msgstr "Servizio non connesso"
++
++#: ../src/collection/e-ews-backend.c:425
++#: ../src/configuration/e-mail-config-ews-gal.c:274
++msgid "Global Address List"
++msgstr "Elenco indirizzi globali"
++
++#: ../src/collection/e-ews-backend.c:847
++#, c-format
++msgid "Could not determine a suitable folder class for a new folder named '%s'"
++msgstr ""
++"Impossibile determinare la classe idonea per una nuova cartella chiamata '%s'"
++
++#: ../src/collection/e-ews-backend.c:936
++#, c-format
++msgid "Data source '%s' does not represent an Exchange Web Services folder"
++msgstr ""
++"Sorgente dati '%s' non rappresenta una cartella dei servizi web Exchange"
++
++#: ../src/configuration/e-ews-config-utils.c:578
++msgid "Folder"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:588
++msgid "Size"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:626
++#: ../src/configuration/e-ews-config-utils.c:631
++msgid "Unable to retrieve folder size information"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:751
++msgid "Folder Sizes"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:754
++msgid "_Close"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:768
++msgid "Fetching folder list…"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:921
++#, c-format
++msgid "Cannot edit permissions of folder '%s', choose other folder."
++msgstr ""
++"Impossibile modificare i permessi della cartella '%s',  selezionare un'altra "
++"cartella."
++
++#: ../src/configuration/e-ews-config-utils.c:998
++msgid "Folder Sizes..."
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:1005
++msgid "Subscribe to folder of other user..."
++msgstr "Effettua la sottoscrizione alla cartella di un altro utente..."
++
++#: ../src/configuration/e-ews-config-utils.c:1014
++#: ../src/configuration/e-ews-config-utils.c:1296
++#: ../src/configuration/e-ews-config-utils.c:1327
++#: ../src/configuration/e-ews-config-utils.c:1358
++#: ../src/configuration/e-ews-config-utils.c:1389
++msgid "Permissions..."
++msgstr "Permessi..."
++
++#: ../src/configuration/e-ews-config-utils.c:1016
++msgid "Edit EWS folder permissions"
++msgstr "Modifica i permessi della cartella EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1298
++msgid "Edit EWS calendar permissions"
++msgstr "Modifica i permessi del calendario EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1329
++msgid "Edit EWS tasks permissions"
++msgstr "Modifica i permessi dei compiti EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1360
++msgid "Edit EWS memos permissions"
++msgstr "Modifica i permessi del promemoria EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1391
++msgid "Edit EWS contacts permissions"
++msgstr "Modifica i permessi dei contatti EWS"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:87
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:488
++msgctxt "PermissionsLevel"
++msgid "None"
++msgstr "Nessuno"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:88
++msgctxt "PermissionsLevel"
++msgid "Owner"
++msgstr "Proprietario"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:98
++msgctxt "PermissionsLevel"
++msgid "Publishing Editor"
++msgstr "Supervisore pubblicazione"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:107
++msgctxt "PermissionsLevel"
++msgid "Editor"
++msgstr "Supervisore"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:115
++msgctxt "PermissionsLevel"
++msgid "Publishing Author"
++msgstr "Autore pubblicazione"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:122
++msgctxt "PermissionsLevel"
++msgid "Author"
++msgstr "Autore"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:128
++msgctxt "PermissionsLevel"
++msgid "Nonediting Author"
++msgstr "Autore"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:133
++msgctxt "PermissionsLevel"
++msgid "Reviewer"
++msgstr "Revisore"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:136
++msgctxt "PermissionsLevel"
++msgid "Contributor"
++msgstr "Collaboratore"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:139
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time"
++msgstr "Libero/Occupato"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:141
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time, subject, location"
++msgstr "Libero/Occupato, soggetto, posizione"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:143
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:511
++msgctxt "PermissionsLevel"
++msgid "Custom"
++msgstr "Personalizza"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:267
++msgid "Writing folder permissions, please wait..."
++msgstr "Modifica permessi cartella, attendere prego..."
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:777
++msgctxt "User"
++msgid "Anonymous"
++msgstr "Anonimo"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:780
++msgctxt "User"
++msgid "Default"
++msgstr "Predefinito"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:786
++msgctxt "User"
++msgid "Unknown"
++msgstr "Sconosciuto"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:867
++#: ../src/configuration/e-ews-search-user.c:431
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1066
++msgid "Name"
++msgstr "Nome"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:873
++msgid "Permission level"
++msgstr "Livello permesso"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:925
++msgid "Edit EWS folder permissions..."
++msgstr "Modifica i permessi della cartella EWS..."
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:950
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:638
++msgid "Account:"
++msgstr "Account:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:978
++msgid "Folder name:"
++msgstr "Nome cartella:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1001
++msgid "Folder ID:"
++msgstr "ID cartella:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1065
++msgid "Permissions"
++msgstr "Permessi"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1087
++msgid "Permi_ssion level:"
++msgstr "Livello perme_sso:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1121
++msgctxt "Permissions"
++msgid "Read"
++msgstr "Lettura"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1133
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1200
++msgctxt "Permissions"
++msgid "None"
++msgstr "Nessuno"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1139
++msgctxt "Permissions"
++msgid "Free/Busy time"
++msgstr "Libero/Occupato"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1144
++msgctxt "Permissions"
++msgid "Free/Busy time, subject, location"
++msgstr "Libero/Occupato, soggetto, posizione"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1150
++msgctxt "Permissions"
++msgid "Full Details"
++msgstr "Informazioni complete"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1156
++msgctxt "Permissions"
++msgid "Write"
++msgstr "Scrittura"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1168
++msgctxt "Permissions"
++msgid "Create items"
++msgstr "Crea elementi"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1172
++msgctxt "Permissions"
++msgid "Create subfolders"
++msgstr "Crea sottocartelle"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1176
++msgctxt "Permissions"
++msgid "Edit own"
++msgstr "Modifica elementi personali"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1180
++msgctxt "Permissions"
++msgid "Edit all"
++msgstr "Modifica tutto"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1188
++msgctxt "Permissions"
++msgid "Delete items"
++msgstr "Elimina elementi"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1205
++msgctxt "Permissions"
++msgid "Own"
++msgstr "Personali"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1210
++msgctxt "Permissions"
++msgid "All"
++msgstr "Tutti"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1216
++msgctxt "Permissions"
++msgid "Other"
++msgstr "Altro"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1228
++msgctxt "Permissions"
++msgid "Folder owner"
++msgstr "Proprietario cartella"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1232
++msgctxt "Permissions"
++msgid "Folder contact"
++msgstr "Contatto cartella"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1236
++msgctxt "Permissions"
++msgid "Folder visible"
++msgstr "Cartella visibile"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1309
++msgid "Reading folder permissions, please wait..."
++msgstr "Lettura permessi cartella, attendere prego..."
++
++#: ../src/configuration/e-ews-ooo-notificator.c:184
++msgid "Unset on Server"
++msgstr ""
++
++#: ../src/configuration/e-ews-ooo-notificator.c:185
++msgid "Unset the \"Out of Office\" status"
++msgstr ""
++
++#: ../src/configuration/e-ews-search-user.c:208
++#, c-format
++msgid "No users found, only one contact"
++msgid_plural "No users found, only %d contacts"
++msgstr[0] ""
++msgstr[1] ""
++
++#: ../src/configuration/e-ews-search-user.c:213
++msgid "No users found"
++msgstr "Nessun utente trovato"
++
++#: ../src/configuration/e-ews-search-user.c:217
++#, c-format
++msgid "Found one user"
++msgid_plural "Found %d users"
++msgstr[0] ""
++msgstr[1] ""
++
++#: ../src/configuration/e-ews-search-user.c:223
++#, c-format
++msgid "Found more than 100 users, but showing only first %d"
++msgid_plural "Found more than 100 users, but showing only first %d"
++msgstr[0] ""
++msgstr[1] ""
++
++#: ../src/configuration/e-ews-search-user.c:357
++#: ../src/configuration/e-ews-search-user.c:540
++msgid "Search for a user"
++msgstr "Cerca un utente"
++
++#: ../src/configuration/e-ews-search-user.c:437
++msgid "E-mail"
++msgstr "E-mail"
++
++#: ../src/configuration/e-ews-search-user.c:474
++msgid "Choose EWS user..."
++msgstr "Seleziona un utente EWS..."
++
++#: ../src/configuration/e-ews-search-user.c:497
++msgid "_Search:"
++msgstr "C_erca:"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:97
++#: ../src/server/e-ews-folder.c:750
++#, c-format
++msgid "Cannot add folder, folder already exists as '%s'"
++msgstr ""
++"Impossibile aggiungere una cartella, questa cartella esiste già come '%s'"
++
++#. Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
++#. * Example result: "Mailbox - John Smith"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:107
++#, c-format
++msgctxt "ForeignFolder"
++msgid "Mailbox - %s"
++msgstr "Casella di posta - %s"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:275
++msgid "Cannot test foreign folder availability while in offline mode"
++msgstr ""
++"Impossibile testare la disponibilità della cartella in modalità offline"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:300
++#, c-format
++msgid "User '%s' was not found on the server"
++msgstr "Impossibile trovare sul server l'utente '%s'"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:336
++#, c-format
++msgid "User name '%s' is ambiguous, specify it more precisely, please"
++msgstr "Il nome uetnte '%s' è ambiguo, specificarlo in modo più preciso"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:358
++#, c-format
++msgid ""
++"Folder '%s' not found. Either it does not exist or you do not have "
++"permission to access it."
++msgstr ""
++"Cartella '%s' non trovata. Forse non esiste o non sei in possesso dei "
++"permessi per accederla."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:376
++msgid "Cannot add folder, cannot determine folder's type"
++msgstr ""
++"Impossibile aggiungere la cartella, impossibile determinare il tipo di "
++"cartella"
++
++#. Translators: This is used to name foreign folder.
++#. * The first '%s' is replaced with user name to whom the folder belongs,
++#. * the second '%s' is replaced with folder name.
++#. * Example result: "John Smith - Calendar"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:421
++#, c-format
++msgctxt "ForeignFolder"
++msgid "%s - %s"
++msgstr "%s - %s"
++
++#. convert well-known names to their non-localized form
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:515
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:723
++msgid "Inbox"
++msgstr "Inbox"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:517
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:724
++msgid "Contacts"
++msgstr "Contatti"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:519
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:725
++msgid "Calendar"
++msgstr "Calendario"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:521
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:726
++msgid "Memos"
++msgstr "Promemoria"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:523
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:727
++msgid "Tasks"
++msgstr "Compiti"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:540
++#, c-format
++msgid "Testing availability of folder '%s' of user '%s', please wait..."
++msgstr ""
++"Test sulla disponibilità della cartella '%s' per l'utente '%s', attendere "
++"prego..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:617
++msgid "Subscribe to folder of other EWS user..."
++msgstr "Effettua la sottoscrizione alla cartella di un altro utente EWS..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:668
++msgid "User"
++msgstr "Utente"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:675
++msgid "_User:"
++msgstr "_Utente:"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:690
++msgid "C_hoose..."
++msgstr "S_eleziona"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:706
++msgid "_Folder name:"
++msgstr "_Nome cartella:"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:736
++msgid "Include _subfolders"
++msgstr "Includi _sottocartelle:"
++
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:141
++msgid "Querying Autodiscover service"
++msgstr "Interrogazione servizio Autodiscover"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:232
++msgid "Fetch _URL"
++msgstr "Recupara _URL"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:194
++msgid "Configuration"
++msgstr "Configurazione"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:212
++msgid "User_name:"
++msgstr "Nome _utente:"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/configuration/e-mail-config-ews-backend.c:226
++msgid "_Host URL:"
++msgstr "URL _Host:"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/configuration/e-mail-config-ews-backend.c:245
++msgid "OAB U_RL:"
++msgstr "OAB U_RL:"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:259
++msgid "Open _Mailbox of other user"
++msgstr "Apri _Casella di posta di un altro utente"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:293
++msgid "S_earch..."
++msgstr "C_erca..."
++
++#: ../src/configuration/e-mail-config-ews-backend.c:304
++msgid "Authentication"
++msgstr "Autenticazione"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:489
++msgctxt "PermissionsLevel"
++msgid "Reviewer (can read items)"
++msgstr "Revisore (può leggere gli elementi)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:490
++msgctxt "PermissionsLevel"
++msgid "Author (can read and create items)"
++msgstr "Autore (può leggere e creare elementi)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:491
++msgctxt "PermissionsLevel"
++msgid "Editor (can read, create and modify items)"
++msgstr "Supervisore (può leggere, creare e modificare lementi)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:596
++msgid "Delegate permissions"
++msgstr "Permessi deleghe"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:614
++msgid "C_alendar"
++msgstr "C_alendario"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:617
++msgid "_Delegate receives copies of meeting-related messages sent to me"
++msgstr ""
++"Il _Delegato riceve le copie di messaggi relativi al meeting inviati a me"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:622
++msgid "_Tasks"
++msgstr "_Attività"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:625
++msgid "_Inbox"
++msgstr "_Inbox"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:628
++msgid "C_ontacts"
++msgstr "C_ontatti"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:631
++msgid "_Notes"
++msgstr "_Note"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:634
++msgid "_Journal"
++msgstr "_Diario"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:637
++#, c-format
++msgid "Delegate '%s' has the following permissions"
++msgstr "Il delegato '%s' ha i seguenti permessi"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:655
++msgid "Delegate can see my _private items"
++msgstr "Il delegato è in grado di visualizzare i miei elementi _privati"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:978
++msgid "Retrieving current user permissions, please wait..."
++msgstr "Recupero permessi utente corrente, attendere prego..."
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1098
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1646
++msgid "Delegates"
++msgstr "Delegati"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1122
++msgid ""
++"Delegates can send items on your behalf, including creating and responding "
++"to meeting requests. If you want to grant folder permissions without giving "
++"send-on-behalf-of permissions, close this dialog box, right-click the "
++"folder, click Permissions and change the options there."
++msgstr ""
++"I delegati possono inviare elementi per conto dell'utente, incluso creare e "
++"rispondere alle richieste di meeting. Se desideri conferire i permessi di "
++"una cartella senza permessi di tipo invia-per-conto-di, chiudere questa "
++"casella di dialogo, eseguire un clic con il tasto destro del mouse sulla "
++"cartella, selezionare Permessi e modificare le opzioni."
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1172
++msgid ""
++"Deliver meeting requests addressed to me and responses to meeting requests "
++"where I am the organizer to:"
++msgstr ""
++"Consegna le richieste di meeting a me indirizzate e rispondi alle richieste "
++"dove io risulto essere l'organizzatore:"
++
++#. new-line break, because GtkRadioButton doesn't allow wrapping of the inner label
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1182
++msgid ""
++"My delegates only, but _send a copy of meeting requests\n"
++"and responses to me (recommended)"
++msgstr ""
++"Solo i miei delegati, ma _invia una copia di richieste di meeting e di "
++"risposte inviate a me (consigliato)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1189
++msgid "My d_elegates only"
++msgstr "Solo i miei d_elegati"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1196
++msgid "My delegates a_nd me"
++msgstr "I miei delegati e_d io"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1730
++msgid "Retrieving \"Delegates\" settings"
++msgstr "Recupero impostazioni \"Delegati\""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:195
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:257
++msgid "EWS Settings"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:202
++msgid "View the size of all Exchange folders"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:206
++msgid "Folder _Sizes"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-gal.c:222
++msgid "Locating offline address books"
++msgstr "Identificazione rubrica offline"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/configuration/e-mail-config-ews-gal.c:301
++msgid "Cache o_ffline address book"
++msgstr "Rubrica o_ffline della cache"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:327
++msgid "Select ad_dress list:"
++msgstr "Seleziona elenco in_dirizzi:"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:351
++msgid "Fetch List"
++msgstr "Recupera elenco"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:432
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:934
++msgid "Out of Office"
++msgstr "Fuori sede"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:448
++msgid ""
++"The messages specified below will be automatically sent to each internal and "
++"external person who sends a mail to you."
++msgstr ""
++"I messaggi di seguito specificati verranno inviati automaticamente ad ogni "
++"persona interna o esterna che ti invia un messaggio di posta."
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:457
++msgid "Do _not send Out of Office replies"
++msgstr "No_n inviare risposte di fuori sede"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:465
++msgid "_Send Out of Office replies"
++msgstr "_Invia risposte di fuori sede"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:473
++msgid "Send Out of Office replies only _during this time period:"
++msgstr "Invia risposte di fuori sede solo _durante questo periodo:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:493
++msgid "_From:"
++msgstr "_Da:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:518
++msgid "_To:"
++msgstr "_A:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:543
++msgid "I_nternal:"
++msgstr "I_nterno:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:552
++msgid "Message to be sent within the organization"
++msgstr "Messaggio da inviare all'interno dell'organizzazione"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:580
++msgid "E_xternal:"
++msgstr "E_sterno:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:588
++msgid "Message to be sent outside the organization"
++msgstr "Messaggio da inviare all'esterno dell'organizzazione"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:598
++msgid "Do not reply to senders outside the organization"
++msgstr "Non rispondere ai mittenti esterni all'organizzazione"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:601
++msgid "Reply only to known senders outside the organization"
++msgstr "Rispondi solo ai mittenti conosciuti esterni all'organizzazione"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:604
++msgid "Reply to any sender outside the organization"
++msgstr "Rispondi a qualsiasi mittente esterno all'organizzazione"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:1018
++msgid "Retrieving \"Out of Office\" settings"
++msgstr "Recupero impostazioni \"Fuori sede\""
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:1
++msgid "Autodiscovery query failed."
++msgstr "Interrogazione di tipo \"autodiscovery\" fallita"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:2
++msgid "The reported error was &quot;{0}&quot;."
++msgstr "L'errore riportato era &quot;{0}&quot;."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:3
++msgid "Failed to locate offline address books."
++msgstr "Identificazione rubrica offline fallita."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:4
++msgid "Failed to retrieve &quot;Out of Office&quot; settings."
++msgstr "Recupero impostazioni &quot;Fuori sede&quot; fallito."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:5
++msgid "Failed to retrieve &quot;Delegates&quot; settings."
++msgstr "Recupero impostazioni &quot;Delegati&quot; fallito."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:6
++msgid "Your Exchange account \"{0}\" has the status set as \"Out of Office\"."
++msgstr ""
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/server/e-ews-connection.c:741
++msgid "Operation Cancelled"
++msgstr "Operazione cancellata"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/server/e-ews-connection.c:811
++msgid "Authentication failed"
++msgstr "Autenticazione non riuscita"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/server/e-ews-connection.c:822
++#, c-format
++msgid "No response: %s"
++msgstr "Nessuna risposta: %s"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/server/e-ews-connection.c:2576
++#, c-format
++msgid "Failed to parse autodiscover response XML"
++msgstr "Analisi XML della risposta per il rilevamento automatico fallita"
++
++#: ../src/server/e-ews-connection.c:2583
++#, c-format
++msgid "Failed to find <Autodiscover> element"
++msgstr "Impossibile trovare l'elemento <Autodiscover> "
++
++#: ../src/server/e-ews-connection.c:2594
++#, c-format
++msgid "Failed to find <Response> element"
++msgstr "Impossibile trovare l'elemento <Response>"
++
++#: ../src/server/e-ews-connection.c:2605
++#, c-format
++msgid "Failed to find <Account> element"
++msgstr "Impossibile trovare l'elemento <Account>"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/server/e-ews-connection.c:2630
++#, c-format
++msgid "Failed to find <ASUrl> and <OABUrl> in autodiscover response"
++msgstr ""
++"Impossibile trovare <ASUrl> e <OABUrl> nella risposta per il rilevamento "
++"automatico"
++
++#: ../src/server/e-ews-connection.c:2720
++msgid "URL cannot be NULL"
++msgstr "L'URL non può essere NULL"
++
++#: ../src/server/e-ews-connection.c:2728
++#, c-format
++msgid "URL '%s' is not valid"
++msgstr "L'URL '%s' non è valido"
++
++#: ../src/server/e-ews-connection.c:2820
++msgid "Email address is missing a domain part"
++msgstr "L'indirizzo email non presenta la parte del dominio"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/server/e-ews-connection.c:3142
++msgid "Failed to parse oab XML"
++msgstr "Analisi oab XML fallita"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/server/e-ews-connection.c:3150
++msgid "Failed to find <OAB> element\n"
++msgstr "Impossibile trovare l'elemento <OAB> \n"
++
++#: ../src/server/e-ews-connection.c:4404
++msgid "No items found"
++msgstr "Nessun elemento trovato"
++
++#: ../src/server/e-ews-folder.c:705
++msgid "Cannot add folder, unsupported folder type"
++msgstr "Impossibile aggiungere la cartella, tipo di cartella non supportata"
++
++#: ../src/server/e-ews-folder.c:710
++msgid "Cannot add folder, master source not found"
++msgstr "Impossibile aggiungere la cartella, sorgente master non trovata"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author fvalen
++#: ../src/utils/ews-camel-common.c:361
++#, c-format
++msgid "CreateItem call failed to return ID for new message"
++msgstr ""
++"La chiamata CreateItem non è riuscita a ritornare un ID per il nuovo "
++"messaggio"
+Index: new/po/ja.po
+===================================================================
+--- new.orig/po/ja.po
++++ new/po/ja.po
+@@ -7,7 +7,8 @@
+ msgid ""
+ msgstr ""
+ "Project-Id-Version: evolution-ews master\n"
+-"Report-Msgid-Bugs-To: http://bugzilla.gnome.org/enter_bug.cgi?product=evolution-ews&keywords=I18N+L10N&component=general\n"
++"Report-Msgid-Bugs-To: http://bugzilla.gnome.org/enter_bug.cgi?"
++"product=evolution-ews&keywords=I18N+L10N&component=general\n"
+ "POT-Creation-Date: 2013-09-23 20:10+0000\n"
+ "PO-Revision-Date: 2013-09-19 13:59+0000\n"
+ "Last-Translator: Noriko Mizumoto <noriko@fedoraproject.org>\n"
+@@ -24,8 +25,11 @@ msgstr "バックエンドでは大量�
+ 
+ #: ../src/addressbook/e-book-backend-ews.c:1460
+ #: ../src/addressbook/e-book-backend-ews.c:1804
+-msgid "Cannot save contact list, it's only supported on EWS Server 2010 or later"
+-msgstr "連絡先一覧を保存できません、EWS Server 2010 またはそれ以降のみの対応となります"
++msgid ""
++"Cannot save contact list, it's only supported on EWS Server 2010 or later"
++msgstr ""
++"連絡先一覧を保存できません、EWS Server 2010 またはそれ以降のみの対応となりま"
++"す"
+ 
+ #: ../src/addressbook/e-book-backend-ews.c:1763
+ msgid "The backend does not support bulk modifications"
+@@ -157,16 +161,24 @@ msgid "NTLM"
+ msgstr "NTLM"
+ 
+ #: ../src/camel/camel-ews-provider.c:94
+-msgid "This option will connect to the Exchange server using a plaintext password with NTLM authentication."
+-msgstr "プレーンテキストのパスワードを使った NTLM 認証で Exchange サーバーに接続します。"
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with NTLM authentication."
++msgstr ""
++"プレーンテキストのパスワードを使った NTLM 認証で Exchange サーバーに接続しま"
++"す。"
+ 
+ #: ../src/camel/camel-ews-provider.c:102
+ msgid "Basic"
+ msgstr "Basic"
+ 
+ #: ../src/camel/camel-ews-provider.c:104
+-msgid "This option will connect to the Exchange server using a plaintext password with Basic authentication."
+-msgstr "プレーンテキストのパスワードを使った Basic 認証で Exchange サーバーに接続します。"
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with Basic authentication."
++msgstr ""
++"プレーンテキストのパスワードを使った Basic 認証で Exchange サーバーに接続しま"
++"す。"
+ 
+ #: ../src/camel/camel-ews-store.c:292
+ #, c-format
+@@ -191,7 +203,7 @@ msgstr "\"不在\" 設定のチェック
+ 
+ #: ../src/camel/camel-ews-store.c:843
+ msgid "Updating foreign folder structure"
+-msgstr ""
++msgstr "異種のフォルダ構造の更新中"
+ 
+ #: ../src/camel/camel-ews-store.c:1298 ../src/camel/camel-ews-store.c:2794
+ #, c-format
+@@ -223,13 +235,17 @@ msgstr "親フォルダー %s は存在�
+ 
+ #: ../src/camel/camel-ews-store.c:1912
+ #, c-format
+-msgid "Cannot create folder under '%s', it is used for folders of other users only"
+-msgstr "'%s' の配下にフォルダーは作成できません、他のユーザーのフォルダー専用となります"
++msgid ""
++"Cannot create folder under '%s', it is used for folders of other users only"
++msgstr ""
++"'%s' の配下にフォルダーは作成できません、他のユーザーのフォルダー専用となりま"
++"す"
+ 
+ #: ../src/camel/camel-ews-store.c:1922
+ #, c-format
+ msgid "Cannot create folder under '%s', it is used for public folders only"
+-msgstr "'%s' の配下にフォルダーは作成できません、パブリックフォルダー専用となります"
++msgstr ""
++"'%s' の配下にフォルダーは作成できません、パブリックフォルダー専用となります"
+ 
+ #: ../src/camel/camel-ews-store.c:1991
+ #, c-format
+@@ -293,7 +309,9 @@ msgstr "オフラインモードでは E
+ #: ../src/camel/camel-ews-store.c:2576
+ #, c-format
+ msgid "Cannot subscribe folder '%s', no public folder available"
+-msgstr "'%s' フォルダーをサブスクライブできません、使用可能なパブリックフォルダーがありません"
++msgstr ""
++"'%s' フォルダーをサブスクライブできません、使用可能なパブリックフォルダーがあ"
++"りません"
+ 
+ #: ../src/camel/camel-ews-store.c:2586
+ #, c-format
+@@ -319,7 +337,8 @@ msgstr "差出人のアドレスがな�
+ 
+ #: ../src/camel/camel-ews-transport.c:125
+ msgid "Exchange server cannot send message with multiple From addresses"
+-msgstr "Exchange サーバーでは差出人アドレスが複数のメッセージの送信はできません"
++msgstr ""
++"Exchange サーバーでは差出人アドレスが複数のメッセージの送信はできません"
+ 
+ #: ../src/camel/camel-ews-transport.c:136
+ msgid "Failed to read From address"
+@@ -327,8 +346,12 @@ msgstr "差出人のアドレスの読�
+ 
+ #: ../src/camel/camel-ews-transport.c:148
+ #, c-format
+-msgid "Exchange server cannot send message as '%s', when the account was configured for address '%s'"
+-msgstr "Exchange サーバーでは '%s' のメッセージは送信できません (アカウントが '%s' アドレスに設定された場合)"
++msgid ""
++"Exchange server cannot send message as '%s', when the account was configured "
++"for address '%s'"
++msgstr ""
++"Exchange サーバーでは '%s' のメッセージは送信できません (アカウントが '%s' ア"
++"ドレスに設定された場合)"
+ 
+ #: ../src/camel/camel-ews-transport.c:162
+ #, c-format
+@@ -343,7 +366,9 @@ msgstr "グローバルアドレス一�
+ #: ../src/collection/e-ews-backend.c:807
+ #, c-format
+ msgid "Could not determine a suitable folder class for a new folder named '%s'"
+-msgstr "'%s' と言う名前の新しいフォルダーに適したフォルダークラスを確定できませんでした"
++msgstr ""
++"'%s' と言う名前の新しいフォルダーに適したフォルダークラスを確定できませんでし"
++"た"
+ 
+ #: ../src/collection/e-ews-backend.c:896
+ #, c-format
+@@ -378,7 +403,9 @@ msgstr "フォルダーの一覧をフ�
+ #: ../src/configuration/e-ews-config-utils.c:791
+ #, c-format
+ msgid "Cannot edit permissions of folder '%s', choose other folder."
+-msgstr "フォルダー '%s' のパーミッションを編集できません、他のフォルダーを選択してください。"
++msgstr ""
++"フォルダー '%s' のパーミッションを編集できません、他のフォルダーを選択してく"
++"ださい。"
+ 
+ #: ../src/configuration/e-ews-config-utils.c:868
+ msgid "Folder Sizes..."
+@@ -410,7 +437,7 @@ msgstr "EWS タスクのパーミッシ�
+ 
+ #: ../src/configuration/e-ews-config-utils.c:1230
+ msgid "Edit EWS memos permissions"
+-msgstr ""
++msgstr "EWS メモのパーミッションを編集"
+ 
+ #: ../src/configuration/e-ews-config-utils.c:1261
+ msgid "Edit EWS contacts permissions"
+@@ -577,7 +604,7 @@ msgstr "サブフォルダーの作成"
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1176
+ msgctxt "Permissions"
+ msgid "Edit own"
+-msgstr ""
++msgstr "自分を編集"
+ 
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1180
+ msgctxt "Permissions"
+@@ -592,7 +619,7 @@ msgstr "アイテムの削除"
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1205
+ msgctxt "Permissions"
+ msgid "Own"
+-msgstr ""
++msgstr "自分"
+ 
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1210
+ msgctxt "Permissions"
+@@ -612,12 +639,12 @@ msgstr "フォルダーの所有者"
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1232
+ msgctxt "Permissions"
+ msgid "Folder contact"
+-msgstr ""
++msgstr "フォルダー連絡先"
+ 
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1236
+ msgctxt "Permissions"
+ msgid "Folder visible"
+-msgstr ""
++msgstr "フォルダーを表示させる"
+ 
+ #: ../src/configuration/e-ews-edit-folder-permissions.c:1309
+ msgid "Reading folder permissions, please wait..."
+@@ -651,7 +678,8 @@ msgstr[0] "%d ユーザーが見つか�
+ #, c-format
+ msgid "Found more than 100 users, but showing only first %d"
+ msgid_plural "Found more than 100 users, but showing only first %d"
+-msgstr[0] "ユーザーが 100 名以上見つかりましたが、最初の %d 名のみを表示しています"
++msgstr[0] ""
++"ユーザーが 100 名以上見つかりましたが、最初の %d 名のみを表示しています"
+ 
+ #: ../src/configuration/e-ews-search-user.c:357
+ #: ../src/configuration/e-ews-search-user.c:540
+@@ -674,7 +702,8 @@ msgstr "検索(_S):"
+ #: ../src/server/e-ews-folder.c:657
+ #, c-format
+ msgid "Cannot add folder, folder already exists as '%s'"
+-msgstr "フォルダーを追加できません、フォルダーは '%s' としてすでに存在しています"
++msgstr ""
++"フォルダーを追加できません、フォルダーは '%s' としてすでに存在しています"
+ 
+ #. Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
+ #. * Example result: "Mailbox - John Smith"
+@@ -687,7 +716,7 @@ msgstr "メールボックス - %s"
+ 
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:272
+ msgid "Cannot test foreign folder availability while in offline mode"
+-msgstr ""
++msgstr "オフラインモードでは異種フォルダーの利用度テストは行なえません"
+ 
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:297
+ #, c-format
+@@ -701,8 +730,12 @@ msgstr "ユーザー名 '%s' では不�
+ 
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:355
+ #, c-format
+-msgid "Folder '%s' not found. Either it does not exist or you do not have permission to access it."
+-msgstr "フォルダー '%s' は見つかりませんでした。このフォルダーは存在していないか、このフォルダーにアクセスするパーミッションがありません。"
++msgid ""
++"Folder '%s' not found. Either it does not exist or you do not have "
++"permission to access it."
++msgstr ""
++"フォルダー '%s' は見つかりませんでした。このフォルダーは存在していないか、こ"
++"のフォルダーにアクセスするパーミッションがありません。"
+ 
+ #: ../src/configuration/e-ews-subscribe-foreign-folder.c:373
+ msgid "Cannot add folder, cannot determine folder's type"
+@@ -835,7 +868,8 @@ msgstr "カレンダー(_A)"
+ 
+ #: ../src/configuration/e-mail-config-ews-delegates-page.c:614
+ msgid "_Delegate receives copies of meeting-related messages sent to me"
+-msgstr "自分に送信されたミーティング関連のメッセージのコピーを代理人に送信する(_D)"
++msgstr ""
++"自分に送信されたミーティング関連のメッセージのコピーを代理人に送信する(_D)"
+ 
+ #: ../src/configuration/e-mail-config-ews-delegates-page.c:619
+ msgid "_Tasks"
+@@ -876,12 +910,25 @@ msgid "Delegates"
+ msgstr "代理人"
+ 
+ #: ../src/configuration/e-mail-config-ews-delegates-page.c:1120
+-msgid "Delegates can send items on your behalf, including creating and responding to meeting requests. If you want to grant folder permissions without giving send-on-behalf-of permissions, close this dialog box, right-click the folder, click Permissions and change the options there."
+-msgstr "ミーティングのリクエストに対して応答するなど、代理人はユーザーの代理としてアイテムを送信することができます。代理としてアイテムの送信を許可するパーミッションを与える代わりにフォルダーのパーミッションを付与したい場合には、このダイアログボックスを閉じてからフォルダーを右クリックし、パーミッションをクリックしてオプションを変更します。"
++msgid ""
++"Delegates can send items on your behalf, including creating and responding "
++"to meeting requests. If you want to grant folder permissions without giving "
++"send-on-behalf-of permissions, close this dialog box, right-click the "
++"folder, click Permissions and change the options there."
++msgstr ""
++"ミーティングのリクエストに対して応答するなど、代理人はユーザーの代理としてア"
++"イテムを送信することができます。代理としてアイテムの送信を許可するパーミッ"
++"ションを与える代わりにフォルダーのパーミッションを付与したい場合には、このダ"
++"イアログボックスを閉じてからフォルダーを右クリックし、パーミッションをクリッ"
++"クしてオプションを変更します。"
+ 
+ #: ../src/configuration/e-mail-config-ews-delegates-page.c:1169
+-msgid "Deliver meeting requests addressed to me and responses to meeting requests where I am the organizer to:"
+-msgstr "自分に宛てられたミーティングリクエスト、および自分がオーガナイザーであるミーティングリクエストに対する応答を次のユーザーに配信します。"
++msgid ""
++"Deliver meeting requests addressed to me and responses to meeting requests "
++"where I am the organizer to:"
++msgstr ""
++"自分に宛てられたミーティングリクエスト、および自分がオーガナイザーであるミー"
++"ティングリクエストに対する応答を次のユーザーに配信します。"
+ 
+ #. new-line break, because GtkRadioButton doesn't allow wrapping of the inner label
+ #: ../src/configuration/e-mail-config-ews-delegates-page.c:1178
+@@ -939,8 +986,12 @@ msgid "Out of Office"
+ msgstr "不在"
+ 
+ #: ../src/configuration/e-mail-config-ews-ooo-page.c:448
+-msgid "The messages specified below will be automatically sent to each internal and external person who sends a mail to you."
+-msgstr "以下のメッセージは、ユーザーにメールを送信した内部および外部の送信者に自動的に送信されます。"
++msgid ""
++"The messages specified below will be automatically sent to each internal and "
++"external person who sends a mail to you."
++msgstr ""
++"以下のメッセージは、ユーザーにメールを送信した内部および外部の送信者に自動的"
++"に送信されます。"
+ 
+ #: ../src/configuration/e-mail-config-ews-ooo-page.c:456
+ msgid "Do _not send Out of Office replies"
+@@ -1016,7 +1067,8 @@ msgstr "&quot;代理人&quot; 設定の�
+ 
+ #: ../src/configuration/module-ews-configuration.error.xml.h:6
+ msgid "Your Exchange account \"{0}\" has the status set as \"Out of Office\"."
+-msgstr "ユーザーの Exchange アカウント \"{0}\" には \"不在\" 状態が設定されています。"
++msgstr ""
++"ユーザーの Exchange アカウント \"{0}\" には \"不在\" 状態が設定されています。"
+ 
+ #: ../src/server/e-ews-connection.c:538
+ msgid "Operation Cancelled"
+Index: new/po/ko.po
+===================================================================
+--- /dev/null
++++ new/po/ko.po
+@@ -0,0 +1,1147 @@
++# Korean translations for evolution-ews package.
++# Copyright (C) 2015 THE evolution-ews'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the evolution-ews package.
++# Automatically generated, 2015.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: evolution-ews 3.12.11\n"
++"Report-Msgid-Bugs-To: \n"
++"POT-Creation-Date: 2015-05-14 18:11+0900\n"
++"PO-Revision-Date: 2015-05-14 18:11+0900\n"
++"Last-Translator: Automatically generated\n"
++"Language-Team: none\n"
++"Language: ko\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++"Plural-Forms: nplurals=1; plural=0;\n"
++
++#: ../evolution-ews.metainfo.xml.in.h:1 ../src/camel/camel-ews-provider.c:77
++msgid "Exchange Web Services"
++msgstr "Exchange 웹 서비스"
++
++#: ../evolution-ews.metainfo.xml.in.h:2 ../src/camel/camel-ews-provider.c:79
++msgid "For accessing Exchange servers using Web Services"
++msgstr "웹 서비스를 사용하여 Exchange 서버에 액세스하는 경우 "
++
++#: ../src/addressbook/e-book-backend-ews.c:1445
++msgid "The backend does not support bulk additions"
++msgstr "백엔드가 대량 추가를 지원하지 않습니다"
++
++#: ../src/addressbook/e-book-backend-ews.c:1484
++#: ../src/addressbook/e-book-backend-ews.c:1838
++msgid ""
++"Cannot save contact list, it's only supported on EWS Server 2010 or later"
++msgstr ""
++
++#: ../src/addressbook/e-book-backend-ews.c:1797
++msgid "The backend does not support bulk modifications"
++msgstr "백엔드가 대량 수정을 지원하지 않습니다"
++
++#: ../src/addressbook/e-book-backend-ews.c:2009
++msgid "Wait till syncing is done"
++msgstr "동기화가 종료될 때 까지 대기"
++
++#: ../src/addressbook/e-book-backend-ews.c:2486
++#, c-format
++msgid "Downloading contacts in %s %d%% completed... "
++msgstr "%s %d%%에 있는 연락처 다운로드 완료..."
++
++#: ../src/addressbook/e-book-backend-ews.c:3081
++msgid "Syncing contacts..."
++msgstr "연락처 동기화중..."
++
++#: ../src/addressbook/e-book-backend-ews.c:3257
++#: ../src/configuration/e-ews-search-user.c:365
++msgid "Searching..."
++msgstr "검색 중.. "
++
++#: ../src/calendar/e-cal-backend-ews.c:1268
++msgid "EWS does not support bulk removals"
++msgstr "EWS는 대량 제거를 지원하지 않습니다"
++
++#: ../src/calendar/e-cal-backend-ews.c:1446
++msgid "Unknown error"
++msgstr ""
++
++#: ../src/calendar/e-cal-backend-ews.c:1661
++msgid "EWS does not support bulk additions"
++msgstr "EWS가 대량 추가를 지원하지 않습니다"
++
++#: ../src/calendar/e-cal-backend-ews.c:1866
++msgid "EWS does not support bulk modifications"
++msgstr "EWS가 대량 수정을 지원하지 않습니다"
++
++#: ../src/camel/camel-ews-folder.c:379
++#, c-format
++msgid "Unable to open mimecontent temporary file!"
++msgstr "mimecontent 임시 파일을 열 수 없습니다!"
++
++#: ../src/camel/camel-ews-folder.c:387
++#, c-format
++msgid "Unable to generate parser from mimecontent!"
++msgstr "mimecontent에서 파서를 생성할 수 없습니다!"
++
++#: ../src/camel/camel-ews-folder.c:396
++#, c-format
++msgid "Unable to parse meeting request mimecontent!"
++msgstr "회의 요청 mimecontent를 구문 분석할 수 없습니다!"
++
++#: ../src/camel/camel-ews-folder.c:455
++#, c-format
++msgid "Unable to create cache file"
++msgstr "캐시 파일을 만들 수 없습니다"
++
++#: ../src/camel/camel-ews-folder.c:559 ../src/camel/camel-ews-folder.c:650
++#, c-format
++msgid "Unable to create cache path"
++msgstr "캐시 경로를 만들 수 없습니다"
++
++#: ../src/camel/camel-ews-folder.c:660
++#, c-format
++msgid "Failed to move message cache file"
++msgstr "메세지를 캐시 파일로 이동하는데 실패했습니다"
++
++#: ../src/camel/camel-ews-folder.c:1364
++#, c-format
++msgid "Could not load summary for %s"
++msgstr "%s에 요약을 읽어들일 수 없습니다"
++
++#: ../src/camel/camel-ews-folder.c:1868
++#, c-format
++msgid "Cant perform actions on the folder while in offline mode"
++msgstr "오프라인에 있는 동안 폴더에 있는 작업을 실행할 수 없습니다"
++
++#: ../src/camel/camel-ews-provider.c:47
++msgid "Checking for new mail"
++msgstr "새 메일 검사"
++
++#: ../src/camel/camel-ews-provider.c:49
++msgid "C_heck for new messages in all folders"
++msgstr "모든 폴더에서 새 메시지 확인(_H)"
++
++#: ../src/camel/camel-ews-provider.c:51
++msgid "_Listen for server change notifications"
++msgstr ""
++
++#: ../src/camel/camel-ews-provider.c:54
++msgid "Options"
++msgstr "옵션 "
++
++#: ../src/camel/camel-ews-provider.c:56
++msgid "_Apply filters to new messages in Inbox on this server"
++msgstr "이 서버의 받은 편지함에 있는 새 메시지에 필터 적용(_A)"
++
++#: ../src/camel/camel-ews-provider.c:58
++msgid "Check new messages for _Junk contents"
++msgstr "새 메시지가 정크 메일인지 확인(_J)"
++
++#: ../src/camel/camel-ews-provider.c:60
++msgid "Only check for Junk messages in the IN_BOX folder"
++msgstr "받은 편지함 폴더에서만 정크메일 확인(_B)"
++
++#: ../src/camel/camel-ews-provider.c:62
++msgid "Automatically synchroni_ze remote mail locally"
++msgstr "로컬에서 자동으로 원격 메일과 동기화(_Z)"
++
++#: ../src/camel/camel-ews-provider.c:65
++msgid "Connection"
++msgstr "연결"
++
++#. Translators: '%s' is preplaced with a widget, where "
++#. * user can select how long the timeout should be.
++#: ../src/camel/camel-ews-provider.c:69
++#, c-format
++msgid "Connection _timeout (in seconds) %s"
++msgstr "연결 시간 초과 %s (초)"
++
++#: ../src/camel/camel-ews-provider.c:94
++msgid "NTLM"
++msgstr "NTLM"
++
++#: ../src/camel/camel-ews-provider.c:96
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with NTLM authentication."
++msgstr ""
++"이 옵션을 켜면 일반 텍스트 암호를 주고 받는 NTLM 인증을 통해 Exchange 서버에 "
++"연결합니다."
++
++#: ../src/camel/camel-ews-provider.c:104
++msgid "Basic"
++msgstr "기본"
++
++#: ../src/camel/camel-ews-provider.c:106
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with Basic authentication."
++msgstr ""
++"이 옵션을 켜면 일반 텍스트 암호를 주고 받는 기본 인증을 통해 Exchange 서버에 "
++"연결합니다."
++
++#: ../src/camel/camel-ews-provider.c:114
++msgid "Kerberos"
++msgstr ""
++
++#: ../src/camel/camel-ews-provider.c:116
++msgid ""
++"This option will connect to the Exchange server using a Kerberos/GSSAPI "
++"authentication."
++msgstr ""
++
++#: ../src/camel/camel-ews-store.c:332
++#, c-format
++msgid "Session has no storage path"
++msgstr "세션에 저장 경로가 없습니다"
++
++#: ../src/camel/camel-ews-store.c:369
++#, c-format
++msgctxt "PublicFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:498
++#, c-format
++msgctxt "ForeignFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:639
++msgid "Checking \"Out of Office\" settings"
++msgstr ""
++
++#: ../src/camel/camel-ews-store.c:1434
++msgid "Updating foreign folder structure"
++msgstr "외부 폴더 구조 업데이트 중 "
++
++#: ../src/camel/camel-ews-store.c:1967
++#, c-format
++msgid "No such folder: %s"
++msgstr "이러한 폴더가 없습니다: %s"
++
++#: ../src/camel/camel-ews-store.c:2279
++msgid "Cannot list EWS public folders in offline mode"
++msgstr "오프라인 모드에서 EWS 공용 폴더를 나열할 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:2352
++msgid "Cannot find any EWS public folders"
++msgstr "EWS 공용 폴더를 찾을 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:2461
++#, c-format
++msgid "Cannot create folder '%s', folder already exists"
++msgstr "폴더 '%s'를 생성할 수 없습니다. 이미 폴더가 존재합니다 "
++
++#: ../src/camel/camel-ews-store.c:2476
++#, c-format
++msgid "Parent folder %s does not exist"
++msgstr "상위 폴더 %s가 존재하지 않습니다 "
++
++#: ../src/camel/camel-ews-store.c:2486
++#, c-format
++msgid ""
++"Cannot create folder under '%s', it is used for folders of other users only"
++msgstr ""
++"'%s' 아래에 폴더를 생성할 수 없습니다, 다른 사용자의 전용 폴더로 사용되고 있"
++"습니다 "
++
++#: ../src/camel/camel-ews-store.c:2496
++#, c-format
++msgid "Cannot create folder under '%s', it is used for public folders only"
++msgstr ""
++"'%s' 아래에 폴더를 생성할 수 없습니다, 공용 폴더 전용으로 사용되고 있습니다"
++
++#: ../src/camel/camel-ews-store.c:2600
++#, c-format
++msgid "Folder does not exist"
++msgstr "폴더가 존재하지 않습니다 "
++
++#: ../src/camel/camel-ews-store.c:2610
++#, c-format
++msgid "Cannot remove folder '%s', it is used for folders of other users only"
++msgstr ""
++"'%s' 폴더를 삭제할 수 없습니다, 다른 사용자의 전용 폴더로 사용되고 있습니다"
++
++#: ../src/camel/camel-ews-store.c:2621
++#, c-format
++msgid "Cannot remove folder '%s', it is used for public folders only"
++msgstr "'%s' 폴더를 삭제할 수 없습니다, 공용 폴더 전용으로 사용되고 있습니다 "
++
++#: ../src/camel/camel-ews-store.c:2777
++#, c-format
++msgid "Folder %s does not exist"
++msgstr "폴더 %s가 존재하지 않습니다"
++
++#: ../src/camel/camel-ews-store.c:2787
++#, c-format
++msgid "No change key record for folder %s"
++msgstr "폴더 %s에 대한 변경 키 기록이 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:2829
++#, c-format
++msgid "Cannot both rename and move a folder at the same time"
++msgstr "동시에 폴더 이름을 변경하고 이동할 수 없습니다"
++
++#: ../src/camel/camel-ews-store.c:2865
++#, c-format
++msgid "Cannot find folder ID for parent folder %s"
++msgstr "상위 폴더 %s의 폴더 ID를 찾을 수 없습니다"
++
++#: ../src/camel/camel-ews-store.c:2915 ../src/camel/camel-ews-transport.c:69
++#, c-format
++msgid "Exchange server %s"
++msgstr "Exchange 서버 %s"
++
++#: ../src/camel/camel-ews-store.c:2918
++#, c-format
++msgid "Exchange service for %s on %s"
++msgstr "Exchange 서비스 (이름 %s, 서버 %s)"
++
++#: ../src/camel/camel-ews-store.c:2962
++#, c-format
++msgid "Could not locate Trash folder"
++msgstr "휴지통 폴더를 찾을 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:3022
++#, c-format
++msgid "Could not locate Junk folder"
++msgstr "정크 폴더를 찾을 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:3212
++msgid "Cannot subscribe EWS folders in offline mode"
++msgstr "오프라인 모드에서 EWS 폴더를 등록할 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:3235
++#, c-format
++msgid "Cannot subscribe folder '%s', no public folder available"
++msgstr "'%s' 폴더를 등록할 수 없습니다, 사용 가능한 공용 폴더가 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:3245
++#, c-format
++msgid "Cannot subscribe folder '%s', folder not found"
++msgstr "폴더 '%s'를 등록할 수 없습니다, 폴더를 찾을 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:3336
++msgid "Cannot unsubscribe EWS folders in offline mode"
++msgstr "오프라인 모드에서 EWS 폴더를 등록 해제할 수 없습니다 "
++
++#: ../src/camel/camel-ews-store.c:3453
++#, c-format
++msgid "You must be working online to complete this operation"
++msgstr "이 작업을 완료하려면 온라인으로 작업해야 합니다 "
++
++#: ../src/camel/camel-ews-store.c:3497
++msgid "Unsetting the \"Out of Office\" status"
++msgstr ""
++
++#: ../src/camel/camel-ews-transport.c:72
++#, c-format
++msgid "Exchange mail delivery via %s"
++msgstr "%s를 통해 Exchange 메일 전송"
++
++#: ../src/camel/camel-ews-transport.c:119
++msgid "Cannot send message with no From address"
++msgstr "주소가 없는 메세지를 전송할 수 없습니다 "
++
++#: ../src/camel/camel-ews-transport.c:125
++msgid "Exchange server cannot send message with multiple From addresses"
++msgstr "Exchange 서버는 여러 주소로 메세지를 보낼 수 없습니다 "
++
++#: ../src/camel/camel-ews-transport.c:136
++msgid "Failed to read From address"
++msgstr "주소를 읽는데 실패했습니다 "
++
++#: ../src/camel/camel-ews-transport.c:148
++#, c-format
++msgid ""
++"Exchange server cannot send message as '%s', when the account was configured "
++"for address '%s'"
++msgstr ""
++"Exchange 서버는 계정이 '%s' 주소로 설정되어 있을 경우 '%s'로 메세지를 보낼 "
++"수 없습니다 "
++
++#: ../src/camel/camel-ews-transport.c:162
++#, c-format
++msgid "Service not connected"
++msgstr "서비스가 연결되어 있지 않습니다 "
++
++#: ../src/collection/e-ews-backend.c:425
++#: ../src/configuration/e-mail-config-ews-gal.c:274
++msgid "Global Address List"
++msgstr "전체 주소 목록"
++
++#: ../src/collection/e-ews-backend.c:847
++#, c-format
++msgid "Could not determine a suitable folder class for a new folder named '%s'"
++msgstr "'%s'라는 이름의 새 폴더에 적절한 폴더 클래스를 지정할 수 없습니다 "
++
++#: ../src/collection/e-ews-backend.c:936
++#, c-format
++msgid "Data source '%s' does not represent an Exchange Web Services folder"
++msgstr "데이터 소스 '%s'는 Exchange 웹 서비스 폴더를 표시하지 않습니다"
++
++#: ../src/configuration/e-ews-config-utils.c:578
++msgid "Folder"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:588
++msgid "Size"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:626
++#: ../src/configuration/e-ews-config-utils.c:631
++msgid "Unable to retrieve folder size information"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:751
++msgid "Folder Sizes"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:754
++msgid "_Close"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:768
++msgid "Fetching folder list…"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:921
++#, c-format
++msgid "Cannot edit permissions of folder '%s', choose other folder."
++msgstr "폴더 '%s'의 권한을 편집할 수 없습니다, 다른 폴더를 선택하십시오. "
++
++#: ../src/configuration/e-ews-config-utils.c:998
++msgid "Folder Sizes..."
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:1005
++msgid "Subscribe to folder of other user..."
++msgstr "다른 사용자의 폴더에 등록..."
++
++#: ../src/configuration/e-ews-config-utils.c:1014
++#: ../src/configuration/e-ews-config-utils.c:1296
++#: ../src/configuration/e-ews-config-utils.c:1327
++#: ../src/configuration/e-ews-config-utils.c:1358
++#: ../src/configuration/e-ews-config-utils.c:1389
++msgid "Permissions..."
++msgstr "권한..."
++
++#: ../src/configuration/e-ews-config-utils.c:1016
++msgid "Edit EWS folder permissions"
++msgstr "EWS 폴더의 권한을 편집 "
++
++#: ../src/configuration/e-ews-config-utils.c:1298
++msgid "Edit EWS calendar permissions"
++msgstr "EWS 달력 권한을 편집 "
++
++#: ../src/configuration/e-ews-config-utils.c:1329
++msgid "Edit EWS tasks permissions"
++msgstr "EWS 작업 권한을 편집 "
++
++#: ../src/configuration/e-ews-config-utils.c:1360
++msgid "Edit EWS memos permissions"
++msgstr "EWS 메모 권한을 편집 "
++
++#: ../src/configuration/e-ews-config-utils.c:1391
++msgid "Edit EWS contacts permissions"
++msgstr "EWS 연락처 권한을 편집 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:87
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:488
++msgctxt "PermissionsLevel"
++msgid "None"
++msgstr "없음 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:88
++msgctxt "PermissionsLevel"
++msgid "Owner"
++msgstr "소유자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:98
++msgctxt "PermissionsLevel"
++msgid "Publishing Editor"
++msgstr "발행 편집자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:107
++msgctxt "PermissionsLevel"
++msgid "Editor"
++msgstr "편집자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:115
++msgctxt "PermissionsLevel"
++msgid "Publishing Author"
++msgstr "발생 작성자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:122
++msgctxt "PermissionsLevel"
++msgid "Author"
++msgstr "작성자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:128
++msgctxt "PermissionsLevel"
++msgid "Nonediting Author"
++msgstr "편집 권한이 없는 작성자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:133
++msgctxt "PermissionsLevel"
++msgid "Reviewer"
++msgstr "검토자"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:136
++msgctxt "PermissionsLevel"
++msgid "Contributor"
++msgstr "참여자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:139
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time"
++msgstr "약속 있음/없음 시간"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:141
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time, subject, location"
++msgstr "약속 있음/없음 시간, 제목, 위치 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:143
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:511
++msgctxt "PermissionsLevel"
++msgid "Custom"
++msgstr "사용자 지정 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:267
++msgid "Writing folder permissions, please wait..."
++msgstr "폴더 권한을 작성하고 있습니다, 잠시만 기다려 주십시오..."
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:777
++msgctxt "User"
++msgid "Anonymous"
++msgstr "익명 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:780
++msgctxt "User"
++msgid "Default"
++msgstr "기본값  "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:786
++msgctxt "User"
++msgid "Unknown"
++msgstr "알 수 없음 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:867
++#: ../src/configuration/e-ews-search-user.c:431
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1066
++msgid "Name"
++msgstr "이름 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:873
++msgid "Permission level"
++msgstr "권한 수준 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:925
++msgid "Edit EWS folder permissions..."
++msgstr "EWS 폴더 권한 편집..."
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:950
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:638
++msgid "Account:"
++msgstr "계정: "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:978
++msgid "Folder name:"
++msgstr "폴더 이름:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1001
++msgid "Folder ID:"
++msgstr "폴더 ID: "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1065
++msgid "Permissions"
++msgstr "권한 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1087
++msgid "Permi_ssion level:"
++msgstr "권한 수준 (_S):"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1121
++msgctxt "Permissions"
++msgid "Read"
++msgstr "읽기 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1133
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1200
++msgctxt "Permissions"
++msgid "None"
++msgstr "없음"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1139
++msgctxt "Permissions"
++msgid "Free/Busy time"
++msgstr "약속 있음/없음 시간"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1144
++msgctxt "Permissions"
++msgid "Free/Busy time, subject, location"
++msgstr "약속 있음/없음 시간, 제목, 위치 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1150
++msgctxt "Permissions"
++msgid "Full Details"
++msgstr "모든 상세 정보 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1156
++msgctxt "Permissions"
++msgid "Write"
++msgstr "쓰기 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1168
++msgctxt "Permissions"
++msgid "Create items"
++msgstr "항목 만들기 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1172
++msgctxt "Permissions"
++msgid "Create subfolders"
++msgstr "하위 폴더 만들기 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1176
++msgctxt "Permissions"
++msgid "Edit own"
++msgstr "자신을 편집 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1180
++msgctxt "Permissions"
++msgid "Edit all"
++msgstr "모두 편집 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1188
++msgctxt "Permissions"
++msgid "Delete items"
++msgstr "항목 삭제 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1205
++msgctxt "Permissions"
++msgid "Own"
++msgstr "자신 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1210
++msgctxt "Permissions"
++msgid "All"
++msgstr "전체 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1216
++msgctxt "Permissions"
++msgid "Other"
++msgstr "기타 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1228
++msgctxt "Permissions"
++msgid "Folder owner"
++msgstr "폴더 소유자 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1232
++msgctxt "Permissions"
++msgid "Folder contact"
++msgstr "폴더 연락처 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1236
++msgctxt "Permissions"
++msgid "Folder visible"
++msgstr "폴더 표시 "
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1309
++msgid "Reading folder permissions, please wait..."
++msgstr "폴더 권한을 읽고 있습니다, 잠시만 기다려 주십시오..."
++
++#: ../src/configuration/e-ews-ooo-notificator.c:184
++msgid "Unset on Server"
++msgstr ""
++
++#: ../src/configuration/e-ews-ooo-notificator.c:185
++msgid "Unset the \"Out of Office\" status"
++msgstr ""
++
++#: ../src/configuration/e-ews-search-user.c:208
++#, c-format
++msgid "No users found, only one contact"
++msgid_plural "No users found, only %d contacts"
++msgstr[0] "사용자를 찾을 수 없습니다, %d개의 연락처만 찾을 수 있음 "
++
++#: ../src/configuration/e-ews-search-user.c:213
++msgid "No users found"
++msgstr "사용자를 찾을 수 없습니다 "
++
++#: ../src/configuration/e-ews-search-user.c:217
++#, c-format
++msgid "Found one user"
++msgid_plural "Found %d users"
++msgstr[0] "%d 명의 사용자가 검색되었습니다 "
++
++#: ../src/configuration/e-ews-search-user.c:223
++#, c-format
++msgid "Found more than 100 users, but showing only first %d"
++msgid_plural "Found more than 100 users, but showing only first %d"
++msgstr[0] "100 명 이상의 사용자가 검색되었지만 첫 번째 %d 명만 표시합니다 "
++
++#: ../src/configuration/e-ews-search-user.c:357
++#: ../src/configuration/e-ews-search-user.c:540
++msgid "Search for a user"
++msgstr "사용자 검색 "
++
++#: ../src/configuration/e-ews-search-user.c:437
++msgid "E-mail"
++msgstr "이메일 "
++
++#: ../src/configuration/e-ews-search-user.c:474
++msgid "Choose EWS user..."
++msgstr "EWS 사용자 선택..."
++
++#: ../src/configuration/e-ews-search-user.c:497
++msgid "_Search:"
++msgstr "검색(_S):"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:97
++#: ../src/server/e-ews-folder.c:750
++#, c-format
++msgid "Cannot add folder, folder already exists as '%s'"
++msgstr "폴더를 추가할 수 없습니다, '%s'라는 폴더가 이미 존재합니다 "
++
++#. Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
++#. * Example result: "Mailbox - John Smith"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:107
++#, c-format
++msgctxt "ForeignFolder"
++msgid "Mailbox - %s"
++msgstr "메일함 - %s"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:275
++msgid "Cannot test foreign folder availability while in offline mode"
++msgstr ""
++"오프라인 모드에 있는 동안 외부 폴더의 사용 가능성을 테스트할 수 없습니다 "
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:300
++#, c-format
++msgid "User '%s' was not found on the server"
++msgstr "서버에서 사용자 '%s'를 찾을 수 없습니다 "
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:336
++#, c-format
++msgid "User name '%s' is ambiguous, specify it more precisely, please"
++msgstr "사용자 이름 '%s'이 애매모호합니다, 보다 구체적으로 지정하십시오 "
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:358
++#, c-format
++msgid ""
++"Folder '%s' not found. Either it does not exist or you do not have "
++"permission to access it."
++msgstr ""
++"폴더 '%s'를 찾을 수 없습니다. 이 폴더는 존재하지 않거나 이 폴더에 액세스할 "
++"수 있는 권한이 없습니다."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:376
++msgid "Cannot add folder, cannot determine folder's type"
++msgstr "폴더를 추가할 수 없습니다, 폴더 유형을 지정할 수 없습니다 "
++
++#. Translators: This is used to name foreign folder.
++#. * The first '%s' is replaced with user name to whom the folder belongs,
++#. * the second '%s' is replaced with folder name.
++#. * Example result: "John Smith - Calendar"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:421
++#, c-format
++msgctxt "ForeignFolder"
++msgid "%s - %s"
++msgstr "%s - %s"
++
++#. convert well-known names to their non-localized form
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:515
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:723
++msgid "Inbox"
++msgstr "받은 편지함"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:517
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:724
++msgid "Contacts"
++msgstr "연락처"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:519
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:725
++msgid "Calendar"
++msgstr "달력"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:521
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:726
++msgid "Memos"
++msgstr "메모"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:523
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:727
++msgid "Tasks"
++msgstr "작업"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:540
++#, c-format
++msgid "Testing availability of folder '%s' of user '%s', please wait..."
++msgstr ""
++"사용자 '%s'의 폴더 '%s'의 가용성을 테스트하고 있습니다. 잠시만 기다려 주십시"
++"오..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:617
++msgid "Subscribe to folder of other EWS user..."
++msgstr "다른 EWS 사용자의 폴더에 등록..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:668
++msgid "User"
++msgstr "사용자"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:675
++msgid "_User:"
++msgstr "사용자(_U):"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:690
++msgid "C_hoose..."
++msgstr "선택(_H)..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:706
++msgid "_Folder name:"
++msgstr "폴더 이름(_F):"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:736
++msgid "Include _subfolders"
++msgstr "하위 폴더에 포함(_S)"
++
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:141
++msgid "Querying Autodiscover service"
++msgstr "자동 검색 서비스를 질의 중 "
++
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:232
++msgid "Fetch _URL"
++msgstr "URL 가져오기(_U)"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:194
++msgid "Configuration"
++msgstr "설정"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:212
++msgid "User_name:"
++msgstr "사용자 이름(_N):"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:226
++msgid "_Host URL:"
++msgstr "호스트 URL(_H):"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:245
++msgid "OAB U_RL:"
++msgstr "OAB U_RL:"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:259
++msgid "Open _Mailbox of other user"
++msgstr "다른 사용자의 메일함 열기(_M) "
++
++#: ../src/configuration/e-mail-config-ews-backend.c:293
++msgid "S_earch..."
++msgstr "검색(_E)..."
++
++#: ../src/configuration/e-mail-config-ews-backend.c:304
++msgid "Authentication"
++msgstr "인증 "
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:489
++msgctxt "PermissionsLevel"
++msgid "Reviewer (can read items)"
++msgstr "검토자 (항목을 읽을 수 있음)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:490
++msgctxt "PermissionsLevel"
++msgid "Author (can read and create items)"
++msgstr "작성자 (항목을 읽고 생성할 수 있음)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:491
++msgctxt "PermissionsLevel"
++msgid "Editor (can read, create and modify items)"
++msgstr "편집자 (항목을 읽고 생성하고 수정할 수 있음)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:596
++msgid "Delegate permissions"
++msgstr "대리인 권한"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:614
++msgid "C_alendar"
++msgstr "달력(_A)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:617
++msgid "_Delegate receives copies of meeting-related messages sent to me"
++msgstr "자신에게 전송된 회의 관련 메시지의 사본을 대리인에게 보내기 (_D)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:622
++msgid "_Tasks"
++msgstr "작업(_T)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:625
++msgid "_Inbox"
++msgstr "받은 편지함(_I):"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:628
++msgid "C_ontacts"
++msgstr "연락처(_O)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:631
++msgid "_Notes"
++msgstr "메모(_N)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:634
++msgid "_Journal"
++msgstr "저널(_J)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:637
++#, c-format
++msgid "Delegate '%s' has the following permissions"
++msgstr "대리인 '%s'은 다음과 같은 권한을 갖습니다 "
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:655
++msgid "Delegate can see my _private items"
++msgstr "대리인은 개인 정보 항목을 볼 수 있습니다(_P)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:978
++msgid "Retrieving current user permissions, please wait..."
++msgstr "현재 사용자 권한을 검색하고 있습니다, 잠시만 기다려 주십시오..."
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1098
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1646
++msgid "Delegates"
++msgstr "대리인 "
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1122
++msgid ""
++"Delegates can send items on your behalf, including creating and responding "
++"to meeting requests. If you want to grant folder permissions without giving "
++"send-on-behalf-of permissions, close this dialog box, right-click the "
++"folder, click Permissions and change the options there."
++msgstr ""
++"회의 요청에 응답하는 등 대리인은 사용자 대신 항목을 전송할 수 있습니다. 대신 "
++"전송할 수 있는 권한을 주지 않고 폴더의 권한을 부여하려면 이 대화 상자를 닫고 "
++"폴더를 오른쪽 클릭하여 권한을 클릭한 후 옵션을 변경합니다."
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1172
++msgid ""
++"Deliver meeting requests addressed to me and responses to meeting requests "
++"where I am the organizer to:"
++msgstr ""
++"자신에게 전송된 회의 요청 및 자신이 주관한 회의 요청에 대한 응답을 다음 사용"
++"자에게 전송합니다:"
++
++#. new-line break, because GtkRadioButton doesn't allow wrapping of the inner label
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1182
++msgid ""
++"My delegates only, but _send a copy of meeting requests\n"
++"and responses to me (recommended)"
++msgstr ""
++"자신의 대리인에게만 하지만 회의 요청 및 응답 복사복을\n"
++"자신에게도 보내기 (권장)(_S)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1189
++msgid "My d_elegates only"
++msgstr "자신의 대리인에게만(_E)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1196
++msgid "My delegates a_nd me"
++msgstr "자신의 대리인 및 자신(_N)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1730
++msgid "Retrieving \"Delegates\" settings"
++msgstr "\"대리인\" 설정을 가져오는 중 "
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:195
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:257
++msgid "EWS Settings"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:202
++msgid "View the size of all Exchange folders"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:206
++msgid "Folder _Sizes"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-gal.c:222
++msgid "Locating offline address books"
++msgstr "오프라인 주소록을 검색 중 "
++
++#: ../src/configuration/e-mail-config-ews-gal.c:301
++msgid "Cache o_ffline address book"
++msgstr "오프라인 주소록을 캐시(_F)"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:327
++msgid "Select ad_dress list:"
++msgstr "주소 목록 선택 (_D):"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:351
++msgid "Fetch List"
++msgstr "목록 가져오기"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:432
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:934
++msgid "Out of Office"
++msgstr "부재 중"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:448
++msgid ""
++"The messages specified below will be automatically sent to each internal and "
++"external person who sends a mail to you."
++msgstr ""
++"다음 메세지는 사용자에게 메일을 보낸 내부 및 외부 사람에게 자동으로 전송됩니"
++"다. "
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:457
++msgid "Do _not send Out of Office replies"
++msgstr "부재 중 회신을 보내지 않음(_N)"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:465
++msgid "_Send Out of Office replies"
++msgstr "부재 중 회신을 보냄(_S)"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:473
++msgid "Send Out of Office replies only _during this time period:"
++msgstr "다음의 기간 동안에만 부재 중 회신을 보냄(_D):"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:493
++msgid "_From:"
++msgstr "시작(_F):"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:518
++msgid "_To:"
++msgstr "종료(_T):"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:543
++msgid "I_nternal:"
++msgstr "내부(_N):"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:552
++msgid "Message to be sent within the organization"
++msgstr "조직에 보내는 메세지 "
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:580
++msgid "E_xternal:"
++msgstr "외부(_X):"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:588
++msgid "Message to be sent outside the organization"
++msgstr "조직 외부에 보낸 메세지 "
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:598
++msgid "Do not reply to senders outside the organization"
++msgstr "조직 외부의 전송자에게 회신하지 않음 "
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:601
++msgid "Reply only to known senders outside the organization"
++msgstr "조직 외부에서 전송하는 경우 아는 사람에게만 회신"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:604
++msgid "Reply to any sender outside the organization"
++msgstr "조직 외부에서 전송하는 경우 보낸 사람 모두에게 회신 "
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:1018
++msgid "Retrieving \"Out of Office\" settings"
++msgstr "\"부재 중\" 설정을 가져오는 중 "
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:1
++msgid "Autodiscovery query failed."
++msgstr "자동 검색 질의에 실패했습니다."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:2
++msgid "The reported error was &quot;{0}&quot;."
++msgstr "보고된 오류는 &quot;{0}&quot;입니다."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:3
++msgid "Failed to locate offline address books."
++msgstr "오프라인 주소록 검색에 실패했습니다."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:4
++msgid "Failed to retrieve &quot;Out of Office&quot; settings."
++msgstr "&quot;부재 중&quot; 설정을 가져오지 못했습니다."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:5
++msgid "Failed to retrieve &quot;Delegates&quot; settings."
++msgstr "&quot;대리인&quot; 설정을 가져오지 못했습니다."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:6
++msgid "Your Exchange account \"{0}\" has the status set as \"Out of Office\"."
++msgstr ""
++
++#: ../src/server/e-ews-connection.c:741
++msgid "Operation Cancelled"
++msgstr "작업이 취소되었습니다"
++
++#: ../src/server/e-ews-connection.c:811
++msgid "Authentication failed"
++msgstr "인증 실패"
++
++#: ../src/server/e-ews-connection.c:822
++#, c-format
++msgid "No response: %s"
++msgstr "응답이 없습니다: %s"
++
++#: ../src/server/e-ews-connection.c:2576
++#, c-format
++msgid "Failed to parse autodiscover response XML"
++msgstr "자동 검색 서비스 응답 XML을 구문 분석하는데 실패했습니다"
++
++#: ../src/server/e-ews-connection.c:2583
++#, c-format
++msgid "Failed to find <Autodiscover> element"
++msgstr "<Autodiscover> 요소를 찾는데 실패했습니다"
++
++#: ../src/server/e-ews-connection.c:2594
++#, c-format
++msgid "Failed to find <Response> element"
++msgstr "<Response> 요소를 찾는데 실패했습니다"
++
++#: ../src/server/e-ews-connection.c:2605
++#, c-format
++msgid "Failed to find <Account> element"
++msgstr "<Account> 요소를 찾는데 실패했습니다"
++
++#: ../src/server/e-ews-connection.c:2630
++#, c-format
++msgid "Failed to find <ASUrl> and <OABUrl> in autodiscover response"
++msgstr "자동 검색 서비스 응답에서 <ASUrl> 및 <OABUrl>을 찾는데 실패했습니다"
++
++#: ../src/server/e-ews-connection.c:2720
++msgid "URL cannot be NULL"
++msgstr "URL은 NULL일 수 없습니다 "
++
++#: ../src/server/e-ews-connection.c:2728
++#, c-format
++msgid "URL '%s' is not valid"
++msgstr "URL '%s'이 잘못되었습니다 "
++
++#: ../src/server/e-ews-connection.c:2820
++msgid "Email address is missing a domain part"
++msgstr "이메일 주소에 도메인 부분이 누락되어 있습니다 "
++
++#: ../src/server/e-ews-connection.c:3142
++msgid "Failed to parse oab XML"
++msgstr "oab XML을 구문 분석하는데 실패했습니다"
++
++#: ../src/server/e-ews-connection.c:3150
++msgid "Failed to find <OAB> element\n"
++msgstr "<OAB> 요소를 찾는데 실패했습니다\n"
++
++#: ../src/server/e-ews-connection.c:4404
++msgid "No items found"
++msgstr "항목이 없습니다"
++
++#: ../src/server/e-ews-folder.c:705
++msgid "Cannot add folder, unsupported folder type"
++msgstr "폴더를 추가할 수 없습니다, 지원되지 않는 폴더 유형입니다 "
++
++#: ../src/server/e-ews-folder.c:710
++msgid "Cannot add folder, master source not found"
++msgstr "폴더를 추가할 수 없습니다, 마스터 소스를 찾을 수 없습니다 "
++
++#: ../src/utils/ews-camel-common.c:361
++#, c-format
++msgid "CreateItem call failed to return ID for new message"
++msgstr "CreateItem 호출이 새로운 메세지의 ID를 반환하는데 실패했습니다"
+Index: new/po/ru.po
+===================================================================
+--- /dev/null
++++ new/po/ru.po
+@@ -0,0 +1,1153 @@
++# Russian translations for evolution-ews package.
++# Copyright (C) 2015 THE evolution-ews'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the evolution-ews package.
++# Automatically generated, 2015.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: evolution-ews 3.12.11\n"
++"Report-Msgid-Bugs-To: \n"
++"POT-Creation-Date: 2015-05-14 18:11+0900\n"
++"PO-Revision-Date: 2015-05-14 18:11+0900\n"
++"Last-Translator: Automatically generated\n"
++"Language-Team: none\n"
++"Language: ru\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
++"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
++
++#: ../evolution-ews.metainfo.xml.in.h:1 ../src/camel/camel-ews-provider.c:77
++msgid "Exchange Web Services"
++msgstr "Веб-службы Exchange"
++
++#: ../evolution-ews.metainfo.xml.in.h:2 ../src/camel/camel-ews-provider.c:79
++msgid "For accessing Exchange servers using Web Services"
++msgstr "Для доступа к серверам Exchange c использованием веб-служб"
++
++#: ../src/addressbook/e-book-backend-ews.c:1445
++msgid "The backend does not support bulk additions"
++msgstr "Драйвер не поддерживает общие добавления"
++
++#: ../src/addressbook/e-book-backend-ews.c:1484
++#: ../src/addressbook/e-book-backend-ews.c:1838
++msgid ""
++"Cannot save contact list, it's only supported on EWS Server 2010 or later"
++msgstr ""
++
++#: ../src/addressbook/e-book-backend-ews.c:1797
++msgid "The backend does not support bulk modifications"
++msgstr "Драйвер не поддерживает общие изменения"
++
++#: ../src/addressbook/e-book-backend-ews.c:2009
++msgid "Wait till syncing is done"
++msgstr "Дождитесь окончания синхронизации"
++
++#: ../src/addressbook/e-book-backend-ews.c:2486
++#, c-format
++msgid "Downloading contacts in %s %d%% completed... "
++msgstr "Загрузка контактов в %s %d%% завершена..."
++
++#: ../src/addressbook/e-book-backend-ews.c:3081
++msgid "Syncing contacts..."
++msgstr "Синхронизация контактов..."
++
++#: ../src/addressbook/e-book-backend-ews.c:3257
++#: ../src/configuration/e-ews-search-user.c:365
++msgid "Searching..."
++msgstr "Поиск..."
++
++#: ../src/calendar/e-cal-backend-ews.c:1268
++msgid "EWS does not support bulk removals"
++msgstr "EWS не поддерживает общие удаления"
++
++#: ../src/calendar/e-cal-backend-ews.c:1446
++msgid "Unknown error"
++msgstr ""
++
++#: ../src/calendar/e-cal-backend-ews.c:1661
++msgid "EWS does not support bulk additions"
++msgstr "EWS не поддерживает общие добавления"
++
++#: ../src/calendar/e-cal-backend-ews.c:1866
++msgid "EWS does not support bulk modifications"
++msgstr "EWS не поддерживает общие изменения"
++
++#: ../src/camel/camel-ews-folder.c:379
++#, c-format
++msgid "Unable to open mimecontent temporary file!"
++msgstr "Не удалось открыть временный файл mimecontent."
++
++#: ../src/camel/camel-ews-folder.c:387
++#, c-format
++msgid "Unable to generate parser from mimecontent!"
++msgstr "Не удалось создать обработчик на основе mimecontent."
++
++#: ../src/camel/camel-ews-folder.c:396
++#, c-format
++msgid "Unable to parse meeting request mimecontent!"
++msgstr "Не удалось разобрать mimecontent запроса встречи."
++
++#: ../src/camel/camel-ews-folder.c:455
++#, c-format
++msgid "Unable to create cache file"
++msgstr "Не удалось создать файл кэша"
++
++#: ../src/camel/camel-ews-folder.c:559 ../src/camel/camel-ews-folder.c:650
++#, c-format
++msgid "Unable to create cache path"
++msgstr "Не удалось создать путь для кэша"
++
++#: ../src/camel/camel-ews-folder.c:660
++#, c-format
++msgid "Failed to move message cache file"
++msgstr "Не удалось переместить файл кэша сообщений"
++
++#: ../src/camel/camel-ews-folder.c:1364
++#, c-format
++msgid "Could not load summary for %s"
++msgstr "Не удалось загрузить сводку для %s"
++
++#: ../src/camel/camel-ews-folder.c:1868
++#, c-format
++msgid "Cant perform actions on the folder while in offline mode"
++msgstr "Выполнение действий над папкой в автономном режиме не разрешено."
++
++#: ../src/camel/camel-ews-provider.c:47
++msgid "Checking for new mail"
++msgstr "Проверка новой почты"
++
++#: ../src/camel/camel-ews-provider.c:49
++msgid "C_heck for new messages in all folders"
++msgstr "П_роверять новую почту во всех папках"
++
++#: ../src/camel/camel-ews-provider.c:51
++msgid "_Listen for server change notifications"
++msgstr ""
++
++#: ../src/camel/camel-ews-provider.c:54
++msgid "Options"
++msgstr "Параметры"
++
++#: ../src/camel/camel-ews-provider.c:56
++msgid "_Apply filters to new messages in Inbox on this server"
++msgstr ""
++"_Применить фильтры к новым сообщениям в папке «Входящие» на этом сервере"
++
++#: ../src/camel/camel-ews-provider.c:58
++msgid "Check new messages for _Junk contents"
++msgstr "Проверять новые сообщения на _спам"
++
++#: ../src/camel/camel-ews-provider.c:60
++msgid "Only check for Junk messages in the IN_BOX folder"
++msgstr "Проверять сообщения на _спам только в папке «Входящие»"
++
++#: ../src/camel/camel-ews-provider.c:62
++msgid "Automatically synchroni_ze remote mail locally"
++msgstr "Автоматически синхрони_зировать удаленную почту"
++
++#: ../src/camel/camel-ews-provider.c:65
++msgid "Connection"
++msgstr "Соединение"
++
++#. Translators: '%s' is preplaced with a widget, where "
++#. * user can select how long the timeout should be.
++#: ../src/camel/camel-ews-provider.c:69
++#, c-format
++msgid "Connection _timeout (in seconds) %s"
++msgstr "_Время ожидания подключения (в секундах): %s"
++
++#: ../src/camel/camel-ews-provider.c:94
++msgid "NTLM"
++msgstr "NTLM"
++
++#: ../src/camel/camel-ews-provider.c:96
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with NTLM authentication."
++msgstr ""
++"Подключаться к серверу Exchange с использованием пароля с аутентификацией "
++"NTLM"
++
++#: ../src/camel/camel-ews-provider.c:104
++msgid "Basic"
++msgstr "Простой"
++
++#: ../src/camel/camel-ews-provider.c:106
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with Basic authentication."
++msgstr ""
++"Подключаться к серверу Exchange с использованием пароля в открытом виде с "
++"базовой аутентификацией"
++
++#: ../src/camel/camel-ews-provider.c:114
++msgid "Kerberos"
++msgstr ""
++
++#: ../src/camel/camel-ews-provider.c:116
++msgid ""
++"This option will connect to the Exchange server using a Kerberos/GSSAPI "
++"authentication."
++msgstr ""
++
++#: ../src/camel/camel-ews-store.c:332
++#, c-format
++msgid "Session has no storage path"
++msgstr "Путь хранения данных сеанса не задан."
++
++#: ../src/camel/camel-ews-store.c:369
++#, c-format
++msgctxt "PublicFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:498
++#, c-format
++msgctxt "ForeignFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:639
++msgid "Checking \"Out of Office\" settings"
++msgstr ""
++
++#: ../src/camel/camel-ews-store.c:1434
++msgid "Updating foreign folder structure"
++msgstr "Обновление структуры внешних папок..."
++
++#: ../src/camel/camel-ews-store.c:1967
++#, c-format
++msgid "No such folder: %s"
++msgstr "Нет такой папки: %s"
++
++#: ../src/camel/camel-ews-store.c:2279
++msgid "Cannot list EWS public folders in offline mode"
++msgstr "Общие папки EWS не могут быть показаны в автономном режиме"
++
++#: ../src/camel/camel-ews-store.c:2352
++msgid "Cannot find any EWS public folders"
++msgstr "Нет общих папок EWS"
++
++#: ../src/camel/camel-ews-store.c:2461
++#, c-format
++msgid "Cannot create folder '%s', folder already exists"
++msgstr "Не удалось создать папку «%s»: папка уже существует"
++
++#: ../src/camel/camel-ews-store.c:2476
++#, c-format
++msgid "Parent folder %s does not exist"
++msgstr "Родительская папка %s не существует"
++
++#: ../src/camel/camel-ews-store.c:2486
++#, c-format
++msgid ""
++"Cannot create folder under '%s', it is used for folders of other users only"
++msgstr ""
++"Не удалось создать папку в «%s». Используется для папок других пользователей."
++
++#: ../src/camel/camel-ews-store.c:2496
++#, c-format
++msgid "Cannot create folder under '%s', it is used for public folders only"
++msgstr "Не удалось создать папку в «%s». Используется для общих папок."
++
++#: ../src/camel/camel-ews-store.c:2600
++#, c-format
++msgid "Folder does not exist"
++msgstr "Папка не существует"
++
++#: ../src/camel/camel-ews-store.c:2610
++#, c-format
++msgid "Cannot remove folder '%s', it is used for folders of other users only"
++msgstr ""
++"Не удалось удалить папку «%s». Используется для папок других пользователей."
++
++#: ../src/camel/camel-ews-store.c:2621
++#, c-format
++msgid "Cannot remove folder '%s', it is used for public folders only"
++msgstr "Не удалось удалить папку «%s». Используется для общих папок."
++
++#: ../src/camel/camel-ews-store.c:2777
++#, c-format
++msgid "Folder %s does not exist"
++msgstr "%s не существует"
++
++#: ../src/camel/camel-ews-store.c:2787
++#, c-format
++msgid "No change key record for folder %s"
++msgstr "Нет записи изменения ключей для папки  %s"
++
++#: ../src/camel/camel-ews-store.c:2829
++#, c-format
++msgid "Cannot both rename and move a folder at the same time"
++msgstr "Переименование и перенос папки не могут выполняться одновременно."
++
++#: ../src/camel/camel-ews-store.c:2865
++#, c-format
++msgid "Cannot find folder ID for parent folder %s"
++msgstr "Не найден идентификатор для родительской папки %s"
++
++#: ../src/camel/camel-ews-store.c:2915 ../src/camel/camel-ews-transport.c:69
++#, c-format
++msgid "Exchange server %s"
++msgstr "Сервер Exchange %s"
++
++#: ../src/camel/camel-ews-store.c:2918
++#, c-format
++msgid "Exchange service for %s on %s"
++msgstr "Служба Exchange для %s на %s"
++
++#: ../src/camel/camel-ews-store.c:2962
++#, c-format
++msgid "Could not locate Trash folder"
++msgstr "Папка «Удаленные» не найдена."
++
++#: ../src/camel/camel-ews-store.c:3022
++#, c-format
++msgid "Could not locate Junk folder"
++msgstr "Папка «Спам» не найдена."
++
++#: ../src/camel/camel-ews-store.c:3212
++msgid "Cannot subscribe EWS folders in offline mode"
++msgstr "Невозможно подписаться на папку EWS в автономном режиме."
++
++#: ../src/camel/camel-ews-store.c:3235
++#, c-format
++msgid "Cannot subscribe folder '%s', no public folder available"
++msgstr "Не удалось подписать папку  «%s». Нет общих папок."
++
++#: ../src/camel/camel-ews-store.c:3245
++#, c-format
++msgid "Cannot subscribe folder '%s', folder not found"
++msgstr "Не удалось подписать папку  «%s». Папка не найдена."
++
++#: ../src/camel/camel-ews-store.c:3336
++msgid "Cannot unsubscribe EWS folders in offline mode"
++msgstr "Невозможно отказаться от подписки папок EWS в автономном режиме."
++
++#: ../src/camel/camel-ews-store.c:3453
++#, c-format
++msgid "You must be working online to complete this operation"
++msgstr "Для завершения операции необходимо подключение к сети"
++
++#: ../src/camel/camel-ews-store.c:3497
++msgid "Unsetting the \"Out of Office\" status"
++msgstr ""
++
++#: ../src/camel/camel-ews-transport.c:72
++#, c-format
++msgid "Exchange mail delivery via %s"
++msgstr "Доставка почты Exchange через %s"
++
++#: ../src/camel/camel-ews-transport.c:119
++msgid "Cannot send message with no From address"
++msgstr "Не удалось отправить сообщение: пустой адрес отправителя."
++
++#: ../src/camel/camel-ews-transport.c:125
++msgid "Exchange server cannot send message with multiple From addresses"
++msgstr ""
++"Сервер Exchange не может отправлять сообщение с несколькими адресами "
++"отправителей"
++
++#: ../src/camel/camel-ews-transport.c:136
++msgid "Failed to read From address"
++msgstr "Ошибка чтения адреса отправителя"
++
++#: ../src/camel/camel-ews-transport.c:148
++#, c-format
++msgid ""
++"Exchange server cannot send message as '%s', when the account was configured "
++"for address '%s'"
++msgstr ""
++"Сервер Exchange не может отправлять сообщение от лица  «%s», так как для "
++"учетной записи настроен адрес «%s»"
++
++#: ../src/camel/camel-ews-transport.c:162
++#, c-format
++msgid "Service not connected"
++msgstr "Служба не подключена"
++
++#: ../src/collection/e-ews-backend.c:425
++#: ../src/configuration/e-mail-config-ews-gal.c:274
++msgid "Global Address List"
++msgstr "Список глобальных адресов"
++
++#: ../src/collection/e-ews-backend.c:847
++#, c-format
++msgid "Could not determine a suitable folder class for a new folder named '%s'"
++msgstr "Не удалось определить класс для новой папки «%s»"
++
++#: ../src/collection/e-ews-backend.c:936
++#, c-format
++msgid "Data source '%s' does not represent an Exchange Web Services folder"
++msgstr "В папке Exchange Web Services нет источника данных «%s»"
++
++#: ../src/configuration/e-ews-config-utils.c:578
++msgid "Folder"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:588
++msgid "Size"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:626
++#: ../src/configuration/e-ews-config-utils.c:631
++msgid "Unable to retrieve folder size information"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:751
++msgid "Folder Sizes"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:754
++msgid "_Close"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:768
++msgid "Fetching folder list…"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:921
++#, c-format
++msgid "Cannot edit permissions of folder '%s', choose other folder."
++msgstr "Не удалось изменить разрешения для папки  «%s». Выберите другую папку."
++
++#: ../src/configuration/e-ews-config-utils.c:998
++msgid "Folder Sizes..."
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:1005
++msgid "Subscribe to folder of other user..."
++msgstr "Подписаться на папку другого пользователя..."
++
++#: ../src/configuration/e-ews-config-utils.c:1014
++#: ../src/configuration/e-ews-config-utils.c:1296
++#: ../src/configuration/e-ews-config-utils.c:1327
++#: ../src/configuration/e-ews-config-utils.c:1358
++#: ../src/configuration/e-ews-config-utils.c:1389
++msgid "Permissions..."
++msgstr "Права доступа…"
++
++#: ../src/configuration/e-ews-config-utils.c:1016
++msgid "Edit EWS folder permissions"
++msgstr "Изменить правда доступа к папке EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1298
++msgid "Edit EWS calendar permissions"
++msgstr "Изменить права доступа к календарю EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1329
++msgid "Edit EWS tasks permissions"
++msgstr "Изменить права доступа к задачам EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1360
++msgid "Edit EWS memos permissions"
++msgstr "Изменить права доступа к заметкам EWS"
++
++#: ../src/configuration/e-ews-config-utils.c:1391
++msgid "Edit EWS contacts permissions"
++msgstr "Изменить права доступа к контактам EWS"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:87
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:488
++msgctxt "PermissionsLevel"
++msgid "None"
++msgstr "Нет"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:88
++msgctxt "PermissionsLevel"
++msgid "Owner"
++msgstr "Владелец"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:98
++msgctxt "PermissionsLevel"
++msgid "Publishing Editor"
++msgstr "Публикующий редактор"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:107
++msgctxt "PermissionsLevel"
++msgid "Editor"
++msgstr "Редактор"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:115
++msgctxt "PermissionsLevel"
++msgid "Publishing Author"
++msgstr "Публикующий автор"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:122
++msgctxt "PermissionsLevel"
++msgid "Author"
++msgstr "Автор"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:128
++msgctxt "PermissionsLevel"
++msgid "Nonediting Author"
++msgstr "Автор без прав редактора"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:133
++msgctxt "PermissionsLevel"
++msgid "Reviewer"
++msgstr "Рецензент"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:136
++msgctxt "PermissionsLevel"
++msgid "Contributor"
++msgstr "Соавтор"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:139
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time"
++msgstr "Свободно/занято"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:141
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time, subject, location"
++msgstr "Свободно/занято, тема, место"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:143
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:511
++msgctxt "PermissionsLevel"
++msgid "Custom"
++msgstr "Дополнительно"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:267
++msgid "Writing folder permissions, please wait..."
++msgstr "Сохранение прав доступа к папке. Пожалуйста, подождите..."
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:777
++msgctxt "User"
++msgid "Anonymous"
++msgstr "Анонимно"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:780
++msgctxt "User"
++msgid "Default"
++msgstr "По умолчанию"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:786
++msgctxt "User"
++msgid "Unknown"
++msgstr "Неизвестно"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:867
++#: ../src/configuration/e-ews-search-user.c:431
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1066
++msgid "Name"
++msgstr "Имя"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:873
++msgid "Permission level"
++msgstr "Уровень разрешений"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:925
++msgid "Edit EWS folder permissions..."
++msgstr "Изменить правда доступа к папке EWS..."
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:950
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:638
++msgid "Account:"
++msgstr "Учетная запись:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:978
++msgid "Folder name:"
++msgstr "Папка:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1001
++msgid "Folder ID:"
++msgstr "Идентификатор:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1065
++msgid "Permissions"
++msgstr "Разрешения"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1087
++msgid "Permi_ssion level:"
++msgstr "Уровень _разрешений:"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1121
++msgctxt "Permissions"
++msgid "Read"
++msgstr "Чтение"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1133
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1200
++msgctxt "Permissions"
++msgid "None"
++msgstr "Нет"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1139
++msgctxt "Permissions"
++msgid "Free/Busy time"
++msgstr "Свободно/занято"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1144
++msgctxt "Permissions"
++msgid "Free/Busy time, subject, location"
++msgstr "Свободно/занято, тема, место"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1150
++msgctxt "Permissions"
++msgid "Full Details"
++msgstr "Полные сведения"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1156
++msgctxt "Permissions"
++msgid "Write"
++msgstr "Запись"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1168
++msgctxt "Permissions"
++msgid "Create items"
++msgstr "Создавать элементы"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1172
++msgctxt "Permissions"
++msgid "Create subfolders"
++msgstr "Создавать подпапки"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1176
++msgctxt "Permissions"
++msgid "Edit own"
++msgstr "Изменять собственные"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1180
++msgctxt "Permissions"
++msgid "Edit all"
++msgstr "Изменить все"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1188
++msgctxt "Permissions"
++msgid "Delete items"
++msgstr "Удалять элементы"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1205
++msgctxt "Permissions"
++msgid "Own"
++msgstr "Собственные"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1210
++msgctxt "Permissions"
++msgid "All"
++msgstr "Все"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1216
++msgctxt "Permissions"
++msgid "Other"
++msgstr "Другие"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1228
++msgctxt "Permissions"
++msgid "Folder owner"
++msgstr "Владелец папки"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1232
++msgctxt "Permissions"
++msgid "Folder contact"
++msgstr "Контакт папки"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1236
++msgctxt "Permissions"
++msgid "Folder visible"
++msgstr "Папка видима"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1309
++msgid "Reading folder permissions, please wait..."
++msgstr "Чтение прав доступа к папке. Пожалуйста, подождите..."
++
++#: ../src/configuration/e-ews-ooo-notificator.c:184
++msgid "Unset on Server"
++msgstr ""
++
++#: ../src/configuration/e-ews-ooo-notificator.c:185
++msgid "Unset the \"Out of Office\" status"
++msgstr ""
++
++#: ../src/configuration/e-ews-search-user.c:208
++#, c-format
++msgid "No users found, only one contact"
++msgid_plural "No users found, only %d contacts"
++msgstr[0] ""
++msgstr[1] ""
++msgstr[2] ""
++
++#: ../src/configuration/e-ews-search-user.c:213
++msgid "No users found"
++msgstr "Пользователи не найдены"
++
++#: ../src/configuration/e-ews-search-user.c:217
++#, c-format
++msgid "Found one user"
++msgid_plural "Found %d users"
++msgstr[0] ""
++msgstr[1] ""
++msgstr[2] ""
++
++#: ../src/configuration/e-ews-search-user.c:223
++#, c-format
++msgid "Found more than 100 users, but showing only first %d"
++msgid_plural "Found more than 100 users, but showing only first %d"
++msgstr[0] ""
++msgstr[1] ""
++msgstr[2] ""
++
++#: ../src/configuration/e-ews-search-user.c:357
++#: ../src/configuration/e-ews-search-user.c:540
++msgid "Search for a user"
++msgstr "Поиск пользователя"
++
++#: ../src/configuration/e-ews-search-user.c:437
++msgid "E-mail"
++msgstr "Email"
++
++#: ../src/configuration/e-ews-search-user.c:474
++msgid "Choose EWS user..."
++msgstr "Выберите пользователя EWS..."
++
++#: ../src/configuration/e-ews-search-user.c:497
++msgid "_Search:"
++msgstr "_Искать:"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:97
++#: ../src/server/e-ews-folder.c:750
++#, c-format
++msgid "Cannot add folder, folder already exists as '%s'"
++msgstr "Папка %s уже существует"
++
++#. Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
++#. * Example result: "Mailbox - John Smith"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:107
++#, c-format
++msgctxt "ForeignFolder"
++msgid "Mailbox - %s"
++msgstr "Почтовый ящик - %s"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:275
++msgid "Cannot test foreign folder availability while in offline mode"
++msgstr ""
++"Невозможно проверить возможность доступа к внешней папке в автономном режиме"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:300
++#, c-format
++msgid "User '%s' was not found on the server"
++msgstr "Нет пользователя  «%s» на сервере"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:336
++#, c-format
++msgid "User name '%s' is ambiguous, specify it more precisely, please"
++msgstr "Неоднозначное имя пользователя : «%s». Введите точное имя."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:358
++#, c-format
++msgid ""
++"Folder '%s' not found. Either it does not exist or you do not have "
++"permission to access it."
++msgstr "Папка «%s» не существует или недостаточно прав доступа."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:376
++msgid "Cannot add folder, cannot determine folder's type"
++msgstr "Папка не добавлена, так как не удалось определить ее тип"
++
++#. Translators: This is used to name foreign folder.
++#. * The first '%s' is replaced with user name to whom the folder belongs,
++#. * the second '%s' is replaced with folder name.
++#. * Example result: "John Smith - Calendar"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:421
++#, c-format
++msgctxt "ForeignFolder"
++msgid "%s - %s"
++msgstr "%s - %s"
++
++#. convert well-known names to their non-localized form
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:515
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:723
++msgid "Inbox"
++msgstr "Входящие"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:517
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:724
++msgid "Contacts"
++msgstr "Контакты"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:519
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:725
++msgid "Calendar"
++msgstr "Календарь"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:521
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:726
++msgid "Memos"
++msgstr "Заметки"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:523
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:727
++msgid "Tasks"
++msgstr "Задачи"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:540
++#, c-format
++msgid "Testing availability of folder '%s' of user '%s', please wait..."
++msgstr ""
++"Проверка доступа к папке  «%s» пользователя  «%s». Пожалуйста, подождите..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:617
++msgid "Subscribe to folder of other EWS user..."
++msgstr "Подписаться на папку другого пользователя EWS..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:668
++msgid "User"
++msgstr "Пользователь"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:675
++msgid "_User:"
++msgstr "_Пользователь:"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:690
++msgid "C_hoose..."
++msgstr "_Выбрать..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:706
++msgid "_Folder name:"
++msgstr "_Имя папки:"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:736
++msgid "Include _subfolders"
++msgstr "Включить в_ложенные"
++
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:141
++msgid "Querying Autodiscover service"
++msgstr "Опрос службы автоматического обнаружения"
++
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:232
++msgid "Fetch _URL"
++msgstr "_Получить URL"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:194
++msgid "Configuration"
++msgstr "Конфигурация"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:212
++msgid "User_name:"
++msgstr "_Имя пользователя:"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:226
++msgid "_Host URL:"
++msgstr "Адрес _узла:"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:245
++msgid "OAB U_RL:"
++msgstr "А_дрес OAB:"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:259
++msgid "Open _Mailbox of other user"
++msgstr "Открыть _почтовый ящик другого пользователя"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:293
++msgid "S_earch..."
++msgstr "_Поиск..."
++
++#: ../src/configuration/e-mail-config-ews-backend.c:304
++msgid "Authentication"
++msgstr "Аутентификация"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:489
++msgctxt "PermissionsLevel"
++msgid "Reviewer (can read items)"
++msgstr "Рецензент (только чтение)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:490
++msgctxt "PermissionsLevel"
++msgid "Author (can read and create items)"
++msgstr "Автор (чтение, создание)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:491
++msgctxt "PermissionsLevel"
++msgid "Editor (can read, create and modify items)"
++msgstr "Редактор (чтение, создание, правка)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:596
++msgid "Delegate permissions"
++msgstr "Передать права доступа"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:614
++msgid "C_alendar"
++msgstr "К_алендарь"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:617
++msgid "_Delegate receives copies of meeting-related messages sent to me"
++msgstr "_Представитель получает копии предназначенных мне сообщений о встречах"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:622
++msgid "_Tasks"
++msgstr "_Задачи"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:625
++msgid "_Inbox"
++msgstr "_Входящие"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:628
++msgid "C_ontacts"
++msgstr "_Контакты"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:631
++msgid "_Notes"
++msgstr "За_метки"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:634
++msgid "_Journal"
++msgstr "_Журнал"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:637
++#, c-format
++msgid "Delegate '%s' has the following permissions"
++msgstr "Разрешения представителя «%s»"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:655
++msgid "Delegate can see my _private items"
++msgstr "_Представители могут видеть мои частные элементы"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:978
++msgid "Retrieving current user permissions, please wait..."
++msgstr "Получение разрешений пользователя. Пожалуйста, подождите..."
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1098
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1646
++msgid "Delegates"
++msgstr "Представители"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1122
++msgid ""
++"Delegates can send items on your behalf, including creating and responding "
++"to meeting requests. If you want to grant folder permissions without giving "
++"send-on-behalf-of permissions, close this dialog box, right-click the "
++"folder, click Permissions and change the options there."
++msgstr ""
++"Представители могут отправлять почту от вашего имени,  создавать встречи и "
++"отвечать на приглашения. Чтобы разрешить доступ к папкам без предоставления "
++"прав отправки сообщений, закройте это окно, откройте контекстное меню папки "
++"(щелчок правой кноки на имени), выберите  «Разрешения» и измените параметры."
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1172
++msgid ""
++"Deliver meeting requests addressed to me and responses to meeting requests "
++"where I am the organizer to:"
++msgstr ""
++"Доставлять предназначенные мне запросы встреч и ответы на приглашения моих "
++"встреч следущим пользователям:"
++
++#. new-line break, because GtkRadioButton doesn't allow wrapping of the inner label
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1182
++msgid ""
++"My delegates only, but _send a copy of meeting requests\n"
++"and responses to me (recommended)"
++msgstr ""
++"Моим представителями с _копией \n"
++"запросов встреч и ответов мне (рекомендуется)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1189
++msgid "My d_elegates only"
++msgstr "Только моим _представителям"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1196
++msgid "My delegates a_nd me"
++msgstr "_Я и мои представители"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1730
++msgid "Retrieving \"Delegates\" settings"
++msgstr "Получение параметров представителей"
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:195
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:257
++msgid "EWS Settings"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:202
++msgid "View the size of all Exchange folders"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:206
++msgid "Folder _Sizes"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-gal.c:222
++msgid "Locating offline address books"
++msgstr "Поиск локальных адресных книг"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:301
++msgid "Cache o_ffline address book"
++msgstr "Кэ_ширование адресной книги в автономном режиме"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:327
++msgid "Select ad_dress list:"
++msgstr "Выберите список _адресов:"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:351
++msgid "Fetch List"
++msgstr "Список выборки"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:432
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:934
++msgid "Out of Office"
++msgstr "Вне офиса"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:448
++msgid ""
++"The messages specified below will be automatically sent to each internal and "
++"external person who sends a mail to you."
++msgstr ""
++"Указанное ниже сообщение будет отправлено каждому, кто отправит вам почту во "
++"время вашего отсутствия."
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:457
++msgid "Do _not send Out of Office replies"
++msgstr "_Не отправлять ответ об отсутствии"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:465
++msgid "_Send Out of Office replies"
++msgstr "_Отправлять ответ об отсутствии"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:473
++msgid "Send Out of Office replies only _during this time period:"
++msgstr "Отправлять о_твет об отсутствии на протяжении заданного периода:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:493
++msgid "_From:"
++msgstr "О_т:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:518
++msgid "_To:"
++msgstr "_Кому:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:543
++msgid "I_nternal:"
++msgstr "_Внутреннее:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:552
++msgid "Message to be sent within the organization"
++msgstr "Сообщение в пределах организации"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:580
++msgid "E_xternal:"
++msgstr "В_нешнее:"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:588
++msgid "Message to be sent outside the organization"
++msgstr "Сообщение для внешних контактов"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:598
++msgid "Do not reply to senders outside the organization"
++msgstr "Не отвечать внешним контактам"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:601
++msgid "Reply only to known senders outside the organization"
++msgstr "Отвечать только известным внешним контактам"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:604
++msgid "Reply to any sender outside the organization"
++msgstr "Отвечать всем внешним контактам"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:1018
++msgid "Retrieving \"Out of Office\" settings"
++msgstr "Получение параметров «Вне офиса»"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:1
++msgid "Autodiscovery query failed."
++msgstr "Ошибка запроса автоматического обнаружения."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:2
++msgid "The reported error was &quot;{0}&quot;."
++msgstr "Сообщение об ошибке: «{0}»."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:3
++msgid "Failed to locate offline address books."
++msgstr "Автономные адресные книги не найдены."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:4
++msgid "Failed to retrieve &quot;Out of Office&quot; settings."
++msgstr "Не удалось получить настройки «Вне офиса»"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:5
++msgid "Failed to retrieve &quot;Delegates&quot; settings."
++msgstr "Не удалось получить настройки представителей."
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:6
++msgid "Your Exchange account \"{0}\" has the status set as \"Out of Office\"."
++msgstr ""
++
++#: ../src/server/e-ews-connection.c:741
++msgid "Operation Cancelled"
++msgstr "Операция отменена"
++
++#: ../src/server/e-ews-connection.c:811
++msgid "Authentication failed"
++msgstr "Проверка подлинности окончилась неудачей"
++
++#: ../src/server/e-ews-connection.c:822
++#, c-format
++msgid "No response: %s"
++msgstr "Нет ответа: %s"
++
++#: ../src/server/e-ews-connection.c:2576
++#, c-format
++msgid "Failed to parse autodiscover response XML"
++msgstr "Не удалось разобрать XML ответа автообнаружения"
++
++#: ../src/server/e-ews-connection.c:2583
++#, c-format
++msgid "Failed to find <Autodiscover> element"
++msgstr "Элемент <Autodiscover> не найден"
++
++#: ../src/server/e-ews-connection.c:2594
++#, c-format
++msgid "Failed to find <Response> element"
++msgstr "Элемент <Response> не найден"
++
++#: ../src/server/e-ews-connection.c:2605
++#, c-format
++msgid "Failed to find <Account> element"
++msgstr "Элемент <Account> не найден"
++
++#: ../src/server/e-ews-connection.c:2630
++#, c-format
++msgid "Failed to find <ASUrl> and <OABUrl> in autodiscover response"
++msgstr "Ответ автообнаружения не содержит <ASUrl> и <OABUrl>."
++
++#: ../src/server/e-ews-connection.c:2720
++msgid "URL cannot be NULL"
++msgstr "Адрес не может содержать NULL"
++
++#: ../src/server/e-ews-connection.c:2728
++#, c-format
++msgid "URL '%s' is not valid"
++msgstr "Неверный адрес «%s»"
++
++#: ../src/server/e-ews-connection.c:2820
++msgid "Email address is missing a domain part"
++msgstr "Адрес не содержит определение домена"
++
++#: ../src/server/e-ews-connection.c:3142
++msgid "Failed to parse oab XML"
++msgstr "Не удалось разобрать XML OAB."
++
++#: ../src/server/e-ews-connection.c:3150
++msgid "Failed to find <OAB> element\n"
++msgstr "Элемент <OAB> не найден\n"
++
++#: ../src/server/e-ews-connection.c:4404
++msgid "No items found"
++msgstr "Нет элементов"
++
++#: ../src/server/e-ews-folder.c:705
++msgid "Cannot add folder, unsupported folder type"
++msgstr "Папка не добавлена, так как ее тип не поддерживается"
++
++#: ../src/server/e-ews-folder.c:710
++msgid "Cannot add folder, master source not found"
++msgstr "Не удалось добавить папку. Источник не найден."
++
++#: ../src/utils/ews-camel-common.c:361
++#, c-format
++msgid "CreateItem call failed to return ID for new message"
++msgstr "Вызов CreateItem не вернул идентификатор нового сообщения."
+Index: new/po/zh_CN.po
+===================================================================
+--- new.orig/po/zh_CN.po
++++ new/po/zh_CN.po
+@@ -12,6 +12,7 @@ msgstr ""
+ "PO-Revision-Date: 2011-10-28 10:43+0000\n"
+ "Last-Translator: Wylmer Wang <wantinghard@gmail.com>\n"
+ "Language-Team: Chinese (China) <i18n-zh@googlegroups.com>\n"
++"Language: \n"
+ "MIME-Version: 1.0\n"
+ "Content-Type: text/plain; charset=UTF-8\n"
+ "Content-Transfer-Encoding: 8bit\n"
+Index: new/po/zh_TW.po
+===================================================================
+--- /dev/null
++++ new/po/zh_TW.po
+@@ -0,0 +1,1187 @@
++# Chinese translations for evolution-ews package
++# evolution-ews �M�󪺶ǲΦr�~�y½Ķ.
++# Copyright (C) 2015 THE evolution-ews'S COPYRIGHT HOLDER
++# This file is distributed under the same license as the evolution-ews package.
++# Automatically generated, 2015.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: evolution-ews 3.12.11\n"
++"Report-Msgid-Bugs-To: \n"
++"POT-Creation-Date: 2015-05-14 18:11+0900\n"
++"PO-Revision-Date: 2015-05-14 18:11+0900\n"
++"Last-Translator: Automatically generated\n"
++"Language-Team: none\n"
++"Language: zh_TW\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../evolution-ews.metainfo.xml.in.h:1 ../src/camel/camel-ews-provider.c:77
++msgid "Exchange Web Services"
++msgstr "Exchange 網站服務"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../evolution-ews.metainfo.xml.in.h:2 ../src/camel/camel-ews-provider.c:79
++msgid "For accessing Exchange servers using Web Services"
++msgstr "使用網站服務存取 Exchange 伺服器"
++
++# auto translated by TM merge from project: evolution-data-server, version: 3.8.4, DocId: evolution-data-server-3.8
++#: ../src/addressbook/e-book-backend-ews.c:1445
++msgid "The backend does not support bulk additions"
++msgstr "後端不支援大量增加"
++
++#: ../src/addressbook/e-book-backend-ews.c:1484
++#: ../src/addressbook/e-book-backend-ews.c:1838
++msgid ""
++"Cannot save contact list, it's only supported on EWS Server 2010 or later"
++msgstr ""
++
++# auto translated by TM merge from project: evolution-data-server, version: 3.8.4, DocId: evolution-data-server-3.8
++#: ../src/addressbook/e-book-backend-ews.c:1797
++msgid "The backend does not support bulk modifications"
++msgstr "後端不支援大量修改"
++
++#: ../src/addressbook/e-book-backend-ews.c:2009
++msgid "Wait till syncing is done"
++msgstr "同步完成前先等待"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/addressbook/e-book-backend-ews.c:2486
++#, c-format
++msgid "Downloading contacts in %s %d%% completed... "
++msgstr "下載通訊錄 %s %d%% 已完成... "
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/addressbook/e-book-backend-ews.c:3081
++msgid "Syncing contacts..."
++msgstr "同步通訊錄..."
++
++# auto translated by TM merge from project: system-config-printer, version: 1.4.1, DocId: system-config-printer
++#: ../src/addressbook/e-book-backend-ews.c:3257
++#: ../src/configuration/e-ews-search-user.c:365
++msgid "Searching..."
++msgstr "正在搜尋..."
++
++#: ../src/calendar/e-cal-backend-ews.c:1268
++msgid "EWS does not support bulk removals"
++msgstr "EWS 不支援大量移除"
++
++#: ../src/calendar/e-cal-backend-ews.c:1446
++msgid "Unknown error"
++msgstr ""
++
++#: ../src/calendar/e-cal-backend-ews.c:1661
++msgid "EWS does not support bulk additions"
++msgstr "EWS 不支援大量新增"
++
++#: ../src/calendar/e-cal-backend-ews.c:1866
++msgid "EWS does not support bulk modifications"
++msgstr "EWS 不支援大量修改"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:379
++#, c-format
++msgid "Unable to open mimecontent temporary file!"
++msgstr "無法開啟 mimecontent 暫存檔！"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:387
++#, c-format
++msgid "Unable to generate parser from mimecontent!"
++msgstr "無法從 mimecontent 產生剖析程式！"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:396
++#, c-format
++msgid "Unable to parse meeting request mimecontent!"
++msgstr "無法剖析會議需求的 mimecontent！"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:455
++#, c-format
++msgid "Unable to create cache file"
++msgstr "無法建立快取檔案"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-folder.c:559 ../src/camel/camel-ews-folder.c:650
++#, c-format
++msgid "Unable to create cache path"
++msgstr "無法建構快取路徑"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:660
++#, c-format
++msgid "Failed to move message cache file"
++msgstr "移動訊息的快取檔案失敗"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-folder.c:1364
++#, c-format
++msgid "Could not load summary for %s"
++msgstr "無法載入 %s 的摘要"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-folder.c:1868
++#, c-format
++msgid "Cant perform actions on the folder while in offline mode"
++msgstr "無法在離線模式下，對資料夾進行操作"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:47
++msgid "Checking for new mail"
++msgstr "檢查新郵件"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:49
++msgid "C_heck for new messages in all folders"
++msgstr "檢查所有資料夾中是否有新郵件(_H)"
++
++#: ../src/camel/camel-ews-provider.c:51
++msgid "_Listen for server change notifications"
++msgstr ""
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:54
++msgid "Options"
++msgstr "選項"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:56
++msgid "_Apply filters to new messages in Inbox on this server"
++msgstr "將過濾條件套用至這個伺服器收件匣的新郵件(_A)"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/camel/camel-ews-provider.c:58
++msgid "Check new messages for _Junk contents"
++msgstr "檢查新郵件中是否有垃圾郵件(_J)"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-provider.c:60
++msgid "Only check for Junk messages in the IN_BOX folder"
++msgstr "只檢查收件匣資料夾中的垃圾郵件(_B)"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-provider.c:62
++msgid "Automatically synchroni_ze remote mail locally"
++msgstr "自動將遠端郵件同步到本地端(_Z)"
++
++# auto translated by TM merge from project: system-config-printer, version: 1.4.1, DocId: system-config-printer
++#: ../src/camel/camel-ews-provider.c:65
++msgid "Connection"
++msgstr "連線"
++
++#. Translators: '%s' is preplaced with a widget, where "
++#. * user can select how long the timeout should be.
++#: ../src/camel/camel-ews-provider.c:69
++#, c-format
++msgid "Connection _timeout (in seconds) %s"
++msgstr "連線逾時(秒) %s (_t)"
++
++#: ../src/camel/camel-ews-provider.c:94
++msgid "NTLM"
++msgstr "NTLM"
++
++#: ../src/camel/camel-ews-provider.c:96
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with NTLM authentication."
++msgstr ""
++"此選項將會使用標準純文字密碼驗證與 NTLM 身份驗證方式，與 Exchange 伺服器連"
++"線。"
++
++# auto translated by TM merge from project: gnome-calculator, version: 3.8.2, DocId: gnome-calculator
++#: ../src/camel/camel-ews-provider.c:104
++msgid "Basic"
++msgstr "基本"
++
++#: ../src/camel/camel-ews-provider.c:106
++msgid ""
++"This option will connect to the Exchange server using a plaintext password "
++"with Basic authentication."
++msgstr ""
++"此選項將會使用標準純文字密碼驗證與基本身份驗證方式，與 Exchange 伺服器連線。"
++
++#: ../src/camel/camel-ews-provider.c:114
++msgid "Kerberos"
++msgstr ""
++
++#: ../src/camel/camel-ews-provider.c:116
++msgid ""
++"This option will connect to the Exchange server using a Kerberos/GSSAPI "
++"authentication."
++msgstr ""
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-store.c:332
++#, c-format
++msgid "Session has no storage path"
++msgstr "session 沒有儲存路徑"
++
++#: ../src/camel/camel-ews-store.c:369
++#, c-format
++msgctxt "PublicFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:498
++#, c-format
++msgctxt "ForeignFolders"
++msgid "%s_%d"
++msgstr "%s_%d"
++
++#: ../src/camel/camel-ews-store.c:639
++msgid "Checking \"Out of Office\" settings"
++msgstr ""
++
++#: ../src/camel/camel-ews-store.c:1434
++msgid "Updating foreign folder structure"
++msgstr "更新外部資料夾結構"
++
++# auto translated by TM merge from project: evolution-data-server, version: el6, DocId: evolution-data-server-2.32
++#: ../src/camel/camel-ews-store.c:1967
++#, c-format
++msgid "No such folder: %s"
++msgstr "沒有這個資料夾： %s"
++
++#: ../src/camel/camel-ews-store.c:2279
++msgid "Cannot list EWS public folders in offline mode"
++msgstr "離線模式下，無法列出 EWS 公開資料夾"
++
++#: ../src/camel/camel-ews-store.c:2352
++msgid "Cannot find any EWS public folders"
++msgstr "找不到任何 EWS 公開資料夾"
++
++#: ../src/camel/camel-ews-store.c:2461
++#, c-format
++msgid "Cannot create folder '%s', folder already exists"
++msgstr "不能建立資料夾「%s」：資料夾已存在"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-store.c:2476
++#, c-format
++msgid "Parent folder %s does not exist"
++msgstr "父資料夾 %s 不存在"
++
++#: ../src/camel/camel-ews-store.c:2486
++#, c-format
++msgid ""
++"Cannot create folder under '%s', it is used for folders of other users only"
++msgstr "不能建立資料夾「%s」，這資料夾只能給其他使用者使用"
++
++#: ../src/camel/camel-ews-store.c:2496
++#, c-format
++msgid "Cannot create folder under '%s', it is used for public folders only"
++msgstr "不能建立資料夾「%s」，這資料夾只能作為公開資料夾使用"
++
++# auto translated by TM merge from project: evolution-exchange, version: el6, DocId: evolution-exchange-2.32
++#: ../src/camel/camel-ews-store.c:2600
++#, c-format
++msgid "Folder does not exist"
++msgstr "資料夾不存在"
++
++#: ../src/camel/camel-ews-store.c:2610
++#, c-format
++msgid "Cannot remove folder '%s', it is used for folders of other users only"
++msgstr "不能移除資料夾「%s」，這資料夾只能給其他使用者使用"
++
++#: ../src/camel/camel-ews-store.c:2621
++#, c-format
++msgid "Cannot remove folder '%s', it is used for public folders only"
++msgstr "不能移除資料夾「%s」，這資料夾只能作為公開資料夾使用"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-store.c:2777
++#, c-format
++msgid "Folder %s does not exist"
++msgstr "資料夾 %s 不存在"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-store.c:2787
++#, c-format
++msgid "No change key record for folder %s"
++msgstr "資料夾 %s 沒有變更金鑰的紀錄"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/camel/camel-ews-store.c:2829
++#, c-format
++msgid "Cannot both rename and move a folder at the same time"
++msgstr "不能同時命名、移動資料夾"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/camel/camel-ews-store.c:2865
++#, c-format
++msgid "Cannot find folder ID for parent folder %s"
++msgstr "找不到資料夾 %s 的資料夾 ID"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/camel/camel-ews-store.c:2915 ../src/camel/camel-ews-transport.c:69
++#, c-format
++msgid "Exchange server %s"
++msgstr "Exchange 伺服器 %s"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/camel/camel-ews-store.c:2918
++#, c-format
++msgid "Exchange service for %s on %s"
++msgstr "%s 的 Exchange 服務，於 %s 之上"
++
++#: ../src/camel/camel-ews-store.c:2962
++#, c-format
++msgid "Could not locate Trash folder"
++msgstr "找不到「回收筒」資料夾"
++
++#: ../src/camel/camel-ews-store.c:3022
++#, c-format
++msgid "Could not locate Junk folder"
++msgstr "找不到「垃圾」資料夾"
++
++#: ../src/camel/camel-ews-store.c:3212
++msgid "Cannot subscribe EWS folders in offline mode"
++msgstr "離線模式下，無法訂閱 EWS 資料夾"
++
++#: ../src/camel/camel-ews-store.c:3235
++#, c-format
++msgid "Cannot subscribe folder '%s', no public folder available"
++msgstr "無法訂閱資料夾「%s」，沒有可用的公開資料夾"
++
++#: ../src/camel/camel-ews-store.c:3245
++#, c-format
++msgid "Cannot subscribe folder '%s', folder not found"
++msgstr "無法訂閱資料夾「%s」，找不到資料夾"
++
++#: ../src/camel/camel-ews-store.c:3336
++msgid "Cannot unsubscribe EWS folders in offline mode"
++msgstr "離線模式下，無法取消訂閱 EWS 資料夾"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews
++#: ../src/camel/camel-ews-store.c:3453
++#, c-format
++msgid "You must be working online to complete this operation"
++msgstr "您必須於線上工作才能完成此操作"
++
++#: ../src/camel/camel-ews-store.c:3497
++msgid "Unsetting the \"Out of Office\" status"
++msgstr ""
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/camel/camel-ews-transport.c:72
++#, c-format
++msgid "Exchange mail delivery via %s"
++msgstr "經由 %s 傳送 Exchange 郵件"
++
++#: ../src/camel/camel-ews-transport.c:119
++msgid "Cannot send message with no From address"
++msgstr "沒有目的地郵件位址，無法發送訊息"
++
++#: ../src/camel/camel-ews-transport.c:125
++msgid "Exchange server cannot send message with multiple From addresses"
++msgstr "多個發送者的郵件位址，Exchange 伺服器無法發送訊息"
++
++#: ../src/camel/camel-ews-transport.c:136
++msgid "Failed to read From address"
++msgstr "無法讀取發送者的郵件位址"
++
++#: ../src/camel/camel-ews-transport.c:148
++#, c-format
++msgid ""
++"Exchange server cannot send message as '%s', when the account was configured "
++"for address '%s'"
++msgstr "Exchange 伺服器無法發送訊息「%s」，當帳號配置給「%s」位址使用時"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/camel/camel-ews-transport.c:162
++#, c-format
++msgid "Service not connected"
++msgstr "無法連接服務"
++
++#: ../src/collection/e-ews-backend.c:425
++#: ../src/configuration/e-mail-config-ews-gal.c:274
++msgid "Global Address List"
++msgstr "全域通訊清單"
++
++#: ../src/collection/e-ews-backend.c:847
++#, c-format
++msgid "Could not determine a suitable folder class for a new folder named '%s'"
++msgstr "無法為新的資料夾「%s」決定適合的資料夾類型"
++
++#: ../src/collection/e-ews-backend.c:936
++#, c-format
++msgid "Data source '%s' does not represent an Exchange Web Services folder"
++msgstr "資料來源「%s」並未出現在 Exchange Web Services 的資料夾裡"
++
++#: ../src/configuration/e-ews-config-utils.c:578
++msgid "Folder"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:588
++msgid "Size"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:626
++#: ../src/configuration/e-ews-config-utils.c:631
++msgid "Unable to retrieve folder size information"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:751
++msgid "Folder Sizes"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:754
++msgid "_Close"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:768
++msgid "Fetching folder list…"
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:921
++#, c-format
++msgid "Cannot edit permissions of folder '%s', choose other folder."
++msgstr "無法編輯資料夾「%s」的權限，請選擇另一個資料夾。"
++
++#: ../src/configuration/e-ews-config-utils.c:998
++msgid "Folder Sizes..."
++msgstr ""
++
++#: ../src/configuration/e-ews-config-utils.c:1005
++msgid "Subscribe to folder of other user..."
++msgstr "訂閱其他使用者的資料夾......"
++
++#: ../src/configuration/e-ews-config-utils.c:1014
++#: ../src/configuration/e-ews-config-utils.c:1296
++#: ../src/configuration/e-ews-config-utils.c:1327
++#: ../src/configuration/e-ews-config-utils.c:1358
++#: ../src/configuration/e-ews-config-utils.c:1389
++msgid "Permissions..."
++msgstr "權限......"
++
++#: ../src/configuration/e-ews-config-utils.c:1016
++msgid "Edit EWS folder permissions"
++msgstr "編輯 EWS 資料夾的權限"
++
++#: ../src/configuration/e-ews-config-utils.c:1298
++msgid "Edit EWS calendar permissions"
++msgstr "編輯 EWS 行事曆的權限"
++
++#: ../src/configuration/e-ews-config-utils.c:1329
++msgid "Edit EWS tasks permissions"
++msgstr "編輯 EWS 工作的權限"
++
++#: ../src/configuration/e-ews-config-utils.c:1360
++msgid "Edit EWS memos permissions"
++msgstr "編輯 EWS 記事的權限"
++
++#: ../src/configuration/e-ews-config-utils.c:1391
++msgid "Edit EWS contacts permissions"
++msgstr "編輯 EWS 聯絡人的權限"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:87
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:488
++msgctxt "PermissionsLevel"
++msgid "None"
++msgstr "無"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:88
++msgctxt "PermissionsLevel"
++msgid "Owner"
++msgstr "擁有者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:98
++msgctxt "PermissionsLevel"
++msgid "Publishing Editor"
++msgstr "發佈編輯者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:107
++msgctxt "PermissionsLevel"
++msgid "Editor"
++msgstr "編輯"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:115
++msgctxt "PermissionsLevel"
++msgid "Publishing Author"
++msgstr "發佈作者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:122
++msgctxt "PermissionsLevel"
++msgid "Author"
++msgstr "作者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:128
++msgctxt "PermissionsLevel"
++msgid "Nonediting Author"
++msgstr "非編輯作者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:133
++msgctxt "PermissionsLevel"
++msgid "Reviewer"
++msgstr "檢閱者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:136
++msgctxt "PermissionsLevel"
++msgid "Contributor"
++msgstr "貢獻者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:139
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time"
++msgstr "空閒/忙碌時間"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:141
++msgctxt "PermissionsLevel"
++msgid "Free/Busy time, subject, location"
++msgstr "空閒/忙碌時間，主題，位置"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:143
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:511
++msgctxt "PermissionsLevel"
++msgid "Custom"
++msgstr "自訂"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:267
++msgid "Writing folder permissions, please wait..."
++msgstr "寫入資料夾權限，請稍候......"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:777
++msgctxt "User"
++msgid "Anonymous"
++msgstr "匿名"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:780
++msgctxt "User"
++msgid "Default"
++msgstr "預設"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:786
++msgctxt "User"
++msgid "Unknown"
++msgstr "未知"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:867
++#: ../src/configuration/e-ews-search-user.c:431
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1066
++msgid "Name"
++msgstr "名稱"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:873
++msgid "Permission level"
++msgstr "權限等級"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:925
++msgid "Edit EWS folder permissions..."
++msgstr "編輯 EWS 資料夾權限......"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:950
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:638
++msgid "Account:"
++msgstr "帳號："
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:978
++msgid "Folder name:"
++msgstr "資料夾名稱："
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1001
++msgid "Folder ID:"
++msgstr "資料夾 ID："
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1065
++msgid "Permissions"
++msgstr "權限"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1087
++msgid "Permi_ssion level:"
++msgstr "權限等級(_s)："
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1121
++msgctxt "Permissions"
++msgid "Read"
++msgstr "讀取"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1133
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1200
++msgctxt "Permissions"
++msgid "None"
++msgstr "無"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1139
++msgctxt "Permissions"
++msgid "Free/Busy time"
++msgstr "空閒/忙碌時間"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1144
++msgctxt "Permissions"
++msgid "Free/Busy time, subject, location"
++msgstr "空閒/忙碌時間，主題，位置"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1150
++msgctxt "Permissions"
++msgid "Full Details"
++msgstr "完整的詳細資料"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1156
++msgctxt "Permissions"
++msgid "Write"
++msgstr "寫入"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1168
++msgctxt "Permissions"
++msgid "Create items"
++msgstr "建立項目"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1172
++msgctxt "Permissions"
++msgid "Create subfolders"
++msgstr "建立子目錄"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1176
++msgctxt "Permissions"
++msgid "Edit own"
++msgstr "編輯自身"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1180
++msgctxt "Permissions"
++msgid "Edit all"
++msgstr "編輯所有"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1188
++msgctxt "Permissions"
++msgid "Delete items"
++msgstr "刪除項目"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1205
++msgctxt "Permissions"
++msgid "Own"
++msgstr "自己"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1210
++msgctxt "Permissions"
++msgid "All"
++msgstr "所有"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1216
++msgctxt "Permissions"
++msgid "Other"
++msgstr "其它"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1228
++msgctxt "Permissions"
++msgid "Folder owner"
++msgstr "資料夾擁有者"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1232
++msgctxt "Permissions"
++msgid "Folder contact"
++msgstr "資料夾連絡人"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1236
++msgctxt "Permissions"
++msgid "Folder visible"
++msgstr "資料夾顯示"
++
++#: ../src/configuration/e-ews-edit-folder-permissions.c:1309
++msgid "Reading folder permissions, please wait..."
++msgstr "正在讀取資料夾權限，請稍候..."
++
++#: ../src/configuration/e-ews-ooo-notificator.c:184
++msgid "Unset on Server"
++msgstr ""
++
++#: ../src/configuration/e-ews-ooo-notificator.c:185
++msgid "Unset the \"Out of Office\" status"
++msgstr ""
++
++#: ../src/configuration/e-ews-search-user.c:208
++#, c-format
++msgid "No users found, only one contact"
++msgid_plural "No users found, only %d contacts"
++msgstr[0] ""
++msgstr[1] ""
++
++#: ../src/configuration/e-ews-search-user.c:213
++msgid "No users found"
++msgstr "找不到使用者"
++
++#: ../src/configuration/e-ews-search-user.c:217
++#, c-format
++msgid "Found one user"
++msgid_plural "Found %d users"
++msgstr[0] ""
++msgstr[1] ""
++
++#: ../src/configuration/e-ews-search-user.c:223
++#, c-format
++msgid "Found more than 100 users, but showing only first %d"
++msgid_plural "Found more than 100 users, but showing only first %d"
++msgstr[0] ""
++msgstr[1] ""
++
++#: ../src/configuration/e-ews-search-user.c:357
++#: ../src/configuration/e-ews-search-user.c:540
++msgid "Search for a user"
++msgstr "尋找使用者"
++
++#: ../src/configuration/e-ews-search-user.c:437
++msgid "E-mail"
++msgstr "電子郵件"
++
++#: ../src/configuration/e-ews-search-user.c:474
++msgid "Choose EWS user..."
++msgstr "選擇 EWS 使用者..."
++
++#: ../src/configuration/e-ews-search-user.c:497
++msgid "_Search:"
++msgstr "尋找(_S)："
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:97
++#: ../src/server/e-ews-folder.c:750
++#, c-format
++msgid "Cannot add folder, folder already exists as '%s'"
++msgstr "無法新增資料夾，資料夾已存在（'%s'）"
++
++#. Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
++#. * Example result: "Mailbox - John Smith"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:107
++#, c-format
++msgctxt "ForeignFolder"
++msgid "Mailbox - %s"
++msgstr "信箱 - %s"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:275
++msgid "Cannot test foreign folder availability while in offline mode"
++msgstr "無法在離線模式下測試外部資料夾的可用性"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:300
++#, c-format
++msgid "User '%s' was not found on the server"
++msgstr "在伺服器上找不到使用者「%s」"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:336
++#, c-format
++msgid "User name '%s' is ambiguous, specify it more precisely, please"
++msgstr "使用者「%s」不明，請更加詳細指定該使用者"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:358
++#, c-format
++msgid ""
++"Folder '%s' not found. Either it does not exist or you do not have "
++"permission to access it."
++msgstr "找不到「%s」資料夾。它可能不存在，或是您可能沒有存取它的權限。"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:376
++msgid "Cannot add folder, cannot determine folder's type"
++msgstr "無法新增資料夾，無法判斷資料夾的類型為何"
++
++#. Translators: This is used to name foreign folder.
++#. * The first '%s' is replaced with user name to whom the folder belongs,
++#. * the second '%s' is replaced with folder name.
++#. * Example result: "John Smith - Calendar"
++#.
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:421
++#, c-format
++msgctxt "ForeignFolder"
++msgid "%s - %s"
++msgstr "%s - %s"
++
++#. convert well-known names to their non-localized form
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:515
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:723
++msgid "Inbox"
++msgstr "收件匣"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:517
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:724
++msgid "Contacts"
++msgstr "連絡人"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:519
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:725
++msgid "Calendar"
++msgstr "行事曆"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:521
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:726
++msgid "Memos"
++msgstr "備忘錄"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:523
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:727
++msgid "Tasks"
++msgstr "工作"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:540
++#, c-format
++msgid "Testing availability of folder '%s' of user '%s', please wait..."
++msgstr "正在測試資料夾「%s」，使用者「%s」，請稍候..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:617
++msgid "Subscribe to folder of other EWS user..."
++msgstr "訂閱其他 EWS 使用者的資料夾..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:668
++msgid "User"
++msgstr "使用者"
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:675
++msgid "_User:"
++msgstr "使用者(_U)："
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:690
++msgid "C_hoose..."
++msgstr "選擇(_h)..."
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:706
++msgid "_Folder name:"
++msgstr "資料夾名稱(_F)："
++
++#: ../src/configuration/e-ews-subscribe-foreign-folder.c:736
++msgid "Include _subfolders"
++msgstr "包含子資料夾(_s)"
++
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:141
++msgid "Querying Autodiscover service"
++msgstr "查詢 Autodiscover 服務"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/configuration/e-mail-config-ews-autodiscover.c:232
++msgid "Fetch _URL"
++msgstr "取得 URL(_U)"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:194
++msgid "Configuration"
++msgstr "配置"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:212
++msgid "User_name:"
++msgstr "使用者名稱(_n)："
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/configuration/e-mail-config-ews-backend.c:226
++msgid "_Host URL:"
++msgstr "主機 URL(_H)："
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/configuration/e-mail-config-ews-backend.c:245
++msgid "OAB U_RL:"
++msgstr "OAB URL(_R)："
++
++#: ../src/configuration/e-mail-config-ews-backend.c:259
++msgid "Open _Mailbox of other user"
++msgstr "開啓其他使用者的收件夾(_M)"
++
++#: ../src/configuration/e-mail-config-ews-backend.c:293
++msgid "S_earch..."
++msgstr "搜尋(_e)..."
++
++#: ../src/configuration/e-mail-config-ews-backend.c:304
++msgid "Authentication"
++msgstr "認證"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:489
++msgctxt "PermissionsLevel"
++msgid "Reviewer (can read items)"
++msgstr "檢閱者（可讀取項目）"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:490
++msgctxt "PermissionsLevel"
++msgid "Author (can read and create items)"
++msgstr "作者（可讀取和建立項目）"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:491
++msgctxt "PermissionsLevel"
++msgid "Editor (can read, create and modify items)"
++msgstr "編輯者（可讀取、建立和修改項目）"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:596
++msgid "Delegate permissions"
++msgstr "代理人權限"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:614
++msgid "C_alendar"
++msgstr "行事曆(_a)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:617
++msgid "_Delegate receives copies of meeting-related messages sent to me"
++msgstr "代理人將會收到傳送給我、有關會議的訊息副本(_D)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:622
++msgid "_Tasks"
++msgstr "工作(_T)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:625
++msgid "_Inbox"
++msgstr "收件夾(_I)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:628
++msgid "C_ontacts"
++msgstr "通訊錄(_o)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:631
++msgid "_Notes"
++msgstr "附註(_N)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:634
++msgid "_Journal"
++msgstr "日誌(_J)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:637
++#, c-format
++msgid "Delegate '%s' has the following permissions"
++msgstr "代理人「%s」擁有以下權限"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:655
++msgid "Delegate can see my _private items"
++msgstr "代理人可以查看我的私人的項目(_p)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:978
++msgid "Retrieving current user permissions, please wait..."
++msgstr "取得現有使用者的權限，請稍候......"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1098
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1646
++msgid "Delegates"
++msgstr "代理人"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1122
++msgid ""
++"Delegates can send items on your behalf, including creating and responding "
++"to meeting requests. If you want to grant folder permissions without giving "
++"send-on-behalf-of permissions, close this dialog box, right-click the "
++"folder, click Permissions and change the options there."
++msgstr ""
++"代理人可以代表您發送事件，包括建立、回應會議需求。如果您想要賦予資料夾權限，"
++"但不想給予「代表發送」權限，請關閉此對話視窗、在資料夾上按右鍵、點選權限並改"
++"變該處之選項。"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1172
++msgid ""
++"Deliver meeting requests addressed to me and responses to meeting requests "
++"where I am the organizer to:"
++msgstr "當我是以下組織者時，傳送發給我的會議需求，並回應會議需求："
++
++#. new-line break, because GtkRadioButton doesn't allow wrapping of the inner label
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1182
++msgid ""
++"My delegates only, but _send a copy of meeting requests\n"
++"and responses to me (recommended)"
++msgstr ""
++"只有我的代理人，但發送會議需求與回應\n"
++"的副本給我（建議）(_s)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1189
++msgid "My d_elegates only"
++msgstr "只有我的代理人(_e)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1196
++msgid "My delegates a_nd me"
++msgstr "我的代理人與我(_n)"
++
++#: ../src/configuration/e-mail-config-ews-delegates-page.c:1730
++msgid "Retrieving \"Delegates\" settings"
++msgstr "取得「代理人」設定"
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:195
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:257
++msgid "EWS Settings"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:202
++msgid "View the size of all Exchange folders"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-folder-sizes-page.c:206
++msgid "Folder _Sizes"
++msgstr ""
++
++#: ../src/configuration/e-mail-config-ews-gal.c:222
++msgid "Locating offline address books"
++msgstr "尋找離線通訊錄"
++
++# translation auto-copied from project evolution-ews, version el6, document evolution-ews, author ccheng
++#: ../src/configuration/e-mail-config-ews-gal.c:301
++msgid "Cache o_ffline address book"
++msgstr "快取離線通訊錄 (_f)"
++
++#: ../src/configuration/e-mail-config-ews-gal.c:327
++msgid "Select ad_dress list:"
++msgstr "選擇通訊錄(_d)："
++
++#: ../src/configuration/e-mail-config-ews-gal.c:351
++msgid "Fetch List"
++msgstr "取得清單"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:432
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:934
++msgid "Out of Office"
++msgstr "不在辦公室"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:448
++msgid ""
++"The messages specified below will be automatically sent to each internal and "
++"external person who sends a mail to you."
++msgstr ""
++"以下指定的訊息將會自動傳送給每一位在您離開辦公室時傳送郵件給您的內部與外部人"
++"士。"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:457
++msgid "Do _not send Out of Office replies"
++msgstr "不要回覆「不在辦公室」(_n)"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:465
++msgid "_Send Out of Office replies"
++msgstr "回覆「不在辦公室」(_S)"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:473
++msgid "Send Out of Office replies only _during this time period:"
++msgstr "僅在這段時間內回覆「不在辦公室」(_d)："
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:493
++msgid "_From:"
++msgstr "從(_F)："
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:518
++msgid "_To:"
++msgstr "至(_T)："
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:543
++msgid "I_nternal:"
++msgstr "內部(_n)："
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:552
++msgid "Message to be sent within the organization"
++msgstr "訊息將被送往組織內"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:580
++msgid "E_xternal:"
++msgstr "外部(_x)："
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:588
++msgid "Message to be sent outside the organization"
++msgstr "訊息將被送往組織外"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:598
++msgid "Do not reply to senders outside the organization"
++msgstr "不要回覆組織外的發送者"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:601
++msgid "Reply only to known senders outside the organization"
++msgstr "只回覆至組織外的已知發送者"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:604
++msgid "Reply to any sender outside the organization"
++msgstr "回覆至組織外的任何發送者"
++
++#: ../src/configuration/e-mail-config-ews-ooo-page.c:1018
++msgid "Retrieving \"Out of Office\" settings"
++msgstr "擷取「Out of Office」設定"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:1
++msgid "Autodiscovery query failed."
++msgstr "自動尋找的查詢失敗。"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:2
++msgid "The reported error was &quot;{0}&quot;."
++msgstr "回報的錯誤是 &quot;{0}&quot;。"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:3
++msgid "Failed to locate offline address books."
++msgstr "無法找到離線通訊錄。"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:4
++msgid "Failed to retrieve &quot;Out of Office&quot; settings."
++msgstr "無法取得 &quot;Out of Office&quot; 設定。"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:5
++msgid "Failed to retrieve &quot;Delegates&quot; settings."
++msgstr "無法取得 &quot;Delegates&quot; 設定。"
++
++#: ../src/configuration/module-ews-configuration.error.xml.h:6
++msgid "Your Exchange account \"{0}\" has the status set as \"Out of Office\"."
++msgstr ""
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/server/e-ews-connection.c:741
++msgid "Operation Cancelled"
++msgstr "操作程序已取消"
++
++# auto translated by TM merge from project: evolution-mapi, version: el6, DocId: evolution-mapi
++#: ../src/server/e-ews-connection.c:811
++msgid "Authentication failed"
++msgstr "驗證失敗"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/server/e-ews-connection.c:822
++#, c-format
++msgid "No response: %s"
++msgstr "沒有回應：%s"
++
++# auto translated by TM merge from project: evolution-data-server, version: 3.8.4, DocId: evolution-data-server-3.8
++#: ../src/server/e-ews-connection.c:2576
++#, c-format
++msgid "Failed to parse autodiscover response XML"
++msgstr "無法解析自動偵測回應的 XML"
++
++#: ../src/server/e-ews-connection.c:2583
++#, c-format
++msgid "Failed to find <Autodiscover> element"
++msgstr "找不到 <Autodiscover> 元素"
++
++#: ../src/server/e-ews-connection.c:2594
++#, c-format
++msgid "Failed to find <Response> element"
++msgstr "找不到 <Response> 元素"
++
++#: ../src/server/e-ews-connection.c:2605
++#, c-format
++msgid "Failed to find <Account> element"
++msgstr "找不到 <Account> 元素"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/server/e-ews-connection.c:2630
++#, c-format
++msgid "Failed to find <ASUrl> and <OABUrl> in autodiscover response"
++msgstr "在 autodiscover 的回應中找不到 <ASUrl> 與 <OABUrl>"
++
++#: ../src/server/e-ews-connection.c:2720
++msgid "URL cannot be NULL"
++msgstr "URL 不能是 NULL"
++
++#: ../src/server/e-ews-connection.c:2728
++#, c-format
++msgid "URL '%s' is not valid"
++msgstr "URL '%s' 無效"
++
++#: ../src/server/e-ews-connection.c:2820
++msgid "Email address is missing a domain part"
++msgstr "電子郵件位址沒有網域那部份"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/server/e-ews-connection.c:3142
++msgid "Failed to parse oab XML"
++msgstr "無法剖析 oab XML"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/server/e-ews-connection.c:3150
++msgid "Failed to find <OAB> element\n"
++msgstr "找不到 <OAB> 元素\n"
++
++# auto translated by TM merge from project: gtk3, version: 3.8.2, DocId: gtk30
++#: ../src/server/e-ews-connection.c:4404
++msgid "No items found"
++msgstr "找不到項目"
++
++#: ../src/server/e-ews-folder.c:705
++msgid "Cannot add folder, unsupported folder type"
++msgstr "無法新增資料夾，不支援的資料夾類型"
++
++#: ../src/server/e-ews-folder.c:710
++msgid "Cannot add folder, master source not found"
++msgstr "無法新增資料夾，找不到主來源"
++
++# auto translated by TM merge from project: evolution-ews, version: el6, DocId: evolution-ews
++#: ../src/utils/ews-camel-common.c:361
++#, c-format
++msgid "CreateItem call failed to return ID for new message"
++msgstr "CreateItem 函式無法為新訊息傳回 ID"
