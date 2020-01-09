@@ -21,9 +21,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
@@ -33,6 +31,8 @@
 #include "camel/camel-ews-store.h"
 #include "camel/camel-ews-store-summary.h"
 #include "camel/camel-ews-utils.h"
+
+#include "server/e-ews-calendar-utils.h"
 
 #include "e-ews-config-utils.h"
 #include "e-ews-search-user.h"
@@ -94,7 +94,7 @@ add_foreign_folder_to_camel (CamelEwsStore *ews_store,
 		g_propagate_error (
 			perror,
 			g_error_new (EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDEREXISTS,
-			_("Cannot add folder, folder already exists as '%s'"), full_name));
+			_("Cannot add folder, folder already exists as “%s”"), full_name));
 
 		g_free (full_name);
 
@@ -102,9 +102,9 @@ add_foreign_folder_to_camel (CamelEwsStore *ews_store,
 	}
 
 	/* Translators: The '%s' is replaced with user name, to whom the foreign mailbox belongs.
-	 * Example result: "Mailbox - John Smith"
+	 * Example result: "Mailbox — John Smith"
 	*/
-	mailbox = g_strdup_printf (C_("ForeignFolder", "Mailbox - %s"), display_username);
+	mailbox = g_strdup_printf (C_("ForeignFolder", "Mailbox — %s"), display_username);
 
 	foreign_mailbox_id = g_strdup_printf ("ForeignMailbox::%s", foreign_email);
 	if (!camel_ews_store_summary_has_folder (ews_store->summary, foreign_mailbox_id)) {
@@ -297,7 +297,7 @@ check_foreign_folder_thread (GObject *with_object,
 		if (!mailboxes) {
 			g_set_error (
 				perror, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_MAILRECIPIENTNOTFOUND,
-				_("User '%s' was not found on the server"), cffd->email);
+				_("User “%s” was not found on the server"), cffd->email);
 			g_object_unref (conn);
 			return;
 		}
@@ -333,7 +333,7 @@ check_foreign_folder_thread (GObject *with_object,
 		if (!mailbox) {
 			g_set_error (
 				perror, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_ITEMNOTFOUND,
-				_("User name '%s' is ambiguous, specify it more precisely, please"), cffd->email);
+				_("User name “%s” is ambiguous, specify it more precisely, please"), cffd->email);
 			g_object_unref (conn);
 			return;
 		}
@@ -344,24 +344,58 @@ check_foreign_folder_thread (GObject *with_object,
 		return;
 	}
 
-	fid.id = (gchar *) (cffd->use_foldername ? cffd->use_foldername : cffd->orig_foldername);
-	fid.change_key = NULL;
-	fid.is_distinguished_id = cffd->use_foldername != NULL;
+	if (g_strcmp0 (cffd->use_foldername, "freebusy-calendar") == 0) {
+		EEWSFreeBusyData fbdata;
+		GSList *free_busy = NULL;
+		gchar *tmp;
+		gboolean success;
 
-	if (!e_ews_connection_get_folder_info_sync (conn, G_PRIORITY_DEFAULT,
-		cffd->email, &fid, &folder, cancellable, &local_error)) {
-		if (g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_ITEMNOTFOUND) ||
-		    g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND)) {
-			g_clear_error (&local_error);
-			local_error = g_error_new (
-				EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND,
-				_("Folder '%s' not found. Either it does not exist or you do not have permission to access it."),
-				cffd->orig_foldername);
+		fbdata.period_start = time (NULL);
+		fbdata.period_end = fbdata.period_start + (60 * 60);
+		fbdata.user_mails = g_slist_prepend (NULL, cffd->email);
+
+		success = e_ews_connection_get_free_busy_sync (conn, G_PRIORITY_DEFAULT,
+			e_ews_cal_utils_prepare_free_busy_request, &fbdata,
+			&free_busy, cancellable, perror);
+
+		g_slist_free_full (free_busy, (GDestroyNotify) icalcomponent_free);
+		g_slist_free (fbdata.user_mails);
+
+		if (!success) {
+			g_object_unref (conn);
+			return;
 		}
 
-		g_propagate_error (perror, local_error);
-		g_object_unref (conn);
-		return;
+		tmp = g_strconcat (cffd->use_foldername, "::", cffd->email, NULL);
+
+		folder = g_object_new (E_TYPE_EWS_FOLDER, NULL);
+		e_ews_folder_set_id (folder, e_ews_folder_id_new (tmp, NULL, FALSE));
+		/* Translators: This is used as a calendar name; it constructs "User Name - Availability" string shown in UI */
+		e_ews_folder_set_name (folder, _("Availability"));
+		e_ews_folder_set_folder_type (folder, E_EWS_FOLDER_TYPE_CALENDAR);
+		e_ews_folder_set_foreign_mail (folder, cffd->email);
+
+		g_free (tmp);
+	} else {
+		fid.id = (gchar *) (cffd->use_foldername ? cffd->use_foldername : cffd->orig_foldername);
+		fid.change_key = NULL;
+		fid.is_distinguished_id = cffd->use_foldername != NULL;
+
+		if (!e_ews_connection_get_folder_info_sync (conn, G_PRIORITY_DEFAULT,
+			cffd->email, &fid, &folder, cancellable, &local_error)) {
+			if (g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_ITEMNOTFOUND) ||
+			    g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND)) {
+				g_clear_error (&local_error);
+				local_error = g_error_new (
+					EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND,
+					_("Folder “%s” not found. Either it does not exist or you do not have permission to access it."),
+					cffd->orig_foldername);
+			}
+
+			g_propagate_error (perror, local_error);
+			g_object_unref (conn);
+			return;
+		}
 	}
 
 	if (g_cancellable_set_error_if_cancelled (cancellable, perror)) {
@@ -373,7 +407,7 @@ check_foreign_folder_thread (GObject *with_object,
 	if (e_ews_folder_get_folder_type (folder) == E_EWS_FOLDER_TYPE_UNKNOWN) {
 		g_propagate_error (
 			perror, g_error_new_literal (EWS_CONNECTION_ERROR,
-			EWS_CONNECTION_ERROR_FOLDERNOTFOUND, _("Cannot add folder, cannot determine folder's type")));
+			EWS_CONNECTION_ERROR_FOLDERNOTFOUND, _("Cannot add folder, cannot determine folder’s type")));
 		g_object_unref (folder);
 		g_object_unref (conn);
 		return;
@@ -416,9 +450,9 @@ check_foreign_folder_idle (GObject *with_object,
 	/* Translators: This is used to name foreign folder.
 	 * The first '%s' is replaced with user name to whom the folder belongs,
 	 * the second '%s' is replaced with folder name.
-	 * Example result: "John Smith - Calendar"
+	 * Example result: "John Smith — Calendar"
 	*/
-	folder_name = g_strdup_printf (C_("ForeignFolder", "%s - %s"), base_username, base_foldername);
+	folder_name = g_strdup_printf (C_("ForeignFolder", "%s — %s"), base_username, base_foldername);
 	if (folder_type != E_EWS_FOLDER_TYPE_MAILBOX)
 		e_ews_folder_set_name (cffd->folder, folder_name);
 
@@ -518,6 +552,8 @@ subscribe_foreign_response_cb (GObject *dialog,
 		use_foldername = g_strdup ("contacts");
 	} else if (g_strcmp0 (orig_foldername, _("Calendar")) == 0) {
 		use_foldername = g_strdup ("calendar");
+	} else if (g_strcmp0 (orig_foldername, _("Free/Busy as Calendar")) == 0) {
+		use_foldername = g_strdup ("freebusy-calendar");
 	} else if (g_strcmp0 (orig_foldername, _("Memos")) == 0) {
 		use_foldername = g_strdup ("notes");
 	} else if (g_strcmp0 (orig_foldername, _("Tasks")) == 0) {
@@ -537,7 +573,7 @@ subscribe_foreign_response_cb (GObject *dialog,
 	cffd->folder = NULL;
 
 	description = g_strdup_printf (
-		_("Testing availability of folder '%s' of user '%s', please wait..."),
+		_("Testing availability of folder “%s” of user “%s”, please wait..."),
 		show_foldername ? show_foldername : cffd->orig_foldername, cffd->email);
 
 	e_ews_config_utils_run_in_thread_with_feedback (
@@ -723,6 +759,7 @@ e_ews_subscribe_foreign_folder (GtkWindow *parent,
 	gtk_combo_box_text_append_text (combo_text, _("Inbox"));
 	gtk_combo_box_text_append_text (combo_text, _("Contacts"));
 	gtk_combo_box_text_append_text (combo_text, _("Calendar"));
+	gtk_combo_box_text_append_text (combo_text, _("Free/Busy as Calendar"));
 	gtk_combo_box_text_append_text (combo_text, _("Memos"));
 	gtk_combo_box_text_append_text (combo_text, _("Tasks"));
 	gtk_combo_box_set_active (GTK_COMBO_BOX (combo_text), 0);

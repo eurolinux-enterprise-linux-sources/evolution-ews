@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include "e-mail-config-ews-autodiscover.h"
 
@@ -139,7 +137,7 @@ mail_config_ews_autodiscover_sync (ECredentialsPrompter *prompter,
 	GError *local_error = NULL;
 	gboolean res = TRUE;
 
-	e_ews_autodiscover_ws_url_sync (
+	e_ews_autodiscover_ws_url_sync (source,
 		async_context->ews_settings, async_context->email_address,
 		credentials && e_named_parameters_get (credentials, E_SOURCE_CREDENTIAL_PASSWORD) ?
 		e_named_parameters_get (credentials, E_SOURCE_CREDENTIAL_PASSWORD) : "",
@@ -173,7 +171,7 @@ mail_config_ews_autodiscover_run_thread (GTask *task,
 
 		without_password = e_ews_connection_utils_get_without_password (async_context->ews_settings);
 		if (without_password) {
-			success = e_ews_autodiscover_ws_url_sync (
+			success = e_ews_autodiscover_ws_url_sync (async_context->source,
 				async_context->ews_settings, async_context->email_address, "",
 				cancellable, &local_error);
 		}
@@ -215,6 +213,15 @@ mail_config_ews_autodiscover_run (EMailConfigEwsAutodiscover *autodiscover)
 	page = e_mail_config_service_backend_get_page (backend);
 	source = e_mail_config_service_backend_get_source (backend);
 	settings = e_mail_config_service_backend_get_settings (backend);
+
+	if (!e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION)) {
+		ESource *collection;
+
+		collection = e_mail_config_service_backend_get_collection (backend);
+		if (collection && e_source_has_extension (collection, E_SOURCE_EXTENSION_AUTHENTICATION)) {
+			source = collection;
+		}
+	}
 
 	activity = e_mail_config_activity_page_new_activity (E_MAIL_CONFIG_ACTIVITY_PAGE (page));
 	cancellable = e_activity_get_cancellable (activity);

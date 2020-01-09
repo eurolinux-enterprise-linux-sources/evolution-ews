@@ -24,14 +24,14 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <string.h>
 
 #include <glib/gi18n-lib.h>
 #include <gmodule.h>
+
+#include "server/camel-sasl-xoauth2-office365.h"
 
 #include "camel-ews-store.h"
 #include "camel-ews-transport.h"
@@ -59,7 +59,8 @@ static CamelProviderConfEntry ews_conf_entries[] = {
 	{ CAMEL_PROVIDER_CONF_CHECKBOX, "filter-junk-inbox", "filter-junk",
 	  N_("Only check for Junk messages in the IN_BOX folder"), "0" },
 	{ CAMEL_PROVIDER_CONF_CHECKBOX, "stay-synchronized", NULL,
-	  N_("Automatically synchroni_ze remote mail locally"), "0" },
+	  N_("Synchroni_ze remote mail locally in all folders"), "0" },
+	{ CAMEL_PROVIDER_CONF_PLACEHOLDER, "ews-limit-by-age-placeholder", NULL },
 	{ CAMEL_PROVIDER_CONF_SECTION_END },
 
 	{ CAMEL_PROVIDER_CONF_SECTION_START, "connection", NULL, N_("Connection") },
@@ -139,6 +140,8 @@ camel_provider_module_init (void)
 
 	bindtextdomain (GETTEXT_PACKAGE, EXCHANGE_EWS_LOCALEDIR);
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+
+	g_type_ensure (CAMEL_TYPE_SASL_XOAUTH2_OFFICE365);
 
 	camel_provider_register (&ews_provider);
 }

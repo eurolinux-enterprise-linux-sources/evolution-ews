@@ -1,48 +1,397 @@
-Evolution-EWS 3.22.6 2017-03-13
+Evolution-EWS 3.28.5 2018-07-30
+-------------------------------
+
+Bug Fixes:
+	I#10 - All day event times broken after drag&drop in Work Week view (Milan Crha)
+
+Translations:
+	Bruce Cowan (en_GB)
+
+Evolution-EWS 3.28.4 2018-07-16
+-------------------------------
+
+Bug Fixes:
+	Bug 796297 - Make it possible to not request RSVP (all-or-nothing) ][ (Milan Crha)
+	eds-I#12 - vCard REV attribute should be a timestamp (Milan Crha)
+	I#4 - Automatic junk filtering doesn't work (Milan Crha)
+	I#5 - Cannot set/change task priority (Milan Crha)
+	I#2 - Silently ignore broken items on fetch in calendars (Milan Crha)
+	I#7 - Event timezone not always properly set on the server (Milan Crha)
+
+Evolution-EWS 3.28.3 2018-06-18
+-------------------------------
+
+Bug Fixes:
+	Bug 796297 - Make it possible to not request RSVP (all-or-nothing) (Milan Crha)
+
+Miscellaneous:
+	Address some of the compiler and static analyzers warnings (Milan Crha)
+	Update bug URL and switch to https:// in the DOAP file (Milan Crha)
+
+Evolution-EWS 3.28.2 2018-05-07
+-------------------------------
+
+Bug Fixes:
+	Bug 795076 - [Contacts] Use Display Name as File As when File As is missing (Milan Crha)
+	Bug 795329 - Fallback to message construction on ErrorMimeContentConversionFailed (Milan Crha)
+	Bug 795414 - Errors on delete of a detached instance (Milan Crha)
+
+Miscellaneous:
+	Crash when meeting invitation iCalendar part could not be parsed (Milan Crha)
+	Skip empty street addresses in contacts (Milan Crha)
+	Stale connection used after resume (Milan Crha)
+
+Translations:
+	Rūdolfs Mazurs (lv)
+
+Evolution-EWS 3.28.1 2018-04-09
+-------------------------------
+
+Bug Fixes:
+	Bug 794116 - Delete messages in chunks to not exceed maximum limit (Milan Crha)
+	Bug 788202 - Convert Task dates to time zone set in Evolution (Milan Crha)
+	Bug 794924 - Reading EWS contact list aborts after error (Milan Crha)
+	Bug 794815 - Forgive errors when fetching events (Milan Crha)
+
+Translations:
+	Andika Triwidada (id)
+
+Evolution-EWS 3.28.0 2018-03-12
 -------------------------------
 
 Translations:
-	Inaki Larranaga Murgoitio (eu)
+	Joe Hansen (da)
+	Alan Mortensen (da)
+	Anders Jonsson (sv)
 
-Evolution-EWS 3.22.5 2017-02-13
+Evolution-EWS 3.27.92 2018-03-05
+--------------------------------
+
+Bug Fixes:
+	Bug 793606 - Fails to import events without DTEND (Milan Crha)
+	Bug 763455 - Server-side password change doesn't reconnect book/calendar (Milan Crha)
+
+Miscellaneous:
+	Fix runtime warning when attendee has no ResponseType (Milan Crha)
+
+Translations:
+	Marek Cernocky (cs)
+	Daniel Mustieles (es)
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+	Mario Blättermann (de)
+	Rafael Fontenelle (pt_BR)
+	Gábor Kelemen (hu)
+
+Evolution-EWS 3.27.91 2018-02-19
+--------------------------------
+
+Bug Fixes:
+	Bug 793104 - COMPLETED in libical 3.0+ is DATE-TIME only (Milan Crha)
+	Bug 775690 - Support OAuth2 for outlook.office365.com (Milan Crha)
+	Bug 793368 - Install AppStream metadata to /usr/share/metainfo/ (Jeremy Bicha)
+
+Miscellaneous:
+	Correct possible scope for Office365 OAuth2 (Milan Crha)
+	Add translator comments around 'Tenant' word (Milan Crha)
+	Check validity of returned values in 'Folder Sizes' function (Milan Crha)
+	Various changes related to outlook.office365.com server (Milan Crha)
+	Office365.com OAuth2 - Relax the 'prompt' user interaction type (Milan Crha)
+
+Translations:
+	Marek Cernocky (cs)
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.27.90 2018-02-05
+--------------------------------
+
+Bug Fixes:
+	Bug 792411 - Use GetUserPhoto to lookup sender's photo (Milan Crha)
+	Bug 793037 - Some appointments displayed as meetings (Milan Crha)
+	Bug 775690 - Support OAuth2 for outlook.office365.com (initial changes) (Milan Crha)
+
+Translations:
+	Marek Cernocky (cs)
+
+Evolution-EWS 3.27.4 2018-01-08
 -------------------------------
+
+Bug Fixes:
+	Bug 792190 - Fails to update offline GAL (Milan Crha)
+
+Miscellaneous:
+	Ignore address books with UUID-like name (Milan Crha)
+
+Translations:
+	Rafael Fontenelle (pt_BR)
+	Daniel Mustieles (es)
+
+Evolution-EWS 3.27.3 2017-12-11
+-------------------------------
+
+Bug Fixes:
+	Bug 790450 - Check response headers for credential expiration hints (Milan Crha)
+
+Miscellaneous:
+	[ECalBackendEws] Prevent crash when item has no MIME content set (Milan Crha)
+	Correct arguments of g_dngettext() added in the previous commit (Milan Crha)
+
+Translations:
+	Mario Blättermann (de)
+	Marek Cernocky (cs)
+	Piotr Drąg (pl)
+	Kukuh Syafaat (id)
+
+Evolution-EWS 3.27.2 2017-11-13
+-------------------------------
+
+Bug Fixes:
+	Bug 760329 - Try to poke autodiscovery when creating new account (Milan Crha)
+
+Miscellaneous:
+	Prevent crash under ews_backend_sync_created_folders() (Milan Crha)
+	Synchronize authentication extensions before creating an ESource (Milan Crha)
+
+Translations:
+	Daniel Mustieles (es)
+	Alan Mortensen (da)
+	Ask Hjorth Larsen (da)
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.27.1 2017-10-16
+-------------------------------
+
+Bug Fixes:
+	Bug 786982 - After pressing "NOT JUNK" mail stays in the Junk folder (Milan Crha)
+	Bug 786208 - Already opened message box doesn’t show new emails (Milan Crha)
+	Bug 781645 - Skip GSettings schema compile when DESTDIR is set (Milan Crha)
+	Bug 788782 - Deadlock when trying to save changes after vFolder's thaw (Milan Crha)
+
+Miscellaneous:
+	Adapt to rename of evolution.desktop to org.gnome.Evolution.desktop (Milan Crha)
+	Escape spaces in server Categories for message Labels (Milan Crha)
+	Use icaltime_is_utc() instead of icaltimetype::is_utc (Milan Crha)
+
+Translations:
+	Matej Urbančič (sl)
+	Aurimas Černius (lt)
+
+Evolution-EWS 3.26.0 2017-09-11
+-------------------------------
+
+Miscellaneous:
+	No code/translation changes
+
+Evolution-EWS 3.25.92.2 2017-09-04
+----------------------------------
+
+Miscellaneous:
+	Do not use PROJECT_VERSION_TWEAK when searching for eds/evo dependencies (Milan Crha)
+
+Evolution-EWS 3.25.92.1 2017-09-04
+----------------------------------
+
+Miscellaneous:
+	Revert "Adapt to rename of evolution.desktop to org.gnome.Evolution.desktop" (Milan Crha)
+
+Evolution-EWS 3.25.92 2017-09-04
+--------------------------------
+
+Bug Fixes:
+	Bug 782826 - Allow adding Free/Busy as a foreign Calendar ][ (Milan Crha)
+	Bug 786095 - Replies to meeting requests with RSVP=false (Milan Crha)
+
+Miscellaneous:
+	Adapt to rename of evolution.desktop to org.gnome.Evolution.desktop (Milan Crha)
+
+Translations:
+	Marek Cernocky (cs)
+	Balázs Úr (hu)
+
+Evolution-EWS 3.25.91 2017-08-21
+--------------------------------
+
+Translations:
+	Rafael Fontenelle (pt_BR)
+	Kukuh Syafaat (id)
+	Matej Urbančič (sl)
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+	Josef Andersson (sv)
+
+Evolution-EWS 3.25.90 2017-08-07
+--------------------------------
+
+Bug Fixes:
+	Bug 785188 - Do not add LIB_INSTALL_DIR into RPATH (Milan Crha)
+	Bug 750564 - Make server settings lookup extensible (Milan Crha)
+
+Translations:
+	Mario Blättermann (de)
+	Balázs Meskó (hu)
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.25.4 2017-07-17
+-------------------------------
+
+Bug Fixes:
+	Bug 625149 - Support offline for books/calendars (Milan Crha)
+	Bug 783987 - Mail account assistant/editor too tall for small resolution (Milan Crha)
+	Bug 784332 - EXDATE missed in recurring events (Milan Crha)
+	Bug 784058 - Ignores Exchange backoff response (Milan Crha)
+	Bug 784775 - PublicDL members replaced with DL aliases in online GAL (Milan Crha)
+
+Miscellaneous:
+	Fix a crash on local cache update of a GAL from OAB (Milan Crha)
+
+Translations:
+	Daniel Mustieles (es)
+	Rafael Fontenelle (pt_BR)
+	Piotr Drąg (pl)
+	Kukuh Syafaat (id)
+
+Evolution-EWS 3.25.3 2017-06-19
+-------------------------------
+
+Bug Fixes:
+	Bug 782826 - Allow adding Free/Busy as a foreign Calendar (Milan Crha)
+
+Miscellaneous:
+	e_ews_connection_try_credentials_sync() asks for password when not needed (Milan Crha)
+	Derive from EBookMetaBackend and ECalMetaBackend (Milan Crha)
+	Allow overwrite of CMAKE_SKIP_RPATH variable (Milan Crha)
+
+Translations:
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.25.2 2017-05-22
+-------------------------------
+
+Bug Fixes:
+	Bug 781833 - Do not set '-Wl,--no-undefined' on BSD (Antoine Jacoutot)
+
+Evolution-EWS 3.25.1 2017-04-24
+-------------------------------
+
+Bug Fixes:
+	Bug 779804 - Mail message Date header received in UTC (Milan Crha)
+	Bug 780391 - Truncate cache stream before resaving received message (Milan Crha)
+
+Miscellaneous:
+	Sources always enabled, even when their part is disabled (Milan Crha)
+	Use correct respond method in e_cal_backend_ews_remove_object() (Milan Crha)
+
+Translations:
+	Kukuh Syafaat (id)
+
+Evolution-EWS 3.24.0 2017-03-20
+-------------------------------
+
+Miscellaneous:
+	No code/translation changes
+
+Evolution-EWS 3.23.92 2017-03-13
+--------------------------------
+
+Translations:
+	Inaki Larranaga Murgoitio (eu)
+	Aurimas Černius (lt)
+
+Evolution-EWS 3.23.91 2017-02-27
+--------------------------------
+
+Translations:
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+	Balázs Úr (hu)
+
+Evolution-EWS 3.23.90 2017-02-13
+--------------------------------
 
 Bug Fixes:
 	Bug 777946 - Fails to import regular appointment (Milan Crha)
 
-Evolution-EWS 3.22.4 2017-01-16
+Miscellaneous:
+	Avoid local message cache expiry clean up when being offline (Milan Crha)
+
+Translations:
+	Mario Blättermann (de)
+	Joe Hansen (da)
+
+Evolution-EWS 3.23.4 2017-01-16
 -------------------------------
 
 Bug Fixes:
+	Bug 773419 - Age limit for offline message download (Milan Crha)
 	Bug 775951 - Folder permission level change doesn't change read permission (Milan Crha)
 	Bug 775649 - Monthly recurrence on the last day refused by the server (Milan Crha)
+	Bug 777021 - Use server-side search for 'body-contains' when online (Milan Crha)
 
 Miscellaneous:
+	Fix possible uninitialized variable usage in ews-test-timezones.c (Milan Crha)
 	Fix few memory leaks (Milan Crha)
+	Fix "variable may be used uninitialized" warning in query-to-restriction conversion (Milan Crha)
 
-Evolution-EWS 3.22.3 2016-12-12
+Translations:
+	Piotr Drąg (pl)
+	Marek Černocký (cs)
+	Josef Andersson (sv)
+	Daniel Mustieles (es)
+	Rafael Fontenelle (pt_BR)
+
+Evolution-EWS 3.23.3 2016-12-12
 -------------------------------
+
+Bug Fixes:
+	Bug 774364 - Use Unicode in translatable strings (Piotr Drąg)
+	Bug 775363 - Bump minimum CMake version to 3.1 (Milan Crha)
+	Bug 775395 - Allow to override some (most) of the RPATH related settings (Dominique Leuenberger)
 
 Miscellaneous:
 	Autodiscover can cause deadlock in GCancellable code (Milan Crha)
+	Make glib_mkenums() files depend on the source enum file (Milan Crha)
 
-Evolution-EWS 3.22.2 2016-11-07
+Translations:
+	Piotr Drąg (pl)
+	Anders Jonsson (sv)
+	Muhammet Kara (tr)
+	Christian Kirbach (de)
+	Balázs Meskó (hu)
+
+Evolution-EWS 3.23.2 2016-11-21
 -------------------------------
 
 Bug Fixes:
-	Bug 770936 - BAD REQUEST due to empty Categories element (Milan Crha)
-	Bug 738093 - Show folder names with slash properly ][ (Milan Crha)
 	Bug 773379 - Cannot add more than one user into folder permissions (Milan Crha)
+	Bug 769573 - Allow also time part set for Tasks, not only date part (Milan Crha)
+	Bug 764065 - [Camel] Port more classes to GObject (Milan Crha)
+	Bug 774523 - Translator comments are missing in the .pot/.po files (Piotr Drąg)
 
 Miscellaneous:
 	Runtime warnings when calling ResolveNames (Milan Crha)
+	Do not require C++ compiler, when not used (Milan Crha)
+	Ensure CMAKE_SKIP_RPATH is OFF, the RPATH is used here (Milan Crha)
 
-Evolution-EWS 3.22.1 2016-10-10
+Evolution-EWS 3.23.1 2016-10-24
 -------------------------------
+
+* Evolution-EWS uses CMake instead of autotools now. At the end of
+  the configure phase are printed all the available options and their
+  values. These can be used for the cmake command to tweak the build.
 
 Bug Fixes:
 	Bug 771370 - Exchange 2016 returns broken MIME content for events with detached instances (Milan Crha)
 	Bug 771931 - Add missing Camel cflags/libs to src/server/ (Milan Crha)
+	Bug 770936 - BAD REQUEST due to empty Categories element (Milan Crha)
+	Bug 738093 - Show folder names with slash properly ][ (Milan Crha)
+
+Miscellaneous:
+	Convert from autotools to CMake (Milan Crha)
+	Require as hard dependency some dependencies (Milan Crha)
+	Add a helper script for a 'dist' target (Milan Crha)
+	Rename SHARE_INSTALL_DIR to SHARE_INSTALL_PREFIX (Milan Crha)
+	Use tests/ as `make check` tests, if enabled with ENABLE_TESTS (Milan Crha)
+	Hard-break `make dist` when there are uncommitted changes (Milan Crha)
 
 Evolution-EWS 3.22.0 2016-09-19
 -------------------------------

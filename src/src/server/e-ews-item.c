@@ -18,9 +18,7 @@
  * USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <string.h>
 #include <errno.h>
@@ -31,6 +29,8 @@
 #include <glib/gstdio.h>
 #include <glib/gprintf.h>
 #include <libsoup/soup-misc.h>
+#include <libedataserver/libedataserver.h>
+
 #include "e-ews-item.h"
 #include "e-ews-item-change.h"
 
@@ -107,10 +107,13 @@ struct _EEwsItemPrivate {
 	EwsId *item_id;
 	gchar *subject;
 	gchar *mime_content;
+	gchar *body;
 
+	gchar *date_header;
 	time_t date_received;
 	time_t date_sent;
 	time_t date_created;
+	time_t last_modified_time;
 
 	gsize size;
 	gchar *msg_id;
@@ -135,6 +138,8 @@ struct _EEwsItemPrivate {
 	EwsMailbox *from;
 	EwsMailbox *sender;
 
+	gboolean is_meeting;
+	gboolean is_response_requested;
 	GSList *modified_occurrences;
 	GSList *attachments_ids;
 	gchar *my_response_type;
@@ -193,40 +198,20 @@ e_ews_item_dispose (GObject *object)
 		priv->attachment_id = NULL;
 	}
 
-	g_free (priv->mime_content);
-
-	g_free (priv->subject);
-	priv->subject = NULL;
-
-	g_free (priv->msg_id);
-	priv->msg_id = NULL;
-
-	g_free (priv->uid);
-	priv->uid = NULL;
-
-	g_free (priv->in_replyto);
-	priv->in_replyto = NULL;
-
-	g_free (priv->references);
-	priv->references = NULL;
-
-	g_free (priv->timezone);
-	priv->timezone = NULL;
-
-	g_free (priv->start_timezone);
-	priv->start_timezone = NULL;
-
-	g_free (priv->end_timezone);
-	priv->end_timezone = NULL;
-
-	g_free (priv->contact_photo_id);
-	priv->contact_photo_id = NULL;
-
-	g_free (priv->iana_start_time_zone);
-	priv->iana_start_time_zone = NULL;
-
-	g_free (priv->iana_end_time_zone);
-	priv->iana_end_time_zone = NULL;
+	g_clear_pointer (&priv->mime_content, g_free);
+	g_clear_pointer (&priv->body, g_free);
+	g_clear_pointer (&priv->subject, g_free);
+	g_clear_pointer (&priv->msg_id, g_free);
+	g_clear_pointer (&priv->uid, g_free);
+	g_clear_pointer (&priv->in_replyto, g_free);
+	g_clear_pointer (&priv->references, g_free);
+	g_clear_pointer (&priv->date_header, g_free);
+	g_clear_pointer (&priv->timezone, g_free);
+	g_clear_pointer (&priv->start_timezone, g_free);
+	g_clear_pointer (&priv->end_timezone, g_free);
+	g_clear_pointer (&priv->contact_photo_id, g_free);
+	g_clear_pointer (&priv->iana_start_time_zone, g_free);
+	g_clear_pointer (&priv->iana_end_time_zone, g_free);
 
 	g_slist_free_full (priv->to_recipients, (GDestroyNotify) e_ews_mailbox_free);
 	priv->to_recipients = NULL;
@@ -243,8 +228,7 @@ e_ews_item_dispose (GObject *object)
 	g_slist_free_full (priv->attachments_ids, g_free);
 	priv->attachments_ids = NULL;
 
-	g_free (priv->my_response_type);
-	priv->my_response_type = NULL;
+	g_clear_pointer (&priv->my_response_type, g_free);
 
 	g_slist_free_full (priv->attendees, (GDestroyNotify) ews_item_free_attendee);
 	priv->attendees = NULL;
@@ -298,6 +282,8 @@ e_ews_item_init (EEwsItem *item)
 	item->priv = G_TYPE_INSTANCE_GET_PRIVATE (item, E_TYPE_EWS_ITEM, EEwsItemPrivate);
 
 	item->priv->item_type = E_EWS_ITEM_TYPE_UNKNOWN;
+	item->priv->is_meeting = FALSE;
+	item->priv->is_response_requested = FALSE;
 
 	item->priv->mapi_extended_tags = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
 	item->priv->mapi_extended_sets = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_hash_table_destroy);
@@ -627,7 +613,7 @@ process_attendees (EEwsItemPrivate *priv,
 		attendee->mailbox = mailbox;
 
 		subparam1 = e_soap_parameter_get_first_child_by_name (subparam, "ResponseType");
-		attendee->responsetype = e_soap_parameter_get_string_value (subparam1);
+		attendee->responsetype = subparam1 ? e_soap_parameter_get_string_value (subparam1) : NULL;
 
 		attendee->attendeetype = (gchar *) type;
 
@@ -1024,6 +1010,7 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 
 		/* The order is maintained according to the order in soap response */
 		if (!g_ascii_strcasecmp (name, "MimeContent")) {
+			gchar *charset;
 			guchar *data;
 			gsize data_len = 0;
 
@@ -1034,6 +1021,20 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 				g_free (data);
 				return FALSE;
 			}
+
+			charset = e_soap_parameter_get_property (subparam, "CharacterSet");
+			if (g_strcmp0 (charset, "UTF-8") == 0 &&
+			    !g_utf8_validate ((const gchar *) data, data_len, NULL)) {
+				gchar *tmp;
+
+				tmp = e_util_utf8_data_make_valid ((const gchar *) data, data_len);
+				if (tmp) {
+					g_free (data);
+					data = (guchar *) tmp;
+				}
+			}
+			g_free (charset);
+
 			priv->mime_content = (gchar *) data;
 
 			g_free (value);
@@ -1043,6 +1044,20 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 			priv->item_id->change_key = e_soap_parameter_get_property (subparam, "ChangeKey");
 		} else if (!g_ascii_strcasecmp (name, "Subject")) {
 			priv->subject = e_soap_parameter_get_string_value (subparam);
+		} else if (!g_ascii_strcasecmp (name, "InternetMessageHeaders")) {
+			for (subparam1 = e_soap_parameter_get_first_child_by_name (subparam, "InternetMessageHeader");
+			     subparam1;
+			     subparam1 = e_soap_parameter_get_next_child (subparam1)) {
+				gchar *str = e_soap_parameter_get_property (subparam1, "HeaderName");
+
+				if (g_strcmp0 (str, "Date") == 0) {
+					priv->date_header = e_soap_parameter_get_string_value (subparam1);
+					g_free (str);
+					break;
+				}
+
+				g_free (str);
+			}
 		} else if (!g_ascii_strcasecmp (name, "DateTimeReceived")) {
 			value = e_soap_parameter_get_string_value (subparam);
 			priv->date_received = ews_item_parse_date (value);
@@ -1062,6 +1077,10 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 		} else if (!g_ascii_strcasecmp (name, "DateTimeCreated")) {
 			value = e_soap_parameter_get_string_value (subparam);
 			priv->date_created = ews_item_parse_date (value);
+			g_free (value);
+		} else if (!g_ascii_strcasecmp (name, "LastModifiedTime")) {
+			value = e_soap_parameter_get_string_value (subparam);
+			priv->last_modified_time = ews_item_parse_date (value);
 			g_free (value);
 		} else if (!g_ascii_strcasecmp (name, "HasAttachments")) {
 			value = e_soap_parameter_get_string_value (subparam);
@@ -1124,6 +1143,14 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 			parse_extended_property (priv, subparam);
 		} else if (!g_ascii_strcasecmp (name, "ModifiedOccurrences")) {
 			process_modified_occurrences (priv, subparam);
+		} else if (!g_ascii_strcasecmp (name, "IsMeeting")) {
+			value = e_soap_parameter_get_string_value (subparam);
+			priv->is_meeting = (!g_ascii_strcasecmp (value, "true"));
+			g_free (value);
+		} else if (!g_ascii_strcasecmp (name, "IsResponseRequested")) {
+			value = e_soap_parameter_get_string_value (subparam);
+			priv->is_response_requested = (!g_ascii_strcasecmp (value, "true"));
+			g_free (value);
 		} else if (!g_ascii_strcasecmp (name, "MyResponseType")) {
 			g_free (priv->my_response_type);
 			priv->my_response_type = e_soap_parameter_get_string_value (subparam);
@@ -1141,8 +1168,9 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 			priv->start_timezone = e_soap_parameter_get_property (subparam, "Id");
 		} else if (!g_ascii_strcasecmp (name, "EndTimeZone")) {
 			priv->end_timezone = e_soap_parameter_get_property (subparam, "Id");
+		} else if (!g_ascii_strcasecmp (name, "Body")) {
+			priv->body = e_soap_parameter_get_string_value (subparam);
 		}
-
 	}
 
 	return TRUE;
@@ -1309,12 +1337,21 @@ e_ews_item_get_in_replyto (EEwsItem *item)
 
 	return (const gchar *) item->priv->in_replyto;
 }
+
 const gchar *
 e_ews_item_get_references (EEwsItem *item)
 {
 	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
 
 	return (const gchar *) item->priv->references;
+}
+
+const gchar *
+e_ews_item_get_date_header (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
+
+	return item->priv->date_header;
 }
 
 time_t
@@ -1341,6 +1378,14 @@ e_ews_item_get_date_created (EEwsItem *item)
 	return item->priv->date_created;
 }
 
+time_t
+e_ews_item_get_last_modified_time (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), -1);
+
+	return item->priv->last_modified_time;
+}
+
 gboolean
 e_ews_item_has_attachments (EEwsItem *item,
                             gboolean *has_attachments)
@@ -1361,6 +1406,22 @@ e_ews_item_is_read (EEwsItem *item,
 	*read = item->priv->is_read;
 
 	return TRUE;
+}
+
+gboolean
+e_ews_item_get_is_meeting (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), FALSE);
+
+	return item->priv->is_meeting;
+}
+
+gboolean
+e_ews_item_get_is_response_requested (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), FALSE);
+
+	return item->priv->is_response_requested;
 }
 
 gboolean
@@ -1768,6 +1829,7 @@ e_ews_dump_file_attachment_from_soap_parameter (ESoapParameter *param,
 	} else {
 		info = e_ews_attachment_info_new (E_EWS_ATTACHMENT_INFO_TYPE_INLINED);
 		e_ews_attachment_info_set_inlined_data (info, content, data_len);
+		e_ews_attachment_info_set_prefer_filename (info, name);
 	}
 	return info;
 }
@@ -2179,9 +2241,11 @@ const gchar *
 e_ews_item_get_body (EEwsItem *item)
 {
 	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
-	g_return_val_if_fail (item->priv->task_fields != NULL, NULL);
 
-	return item->priv->task_fields->body;
+	if (item->priv->body)
+		return item->priv->body;
+
+	return item->priv->task_fields ? item->priv->task_fields->body : NULL;
 }
 
 const gchar *

@@ -27,6 +27,9 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 #include <libsoup/soup.h>
+#include <libedataserver/libedataserver.h>
+#include <libebackend/libebackend.h>
+
 #include "e-soap-message.h"
 #include "ews-errors.h"
 #include "e-ews-folder.h"
@@ -65,6 +68,10 @@ struct _EEwsConnection {
 
 struct _EEwsConnectionClass {
 	GObjectClass parent_class;
+
+	void	(* password_will_expire)	(EEwsConnection *connection,
+						 gint in_days,
+						 const gchar *service_url);
 };
 
 enum {
@@ -100,7 +107,8 @@ typedef enum {
 } EwsSendMeetingCancellationsType;
 
 typedef enum {
-	EWS_ALL_OCCURRENCES = 1,
+	EWS_NONE_OCCURRENCES = 0,
+	EWS_ALL_OCCURRENCES,
 	EWS_SPECIFIED_OCCURRENCE_ONLY
 } EwsAffectedTaskOccurrencesType;
 
@@ -110,6 +118,19 @@ typedef enum {
 	E_EWS_BODY_TYPE_HTML,
 	E_EWS_BODY_TYPE_TEXT
 } EEwsBodyType;
+
+typedef enum {
+	E_EWS_SIZE_REQUESTED_UNKNOWN = 0,
+	E_EWS_SIZE_REQUESTED_48X48 = 48,
+	E_EWS_SIZE_REQUESTED_64X64 = 64,
+	E_EWS_SIZE_REQUESTED_96X96 = 96,
+	E_EWS_SIZE_REQUESTED_120X120 = 120,
+	E_EWS_SIZE_REQUESTED_240X240 = 240,
+	E_EWS_SIZE_REQUESTED_360X360 = 360,
+	E_EWS_SIZE_REQUESTED_432X432 = 432,
+	E_EWS_SIZE_REQUESTED_504X504 = 504,
+	E_EWS_SIZE_REQUESTED_648X648 = 648
+} EEwsSizeRequested;
 
 typedef struct {
 	gchar *id;
@@ -371,7 +392,8 @@ EEwsExtendedFieldURI *
 void		e_ews_extended_field_uri_free	(EEwsExtendedFieldURI *ex_field_uri);
 
 EEwsIndexedFieldURI *
-		e_ews_indexed_field_uri_new	(void);
+		e_ews_indexed_field_uri_new	(const gchar *uri,
+						 const gchar *index);
 void		e_ews_indexed_field_uri_free	(EEwsIndexedFieldURI *id_field_uri);
 
 EEwsAdditionalProps *
@@ -385,15 +407,18 @@ void		e_ews_notification_event_free	(EEwsNotificationEvent *event);
 void		ews_oal_free			(EwsOAL *oal);
 void		ews_oal_details_free		(EwsOALDetails *details);
 
-void		e_ews_connection_utils_unref_in_thread
-						(gpointer object);
-
 GType		e_ews_connection_get_type	(void);
-EEwsConnection *e_ews_connection_new		(const gchar *uri,
+EEwsConnection *e_ews_connection_new		(ESource *source,
+						 const gchar *uri,
 						 CamelEwsSettings *settings);
-EEwsConnection *e_ews_connection_new_full	(const gchar *uri,
+EEwsConnection *e_ews_connection_new_full	(ESource *source,
+						 const gchar *uri,
 						 CamelEwsSettings *settings,
 						 gboolean allow_connection_reuse);
+EEwsConnection *e_ews_connection_new_for_backend(EBackend *backend,
+						 ESourceRegistry *registry,
+						 const gchar *uri,
+						 CamelEwsSettings *settings);
 void		e_ews_connection_update_credentials
 						(EEwsConnection *cnc,
 						 const ENamedParameters *credentials);
@@ -403,7 +428,12 @@ ESourceAuthenticationResult
 						 const ENamedParameters *credentials,
 						 GCancellable *cancellable,
 						 GError **error);
+ESource *	e_ews_connection_get_source	(EEwsConnection *cnc);
 const gchar *	e_ews_connection_get_uri	(EEwsConnection *cnc);
+ESoupAuthBearer *
+		e_ews_connection_ref_bearer_auth(EEwsConnection *cnc);
+void		e_ews_connection_set_bearer_auth(EEwsConnection *cnc,
+						 ESoupAuthBearer *bearer_auth);
 const gchar *	e_ews_connection_get_password	(EEwsConnection *cnc);
 gchar *		e_ews_connection_dup_password	(EEwsConnection *cnc);
 void		e_ews_connection_set_password	(EEwsConnection *cnc,
@@ -420,8 +450,14 @@ CamelEwsSettings *
 		e_ews_connection_ref_settings	(EEwsConnection *cnc);
 SoupSession *	e_ews_connection_ref_soup_session
 						(EEwsConnection *cnc);
+gboolean	e_ews_connection_get_disconnected_flag
+						(EEwsConnection *cnc);
+void		e_ews_connection_set_disconnected_flag
+						(EEwsConnection *cnc,
+						 gboolean disconnected_flag);
 EEwsConnection *e_ews_connection_find		(const gchar *uri,
 						 const gchar *username);
+GSList *	e_ews_connection_list_existing	(void); /* EEwsConnection * */
 void		e_ews_connection_queue_request	(EEwsConnection *cnc,
 						 ESoapMessage *msg,
 						 EEwsResponseCallback cb,
@@ -429,12 +465,14 @@ void		e_ews_connection_queue_request	(EEwsConnection *cnc,
 						 GCancellable *cancellable,
 						 GSimpleAsyncResult *simple);
 
-gboolean	e_ews_autodiscover_ws_url_sync	(CamelEwsSettings *settings,
+gboolean	e_ews_autodiscover_ws_url_sync	(ESource *source,
+						 CamelEwsSettings *settings,
 						 const gchar *email_address,
 						 const gchar *password,
 						 GCancellable *cancellable,
 						 GError **error);
-void		e_ews_autodiscover_ws_url	(CamelEwsSettings *settings,
+void		e_ews_autodiscover_ws_url	(ESource *source,
+						 CamelEwsSettings *settings,
 						 const gchar *email_address,
 						 const gchar *password,
 						 GCancellable *cancellable,
@@ -499,6 +537,7 @@ void		e_ews_connection_find_folder_items
 						 const EEwsAdditionalProps *add_props,
 						 EwsSortOrder *sort_order,
 						 const gchar *query,
+						 GPtrArray *only_ids, /* element-type utf8 */
 						 EEwsFolderType type,
 						 EwsConvertQueryCallback convert_query_cb,
 						 GCancellable *cancellable,
@@ -518,6 +557,7 @@ gboolean	e_ews_connection_find_folder_items_sync
 						 const EEwsAdditionalProps *add_props,
 						 EwsSortOrder *sort_order,
 						 const gchar *query,
+						 GPtrArray *only_ids, /* element-type utf8 */
 						 EEwsFolderType type,
 						 gboolean *includes_last_item,
 						 GSList **items,
@@ -592,7 +632,15 @@ gboolean	e_ews_connection_delete_items_sync
 						 EwsAffectedTaskOccurrencesType affected_tasks,
 						 GCancellable *cancellable,
 						 GError **error);
-
+gboolean	e_ews_connection_delete_items_in_chunks_sync
+						(EEwsConnection *cnc,
+						 gint pri,
+						 const GSList *ids,
+						 EwsDeleteType delete_type,
+						 EwsSendMeetingCancellationsType send_cancels,
+						 EwsAffectedTaskOccurrencesType affected_tasks,
+						 GCancellable *cancellable,
+						 GError **error);
 void		e_ews_connection_delete_item	(EEwsConnection *cnc,
 						 gint pri,
 						 EwsId *id,
@@ -954,13 +1002,13 @@ void		e_ews_connection_delete_attachments
 gboolean	e_ews_connection_delete_attachments_finish
 						(EEwsConnection *cnc,
 						 GAsyncResult *result,
-						 GSList **parents_ids,
+						 gchar **new_change_key,
 						 GError **error);
 gboolean	e_ews_connection_delete_attachments_sync
 						(EEwsConnection *cnc,
 						 gint pri,
 						 const GSList *attachments_ids,
-						 GSList **parents_ids,
+						 gchar **new_change_key,
 						 GCancellable *cancellable,
 						 GError **error);
 
@@ -1296,6 +1344,26 @@ gboolean	e_ews_connection_get_server_time_zones_sync
 						 gint pri,
 						 GSList *msdn_locations,
 						 GSList **tzds, /* EEwsCalendarTimeZoneDefinition */
+						 GCancellable *cancellable,
+						 GError **error);
+void		e_ews_connection_get_user_photo	(EEwsConnection *cnc,
+						 gint pri,
+						 const gchar *email,
+						 EEwsSizeRequested size_requested,
+						 GCancellable *cancellable,
+						 GAsyncReadyCallback callback,
+						 gpointer user_data);
+gboolean	e_ews_connection_get_user_photo_finish
+						(EEwsConnection *cnc,
+						 GAsyncResult *result,
+						 gchar **out_picture_data, /* base64-encoded */
+						 GError **error);
+gboolean	e_ews_connection_get_user_photo_sync
+						(EEwsConnection *cnc,
+						 gint pri,
+						 const gchar *email,
+						 EEwsSizeRequested size_requested,
+						 gchar **out_picture_data, /* base64-encoded */
 						 GCancellable *cancellable,
 						 GError **error);
 

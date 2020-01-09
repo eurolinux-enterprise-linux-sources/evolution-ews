@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -311,7 +309,7 @@ ews_config_utils_try_credentials_sync (ECredentialsPrompter *prompter,
 	gboolean res = TRUE;
 
 	hosturl = camel_ews_settings_dup_hosturl (data->ews_settings);
-	data->conn = e_ews_connection_new (data->connect_url ? data->connect_url : hosturl, data->ews_settings);
+	data->conn = e_ews_connection_new (source, data->connect_url ? data->connect_url : hosturl, data->ews_settings);
 	g_free (hosturl);
 
 	e_ews_connection_update_credentials (data->conn, credentials);
@@ -371,7 +369,7 @@ e_ews_config_utils_open_connection_for (ESource *source,
 			gchar *hosturl;
 
 			hosturl = camel_ews_settings_dup_hosturl (ews_settings);
-			conn = e_ews_connection_new (connect_url && *connect_url ? connect_url : hosturl, ews_settings);
+			conn = e_ews_connection_new (source, connect_url && *connect_url ? connect_url : hosturl, ews_settings);
 			g_free (hosturl);
 
 			e_ews_connection_update_credentials (conn, NULL);
@@ -691,14 +689,21 @@ ews_settings_get_folder_sizes_thread (gpointer user_data)
 				fsd->cancellable, &fsd->error);
 
 		for (l = folders_list; l != NULL; l = l->next) {
+			const EEwsFolder *folder = l->data;
 			const EwsFolderId *folder_id;
 			gchar *folder_full_name;
 			gchar *folder_size;
 
-			folder_id = e_ews_folder_get_id (l->data);
+			if (!folder || e_ews_folder_is_error (folder))
+				continue;
+
+			folder_id = e_ews_folder_get_id (folder);
+			if (!folder_id)
+				continue;
+
 			folder_full_name = camel_ews_store_summary_get_folder_full_name (
 				fsd->ews_store->summary, folder_id->id, NULL);
-			folder_size = g_format_size (e_ews_folder_get_size (l->data));
+			folder_size = g_format_size (e_ews_folder_get_size (folder));
 
 			g_hash_table_insert (fsd->folder_sizes, folder_full_name, folder_size);
 		}
@@ -916,7 +921,7 @@ action_folder_permissions_mail_cb (GtkAction *action,
 
 	str_folder_id = camel_ews_store_summary_get_folder_id_from_name (ews_store->summary, folder_path);
 	if (!str_folder_id) {
-		e_notice (parent, GTK_MESSAGE_ERROR, _("Cannot edit permissions of folder '%s', choose other folder."), folder_path);
+		e_notice (parent, GTK_MESSAGE_ERROR, _("Cannot edit permissions of folder “%s”, choose other folder."), folder_path);
 	} else {
 		EShell *shell;
 		ESource *source;

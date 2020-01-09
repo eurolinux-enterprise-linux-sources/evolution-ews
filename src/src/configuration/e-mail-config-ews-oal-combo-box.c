@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <mail/e-mail-config-service-page.h>
 
@@ -323,6 +321,15 @@ e_mail_config_ews_oal_combo_box_update (EMailConfigEwsOalComboBox *combo_box,
 	backend = e_mail_config_ews_oal_combo_box_get_backend (combo_box);
 	settings = e_mail_config_service_backend_get_settings (backend);
 	source = e_mail_config_service_backend_get_source (backend);
+
+	if (!e_source_has_extension (source, E_SOURCE_EXTENSION_AUTHENTICATION)) {
+		ESource *collection;
+
+		collection = e_mail_config_service_backend_get_collection (backend);
+		if (collection && e_source_has_extension (collection, E_SOURCE_EXTENSION_AUTHENTICATION)) {
+			source = collection;
+		}
+	}
 
 	simple = g_simple_async_result_new (
 		G_OBJECT (combo_box), callback, user_data,

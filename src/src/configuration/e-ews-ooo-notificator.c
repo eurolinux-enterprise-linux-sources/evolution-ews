@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "evolution-ews-config.h"
 
 #include "e-ews-ooo-notificator.h"
 #include "camel/camel-ews-store.h"
@@ -182,7 +180,7 @@ e_ews_ooo_notificator_show_notification (EEwsOooNotificator *extension,
 	action = gtk_action_new (
 			"ooo-unset-on-server",
 			_("Unset on Server"),
-			_("Unset the \"Out of Office\" status"),
+			_("Unset the “Out of Office” status"),
 			GTK_STOCK_OK);
 	g_signal_connect_swapped (
 			action,

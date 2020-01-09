@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include "e-mail-config-ews-backend.h"
 
@@ -41,12 +39,17 @@
 	((obj), E_TYPE_MAIL_CONFIG_EWS_BACKEND, EMailConfigEwsBackendPrivate))
 
 struct _EMailConfigEwsBackendPrivate {
-	GtkWidget *user_entry;		/* not referenced */
-	GtkWidget *host_entry;		/* not referenced */
-	GtkWidget *url_button;		/* not referenced */
-	GtkWidget *oab_entry;		/* not referenced */
-	GtkWidget *auth_check;		/* not referenced */
-	GtkWidget *impersonate_user_entry; /* not referenced */
+	GtkWidget *user_entry;
+	GtkWidget *host_entry;
+	GtkWidget *url_button;
+	GtkWidget *oab_entry;
+	GtkWidget *auth_check;
+	GtkWidget *impersonate_user_entry;
+	GtkGrid *oauth2_settings_grid;
+	GtkWidget *oauth2_override_check;
+	GtkWidget *oauth2_tenant_entry;
+	GtkWidget *oauth2_client_id_entry;
+	GtkWidget *oauth2_redirect_uri_entry;
 };
 
 G_DEFINE_DYNAMIC_TYPE (
@@ -86,6 +89,7 @@ search_for_impersonate_user_clicked_cb (GtkButton *button,
 					EMailConfigServiceBackend *backend)
 {
 	EMailConfigEwsBackendPrivate *priv;
+	ESource *source;
 	CamelSettings *settings;
 	EEwsConnection *conn;
 	GtkWindow *parent;
@@ -93,9 +97,13 @@ search_for_impersonate_user_clicked_cb (GtkButton *button,
 
 	g_return_if_fail (E_IS_MAIL_CONFIG_SERVICE_BACKEND (backend));
 
+	source = e_mail_config_service_backend_get_collection (backend);
+	if (!source)
+		source = e_mail_config_service_backend_get_source (backend);
+
 	priv = E_MAIL_CONFIG_EWS_BACKEND_GET_PRIVATE (backend);
 	settings = e_mail_config_service_backend_get_settings (backend);
-	conn = e_ews_connection_new (gtk_entry_get_text (GTK_ENTRY (priv->host_entry)), CAMEL_EWS_SETTINGS (settings));
+	conn = e_ews_connection_new (source, gtk_entry_get_text (GTK_ENTRY (priv->host_entry)), CAMEL_EWS_SETTINGS (settings));
 	parent = e_ews_config_utils_get_widget_toplevel_window (GTK_WIDGET (button));
 
 	if (e_ews_search_user_modal (parent, conn, NULL, NULL, &email)) {
@@ -104,6 +112,36 @@ search_for_impersonate_user_clicked_cb (GtkButton *button,
 
 	g_object_unref (conn);
 	g_free (email);
+}
+
+static gboolean
+mail_config_ews_backend_auth_mech_is_oauth2 (GBinding *binding,
+					     const GValue *from_value,
+					     GValue *to_value,
+					     gpointer user_data)
+{
+	gboolean is_office365;
+	const gchar *active_mechanism;
+
+	active_mechanism = g_value_get_string (from_value);
+	is_office365 = g_strcmp0 (active_mechanism, "Office365") == 0;
+
+	g_value_set_boolean (to_value, is_office365);
+
+	return TRUE;
+}
+
+static void
+mail_config_ews_backend_set_oauth2_tooltip (GtkWidget *widget,
+					    const gchar *value,
+					    const gchar *when_value_empty,
+					    gchar *when_value_filled) /* takes ownership */
+{
+	g_return_if_fail (GTK_IS_WIDGET (widget));
+
+	gtk_widget_set_tooltip_text (widget, value && *value ? when_value_filled : when_value_empty);
+
+	g_free (when_value_filled);
 }
 
 static void
@@ -263,6 +301,123 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 	priv->auth_check = widget;  /* do not reference */
 	gtk_widget_show (widget);
 
+	widget = gtk_grid_new ();
+	gtk_widget_set_margin_left (widget, 12);
+	gtk_box_pack_start (GTK_BOX (parent), widget, FALSE, FALSE, 0);
+	priv->oauth2_settings_grid = GTK_GRID (widget);
+
+	gtk_grid_set_column_spacing (priv->oauth2_settings_grid, 4);
+	gtk_grid_set_row_spacing (priv->oauth2_settings_grid, 4);
+
+	container = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+	gtk_grid_attach (priv->oauth2_settings_grid, container, 0, 0, 2, 1);
+
+	widget = gtk_check_button_new_with_mnemonic (_("_Override Office365 OAuth2 settings"));
+	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
+	priv->oauth2_override_check = widget;
+
+	markup = g_markup_printf_escaped ("(<a href=\"https://wiki.gnome.org/Apps/Evolution/EWS/OAuth2\">%s</a>)", _("Help…"));
+	widget = gtk_label_new (markup);
+	gtk_label_set_use_markup (GTK_LABEL (widget), TRUE);
+	gtk_misc_set_alignment (GTK_MISC (widget), 0.0, 0.5);
+	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
+	g_free (markup);
+
+	/* Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in an Office 365 world.
+	   You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/ */
+	widget = gtk_label_new_with_mnemonic (_("_Tenant:"));
+	gtk_widget_set_margin_left (widget, 12);
+	gtk_misc_set_alignment (GTK_MISC (widget), 1.0, 0.5);
+	gtk_grid_attach (priv->oauth2_settings_grid, widget, 0, 1, 1, 1);
+	label = GTK_LABEL (widget);
+
+	e_binding_bind_property (
+		priv->oauth2_override_check, "active",
+		widget, "sensitive",
+		G_BINDING_SYNC_CREATE);
+
+	widget = gtk_entry_new ();
+	gtk_widget_set_hexpand (widget, TRUE);
+	gtk_label_set_mnemonic_widget (label, widget);
+	gtk_grid_attach (priv->oauth2_settings_grid, widget, 1, 1, 1, 1);
+	priv->oauth2_tenant_entry = widget;
+
+	e_binding_bind_property (
+		priv->oauth2_override_check, "active",
+		widget, "sensitive",
+		G_BINDING_SYNC_CREATE);
+
+	mail_config_ews_backend_set_oauth2_tooltip (widget, OFFICE365_TENANT,
+		/* Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in an Office 365 world.
+		   You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/ */
+		_("There is not set any default tenant"),
+		/* Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in an Office 365 world.
+		   You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/ */
+		g_strdup_printf (_("Default tenant is “%s”"), OFFICE365_TENANT));
+
+	widget = gtk_label_new_with_mnemonic (_("Application I_D:"));
+	gtk_widget_set_margin_left (widget, 12);
+	gtk_misc_set_alignment (GTK_MISC (widget), 1.0, 0.5);
+	gtk_grid_attach (priv->oauth2_settings_grid, widget, 0, 2, 1, 1);
+	label = GTK_LABEL (widget);
+
+	e_binding_bind_property (
+		priv->oauth2_override_check, "active",
+		widget, "sensitive",
+		G_BINDING_SYNC_CREATE);
+
+	widget = gtk_entry_new ();
+	gtk_widget_set_hexpand (widget, TRUE);
+	gtk_label_set_mnemonic_widget (label, widget);
+	gtk_grid_attach (priv->oauth2_settings_grid, widget, 1, 2, 1, 1);
+	priv->oauth2_client_id_entry = widget;
+
+	e_binding_bind_property (
+		priv->oauth2_override_check, "active",
+		widget, "sensitive",
+		G_BINDING_SYNC_CREATE);
+
+	mail_config_ews_backend_set_oauth2_tooltip (widget, OFFICE365_CLIENT_ID,
+		_("There is not set any default application ID"),
+		g_strdup_printf (_("Default application ID is “%s”"), OFFICE365_CLIENT_ID));
+
+	widget = gtk_label_new_with_mnemonic (_("_Redirect URI:"));
+	gtk_widget_set_margin_left (widget, 12);
+	gtk_misc_set_alignment (GTK_MISC (widget), 1.0, 0.5);
+	gtk_grid_attach (priv->oauth2_settings_grid, widget, 0, 3, 1, 1);
+	label = GTK_LABEL (widget);
+
+	e_binding_bind_property (
+		priv->oauth2_override_check, "active",
+		widget, "sensitive",
+		G_BINDING_SYNC_CREATE);
+
+	widget = gtk_entry_new ();
+	gtk_widget_set_hexpand (widget, TRUE);
+	gtk_label_set_mnemonic_widget (label, widget);
+	gtk_grid_attach (priv->oauth2_settings_grid, widget, 1, 3, 1, 1);
+	priv->oauth2_redirect_uri_entry = widget;
+
+	e_binding_bind_property (
+		priv->oauth2_override_check, "active",
+		widget, "sensitive",
+		G_BINDING_SYNC_CREATE);
+
+	markup = g_strdup_printf (_("Default redirect URI is “%s”"), "https://login.microsoftonline.com/common/oauth2/nativeclient");
+	mail_config_ews_backend_set_oauth2_tooltip (widget, OFFICE365_REDIRECT_URI,
+		markup,
+		g_strdup_printf (_("Default redirect URI is “%s”"), OFFICE365_REDIRECT_URI));
+	g_free (markup);
+
+	gtk_widget_show_all (GTK_WIDGET (priv->oauth2_settings_grid));
+
+	e_binding_bind_property_full (
+		priv->auth_check, "active-mechanism",
+		priv->oauth2_settings_grid, "visible",
+		G_BINDING_SYNC_CREATE,
+		mail_config_ews_backend_auth_mech_is_oauth2,
+		NULL, NULL, NULL);
+
 	e_binding_bind_object_text_property (
 		settings, "user",
 		priv->user_entry, "text",
@@ -288,6 +443,30 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 		settings, "auth-mechanism",
 		priv->auth_check, "active-mechanism",
 		G_BINDING_BIDIRECTIONAL);
+
+	e_binding_bind_property (
+		settings, "override-oauth2",
+		priv->oauth2_override_check, "active",
+		G_BINDING_BIDIRECTIONAL |
+		G_BINDING_SYNC_CREATE);
+
+	e_binding_bind_object_text_property (
+		settings, "oauth2-tenant",
+		priv->oauth2_tenant_entry, "text",
+		G_BINDING_BIDIRECTIONAL |
+		G_BINDING_SYNC_CREATE);
+
+	e_binding_bind_object_text_property (
+		settings, "oauth2-client-id",
+		priv->oauth2_client_id_entry, "text",
+		G_BINDING_BIDIRECTIONAL |
+		G_BINDING_SYNC_CREATE);
+
+	e_binding_bind_object_text_property (
+		settings, "oauth2-redirect_uri",
+		priv->oauth2_redirect_uri_entry, "text",
+		G_BINDING_BIDIRECTIONAL |
+		G_BINDING_SYNC_CREATE);
 
 	extension_name = E_SOURCE_EXTENSION_COLLECTION;
 	source = e_mail_config_service_backend_get_collection (backend);
@@ -352,6 +531,18 @@ mail_config_ews_backend_setup_defaults (EMailConfigServiceBackend *backend)
 }
 
 static gboolean
+mail_config_ews_backend_auto_configure (EMailConfigServiceBackend *backend,
+					EConfigLookup *config_lookup,
+					gint *out_priority,
+					gboolean *out_is_complete)
+{
+	return e_mail_config_service_backend_auto_configure_for_kind (backend, config_lookup,
+		E_CONFIG_LOOKUP_RESULT_COLLECTION, NULL,
+		e_mail_config_service_backend_get_collection (backend),
+		out_priority, out_is_complete);
+}
+
+static gboolean
 mail_config_ews_backend_check_complete (EMailConfigServiceBackend *backend)
 {
 	EMailConfigServicePage *page;
@@ -393,6 +584,30 @@ mail_config_ews_backend_check_complete (EMailConfigServiceBackend *backend)
 	complete = complete && correct;
 
 	e_util_set_entry_issue_hint (priv->user_entry, correct ? NULL : _("User name cannot be empty"));
+
+	if (correct && camel_ews_settings_get_auth_mechanism (ews_settings) == EWS_AUTH_TYPE_OAUTH2) {
+		const gchar *tenant, *client_id;
+
+		if (camel_ews_settings_get_override_oauth2 (ews_settings)) {
+			tenant = camel_ews_settings_get_oauth2_tenant (ews_settings);
+			client_id = camel_ews_settings_get_oauth2_client_id (ews_settings);
+		} else {
+			tenant = OFFICE365_TENANT;
+			client_id = OFFICE365_CLIENT_ID;
+		}
+
+		correct = tenant && *tenant;
+		complete = complete && correct;
+
+		/* Translators: 'Tenant' here means a term used by Microsoft to identify a company or organization in an Office 365 world.
+		   You probably do not want to translate it. More for example here: https://powerbi.microsoft.com/en-us/blog/what-is-a-tenant/ */
+		e_util_set_entry_issue_hint (priv->oauth2_tenant_entry, correct ? NULL : _("Tenant cannot be empty"));
+
+		correct = client_id && *client_id;
+		complete = complete && correct;
+
+		e_util_set_entry_issue_hint (priv->oauth2_client_id_entry, correct ? NULL : _("Application ID cannot be empty"));
+	}
 
 	return complete;
 }
@@ -439,6 +654,7 @@ e_mail_config_ews_backend_class_init (EMailConfigEwsBackendClass *class)
 	backend_class->new_collection = mail_config_ews_backend_new_collection;
 	backend_class->insert_widgets = mail_config_ews_backend_insert_widgets;
 	backend_class->setup_defaults = mail_config_ews_backend_setup_defaults;
+	backend_class->auto_configure = mail_config_ews_backend_auto_configure;
 	backend_class->check_complete = mail_config_ews_backend_check_complete;
 	backend_class->commit_changes = mail_config_ews_backend_commit_changes;
 }

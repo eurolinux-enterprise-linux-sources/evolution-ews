@@ -19,9 +19,7 @@
  * USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -46,7 +44,6 @@
 #include "e-ews-item-change.h"
 #include "e-ews-debug.h"
 #include "e-ews-notification.h"
-#include "e-soup-auth-negotiate.h"
 
 #define d(x) x
 
@@ -82,6 +79,8 @@ static void	ews_connection_authenticate	(SoupSession *sess,
 /* Connection APIS */
 
 struct _EEwsConnectionPrivate {
+	ESource *source;
+	ESoupAuthBearer *bearer_auth;
 	SoupSession *soup_session;
 	GThread *soup_thread;
 	GMainLoop *soup_loop;
@@ -109,17 +108,22 @@ struct _EEwsConnectionPrivate {
 	GSList *subscribed_folders;
 
 	EEwsServerVersion version;
+
+	/* Set to TRUE when this connection had been disconnected and cannot be used anymore */
+	gboolean disconnected_flag;
 };
 
 enum {
 	PROP_0,
 	PROP_PASSWORD,
 	PROP_PROXY_RESOLVER,
-	PROP_SETTINGS
+	PROP_SETTINGS,
+	PROP_SOURCE
 };
 
 enum {
 	SERVER_NOTIFICATION,
+	PASSWORD_WILL_EXPIRE,
 	LAST_SIGNAL,
 };
 
@@ -147,6 +151,7 @@ struct _EwsAsyncData {
 	EwsDelegateDeliver deliver_to;
 	EEwsFolderType folder_type;
 	EEwsConnection *cnc;
+	gchar *user_photo; /* base64-encoded, as GetUserPhoto result */
 };
 
 struct _EwsNode {
@@ -191,6 +196,7 @@ ews_connection_error_quark (void)
 static void
 async_data_free (EwsAsyncData *async_data)
 {
+	g_free (async_data->user_photo);
 	g_free (async_data);
 }
 
@@ -383,9 +389,16 @@ e_ews_extended_field_uri_free (EEwsExtendedFieldURI *ex_field_uri)
 }
 
 EEwsIndexedFieldURI *
-e_ews_indexed_field_uri_new (void)
+e_ews_indexed_field_uri_new (const gchar *uri,
+			     const gchar *index)
 {
-	return g_new0 (EEwsIndexedFieldURI, 1);
+	EEwsIndexedFieldURI *furi;
+
+	furi = g_new0 (EEwsIndexedFieldURI, 1);
+	furi->field_uri = g_strdup (uri);
+	furi->field_index = g_strdup (index);
+
+	return furi;
 }
 
 void
@@ -492,11 +505,27 @@ ews_connection_scheduled_cb (gpointer user_data)
 
 	switch (sd->op) {
 	case EWS_SCHEDULE_OP_QUEUE_MESSAGE:
-		e_ews_debug_dump_raw_soup_request (sd->message);
+		if (!e_ews_connection_utils_prepare_message (sd->cnc, sd->message, NULL)) {
+			e_ews_debug_dump_raw_soup_request (sd->message);
 
-		soup_session_queue_message (
-			sd->cnc->priv->soup_session, sd->message,
-			sd->queue_callback, sd->queue_user_data);
+			if (sd->queue_callback) {
+				sd->queue_callback (sd->cnc->priv->soup_session, sd->message, sd->queue_user_data);
+			} else {
+				/* This should not happen */
+				g_warn_if_reached ();
+
+				soup_session_queue_message (
+					sd->cnc->priv->soup_session, sd->message,
+					sd->queue_callback, sd->queue_user_data);
+				soup_session_cancel_message (sd->cnc->priv->soup_session, sd->message, sd->message->status_code);
+			}
+		} else {
+			e_ews_debug_dump_raw_soup_request (sd->message);
+
+			soup_session_queue_message (
+				sd->cnc->priv->soup_session, sd->message,
+				sd->queue_callback, sd->queue_user_data);
+		}
 		break;
 	case EWS_SCHEDULE_OP_CANCEL:
 		soup_session_cancel_message (sd->cnc->priv->soup_session, sd->message, SOUP_STATUS_CANCELLED);
@@ -636,10 +665,16 @@ ews_next_request (gpointer _cnc)
 	if (cnc->priv->soup_session) {
 		SoupMessage *msg = SOUP_MESSAGE (node->msg);
 
-		e_ews_debug_dump_raw_soup_request (msg);
+		if (!e_ews_connection_utils_prepare_message (cnc, msg, node->cancellable)) {
+			e_ews_debug_dump_raw_soup_request (msg);
+			QUEUE_UNLOCK (cnc);
 
-		soup_session_queue_message (cnc->priv->soup_session, msg, ews_response_cb, node);
-		QUEUE_UNLOCK (cnc);
+			ews_response_cb (cnc->priv->soup_session, msg, node);
+		} else {
+			e_ews_debug_dump_raw_soup_request (msg);
+			soup_session_queue_message (cnc->priv->soup_session, msg, ews_response_cb, node);
+			QUEUE_UNLOCK (cnc);
+		}
 	} else {
 		QUEUE_UNLOCK (cnc);
 
@@ -695,10 +730,13 @@ ews_active_job_done (EEwsConnection *cnc,
 	if (ews_node->cancellable)
 		g_object_unref (ews_node->cancellable);
 
-	/* the 'simple' holds reference on 'cnc' and this function
-	 * is called in a dedicated thread, which 'cnc' joins on dispose,
-	 * thus to avoid race condition, unref the object in its own thread */
-	e_ews_connection_utils_unref_in_thread (ews_node->simple);
+	if (ews_node->simple) {
+		/* the 'simple' holds reference on 'cnc' and this function
+		 * is called in a dedicated thread, which 'cnc' joins on dispose,
+		 * thus to avoid race condition, unref the object in its own thread */
+		e_ews_connection_utils_unref_in_thread (ews_node->simple);
+	}
+
 	g_free (ews_node);
 }
 
@@ -768,6 +806,36 @@ e_ews_connection_queue_request (EEwsConnection *cnc,
 	ews_trigger_next_request (cnc);
 }
 
+static gboolean
+ews_connection_credentials_failed (EEwsConnection *connection,
+				   SoupMessage *message,
+				   GSimpleAsyncResult *simple)
+{
+	gint expire_in_days = 0;
+	gboolean expired = FALSE;
+	gchar *service_url = NULL;
+
+	g_return_val_if_fail (E_IS_EWS_CONNECTION (connection), FALSE);
+	g_return_val_if_fail (SOUP_IS_MESSAGE (message), FALSE);
+	g_return_val_if_fail (G_IS_SIMPLE_ASYNC_RESULT (simple), FALSE);
+
+	if (!e_ews_connection_utils_check_x_ms_credential_headers (message, &expire_in_days, &expired, &service_url))
+		return FALSE;
+
+	if (expired) {
+		GError *error = NULL;
+
+		e_ews_connection_utils_expired_password_to_error (service_url, &error);
+		g_simple_async_result_take_error (simple, error);
+	} else if (expire_in_days > 0) {
+		g_signal_emit (connection, signals[PASSWORD_WILL_EXPIRE], 0, expire_in_days, service_url);
+	}
+
+	g_free (service_url);
+
+	return expired;
+}
+
 /* Response callbacks */
 
 static void
@@ -777,12 +845,37 @@ ews_response_cb (SoupSession *session,
 {
 	EwsNode *enode = (EwsNode *) data;
 	ESoapResponse *response;
+	ESoapParameter *param;
 	gint log_level;
+	gint wait_ms = 0;
 
 	if (g_cancellable_is_cancelled (enode->cancellable))
 		goto exit;
 
-	if (msg->status_code == SOUP_STATUS_UNAUTHORIZED) {
+	if (ews_connection_credentials_failed (enode->cnc, msg, enode->simple)) {
+		goto exit;
+	} else if (msg->status_code == SOUP_STATUS_UNAUTHORIZED) {
+		if (msg->response_headers) {
+			const gchar *diagnostics;
+
+			diagnostics = soup_message_headers_get_list (msg->response_headers, "X-MS-DIAGNOSTICS");
+			if (diagnostics && strstr (diagnostics, "invalid_grant")) {
+				g_simple_async_result_set_error (
+					enode->simple,
+					EWS_CONNECTION_ERROR,
+					EWS_CONNECTION_ERROR_ACCESSDENIED,
+					"%s", diagnostics);
+				goto exit;
+			} else if (diagnostics && *diagnostics) {
+				g_simple_async_result_set_error (
+					enode->simple,
+					EWS_CONNECTION_ERROR,
+					EWS_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+					"%s", diagnostics);
+				goto exit;
+			}
+		}
+
 		g_simple_async_result_set_error (
 			enode->simple,
 			EWS_CONNECTION_ERROR,
@@ -792,7 +885,8 @@ ews_response_cb (SoupSession *session,
 	} else if (msg->status_code == SOUP_STATUS_CANT_RESOLVE ||
 		   msg->status_code == SOUP_STATUS_CANT_RESOLVE_PROXY ||
 		   msg->status_code == SOUP_STATUS_CANT_CONNECT ||
-		   msg->status_code == SOUP_STATUS_CANT_CONNECT_PROXY) {
+		   msg->status_code == SOUP_STATUS_CANT_CONNECT_PROXY ||
+		   msg->status_code == SOUP_STATUS_IO_ERROR) {
 		g_simple_async_result_set_error (
 			enode->simple,
 			EWS_CONNECTION_ERROR,
@@ -825,13 +919,119 @@ ews_response_cb (SoupSession *session,
 		e_soap_response_dump_response (response, stdout);
 	}
 
+	param = e_soap_response_get_first_parameter_by_name (response, "detail", NULL);
+	if (param)
+		param = e_soap_parameter_get_first_child_by_name (param, "ResponseCode");
+	if (param) {
+		gchar *value;
+
+		value = e_soap_parameter_get_string_value (param);
+		if (value && ews_get_error_code (value) == EWS_CONNECTION_ERROR_SERVERBUSY) {
+			param = e_soap_response_get_first_parameter_by_name (response, "detail", NULL);
+			if (param)
+				param = e_soap_parameter_get_first_child_by_name (param, "MessageXml");
+			if (param) {
+				param = e_soap_parameter_get_first_child_by_name (param, "Value");
+				if (param) {
+					g_free (value);
+
+					value = e_soap_parameter_get_property (param, "Name");
+					if (g_strcmp0 (value, "BackOffMilliseconds") == 0) {
+						wait_ms = e_soap_parameter_get_int_value (param);
+					}
+				}
+			}
+		}
+
+		g_free (value);
+	}
+
+	if (wait_ms > 0) {
+		GCancellable *cancellable = enode->cancellable;
+		EFlag *flag;
+
+		if (cancellable)
+			g_object_ref (cancellable);
+		g_object_ref (msg);
+
+		flag = e_flag_new ();
+		while (wait_ms > 0 && !g_cancellable_is_cancelled (cancellable) && msg->status_code != SOUP_STATUS_CANCELLED) {
+			gint64 now = g_get_monotonic_time ();
+			gint left_minutes, left_seconds;
+
+			left_minutes = wait_ms / 60000;
+			left_seconds = (wait_ms / 1000) % 60;
+
+			if (left_minutes > 0) {
+				camel_operation_push_message (cancellable,
+					g_dngettext (GETTEXT_PACKAGE,
+						"Exchange server is busy, waiting to retry (%d:%02d minute)",
+						"Exchange server is busy, waiting to retry (%d:%02d minutes)", left_minutes),
+					left_minutes, left_seconds);
+			} else {
+				camel_operation_push_message (cancellable,
+					g_dngettext (GETTEXT_PACKAGE,
+						"Exchange server is busy, waiting to retry (%d second)",
+						"Exchange server is busy, waiting to retry (%d seconds)", left_seconds),
+					left_seconds);
+			}
+
+			e_flag_wait_until (flag, now + (G_TIME_SPAN_MILLISECOND * (wait_ms > 1000 ? 1000 : wait_ms)));
+
+			now = g_get_monotonic_time () - now;
+			now = now / G_TIME_SPAN_MILLISECOND;
+
+			if (now >= wait_ms)
+				wait_ms = 0;
+			wait_ms -= now;
+
+			camel_operation_pop_message (cancellable);
+		}
+
+		e_flag_free (flag);
+
+		g_object_unref (response);
+
+		if (g_cancellable_is_cancelled (cancellable) ||
+		    msg->status_code == SOUP_STATUS_CANCELLED) {
+			g_clear_object (&cancellable);
+			g_object_unref (msg);
+		} else {
+			EwsNode *new_node;
+
+			new_node = ews_node_new ();
+			new_node->msg = E_SOAP_MESSAGE (msg); /* takes ownership */
+			new_node->pri = enode->pri;
+			new_node->cb = enode->cb;
+			new_node->cnc = enode->cnc;
+			new_node->simple = enode->simple;
+
+			enode->simple = NULL;
+
+			QUEUE_LOCK (enode->cnc);
+			enode->cnc->priv->jobs = g_slist_prepend (enode->cnc->priv->jobs, new_node);
+			QUEUE_UNLOCK (enode->cnc);
+
+			if (cancellable) {
+				new_node->cancellable = g_object_ref (cancellable);
+				new_node->cancel_handler_id = g_cancellable_connect (
+					cancellable, G_CALLBACK (ews_cancel_request), new_node, NULL);
+			}
+
+			g_clear_object (&cancellable);
+		}
+
+		goto exit;
+	}
+
 	if (enode->cb != NULL)
 		enode->cb (response, enode->simple);
 
 	g_object_unref (response);
 
 exit:
-	g_simple_async_result_complete_in_idle (enode->simple);
+	if (enode->simple)
+		g_simple_async_result_complete_in_idle (enode->simple);
 
 	ews_active_job_done (enode->cnc, enode);
 }
@@ -873,7 +1073,8 @@ sync_xxx_response_cb (ESoapParameter *subparam,
 			EEwsFolder *folder;
 
 			folder = parser (subparam1);
-			items_created = g_slist_append (items_created, folder);
+			if (folder)
+				items_created = g_slist_append (items_created, folder);
 		}
 
 		for (subparam1 = e_soap_parameter_get_first_child_by_name (node, "Update");
@@ -882,7 +1083,8 @@ sync_xxx_response_cb (ESoapParameter *subparam,
 			EEwsFolder *folder;
 
 			folder = parser (subparam1);
-			items_updated = g_slist_append (items_updated, folder);
+			if (folder)
+				items_updated = g_slist_append (items_updated, folder);
 		}
 		  /* Exchange 2007SP1 introduced <ReadFlagChange> which is basically identical
 		   * to <Update>; no idea why they thought it was a good idea. */
@@ -892,7 +1094,8 @@ sync_xxx_response_cb (ESoapParameter *subparam,
 			EEwsFolder *folder;
 
 			folder = parser (subparam1);
-			items_updated = g_slist_append (items_updated, folder);
+			if (folder)
+				items_updated = g_slist_append (items_updated, folder);
 		}
 
 		for (subparam1 = e_soap_parameter_get_first_child_by_name (node, "Delete");
@@ -1189,8 +1392,9 @@ handle_get_items_response_cb (EwsAsyncData *async_data, ESoapParameter *param)
 		const gchar *name = (const gchar *) subparam->name;
 
 		if (g_str_has_suffix (name, "ResponseMessage")) {
-			/* coverity[unchecked_value] */
-			ews_get_response_status (subparam, &error);
+			if (ews_get_response_status (subparam, &error))
+				error = NULL;
+
 			ews_handle_items_param (subparam, async_data, error);
 		} else {
 			g_warning (
@@ -1481,252 +1685,6 @@ create_folder_response_cb (ESoapResponse *response,
 	}
 }
 
-static void
-ews_connection_set_settings (EEwsConnection *connection,
-                             CamelEwsSettings *settings)
-{
-	g_return_if_fail (CAMEL_IS_EWS_SETTINGS (settings));
-	g_return_if_fail (connection->priv->settings == NULL);
-
-	connection->priv->settings = g_object_ref (settings);
-}
-
-static void
-ews_connection_set_property (GObject *object,
-                             guint property_id,
-                             const GValue *value,
-                             GParamSpec *pspec)
-{
-	switch (property_id) {
-		case PROP_PASSWORD:
-			e_ews_connection_set_password (
-				E_EWS_CONNECTION (object),
-				g_value_get_string (value));
-			return;
-
-		case PROP_PROXY_RESOLVER:
-			e_ews_connection_set_proxy_resolver (
-				E_EWS_CONNECTION (object),
-				g_value_get_object (value));
-			return;
-
-		case PROP_SETTINGS:
-			ews_connection_set_settings (
-				E_EWS_CONNECTION (object),
-				g_value_get_object (value));
-			return;
-	}
-
-	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-}
-
-static void
-ews_connection_get_property (GObject *object,
-                             guint property_id,
-                             GValue *value,
-                             GParamSpec *pspec)
-{
-	switch (property_id) {
-		case PROP_PASSWORD:
-			g_value_take_string (
-				value,
-				e_ews_connection_dup_password (
-				E_EWS_CONNECTION (object)));
-			return;
-
-		case PROP_PROXY_RESOLVER:
-			g_value_take_object (
-				value,
-				e_ews_connection_ref_proxy_resolver (
-				E_EWS_CONNECTION (object)));
-			return;
-
-		case PROP_SETTINGS:
-			g_value_take_object (
-				value,
-				e_ews_connection_ref_settings (
-				E_EWS_CONNECTION (object)));
-			return;
-	}
-
-	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-}
-
-static void
-ews_connection_dispose (GObject *object)
-{
-	EEwsConnectionPrivate *priv;
-
-	priv = E_EWS_CONNECTION_GET_PRIVATE (object);
-
-	g_mutex_lock (&connecting);
-
-	/* remove the connection from the hash table */
-	if (loaded_connections_permissions != NULL) {
-		g_hash_table_remove (
-			loaded_connections_permissions, priv->hash_key);
-		if (g_hash_table_size (loaded_connections_permissions) == 0) {
-			g_hash_table_destroy (loaded_connections_permissions);
-			loaded_connections_permissions = NULL;
-		}
-	}
-
-	g_mutex_unlock (&connecting);
-
-	if (priv->soup_session) {
-		g_signal_handlers_disconnect_by_func (
-			priv->soup_session,
-			ews_connection_authenticate, object);
-
-		g_main_loop_quit (priv->soup_loop);
-		g_thread_join (priv->soup_thread);
-		priv->soup_thread = NULL;
-
-		g_main_loop_unref (priv->soup_loop);
-		priv->soup_loop = NULL;
-		g_main_context_unref (priv->soup_context);
-		priv->soup_context = NULL;
-	}
-
-	g_clear_object (&priv->proxy_resolver);
-
-	if (priv->settings != NULL) {
-		g_object_unref (priv->settings);
-		priv->settings = NULL;
-	}
-
-	e_ews_connection_set_password (E_EWS_CONNECTION (object), NULL);
-
-	g_slist_free (priv->jobs);
-	priv->jobs = NULL;
-
-	g_slist_free (priv->active_job_queue);
-	priv->active_job_queue = NULL;
-
-	g_slist_free_full (priv->subscribed_folders, g_free);
-	priv->subscribed_folders = NULL;
-
-	if (priv->subscriptions != NULL) {
-		g_hash_table_destroy (priv->subscriptions);
-		priv->subscriptions = NULL;
-	}
-
-	/* Chain up to parent's dispose() method. */
-	G_OBJECT_CLASS (e_ews_connection_parent_class)->dispose (object);
-}
-
-static void
-ews_connection_finalize (GObject *object)
-{
-	EEwsConnectionPrivate *priv;
-
-	priv = E_EWS_CONNECTION_GET_PRIVATE (object);
-
-	g_free (priv->uri);
-	g_free (priv->password);
-	g_free (priv->email);
-	g_free (priv->hash_key);
-	g_free (priv->impersonate_user);
-
-	g_mutex_clear (&priv->property_lock);
-	g_rec_mutex_clear (&priv->queue_lock);
-	g_mutex_clear (&priv->notification_lock);
-
-	/* Chain up to parent's finalize() method. */
-	G_OBJECT_CLASS (e_ews_connection_parent_class)->finalize (object);
-}
-
-static GObject *
-ews_connection_constructor (GType gtype, guint n_properties,
-			    GObjectConstructParam *properties)
-{
-	GObject *obj = G_OBJECT_CLASS (e_ews_connection_parent_class)->
-		constructor (gtype, n_properties, properties);
-	EEwsConnectionPrivate *priv = E_EWS_CONNECTION_GET_PRIVATE (obj);
-	EwsAuthType mech;
-
-	mech = camel_ews_settings_get_auth_mechanism (priv->settings);
-
-	/* We used to disable Basic auth to avoid it getting in the way of
-	 * our GSSAPI hacks. But leave it enabled in the case where NTLM is
-	 * enabled, which is the default configuration. It's a useful fallback
-	 * which people may be relying on. */
-	if (mech == EWS_AUTH_TYPE_GSSAPI) {
-		soup_session_add_feature_by_type (priv->soup_session,
-						  E_SOUP_TYPE_AUTH_NEGOTIATE);
-		soup_session_remove_feature_by_type (priv->soup_session,
-						     SOUP_TYPE_AUTH_BASIC);
-	} else if (mech == EWS_AUTH_TYPE_NTLM)
-		soup_session_add_feature_by_type (priv->soup_session,
-						  SOUP_TYPE_AUTH_NTLM);
-
-	return obj;
-}
-
-static void
-e_ews_connection_class_init (EEwsConnectionClass *class)
-{
-	GObjectClass *object_class;
-
-	g_type_class_add_private (class, sizeof (EEwsConnectionPrivate));
-
-	object_class = G_OBJECT_CLASS (class);
-	object_class->constructor = ews_connection_constructor;
-	object_class->set_property = ews_connection_set_property;
-	object_class->get_property = ews_connection_get_property;
-	object_class->dispose = ews_connection_dispose;
-	object_class->finalize = ews_connection_finalize;
-
-	g_object_class_install_property (
-		object_class,
-		PROP_PASSWORD,
-		g_param_spec_string (
-			"password",
-			"Password",
-			"Authentication password",
-			NULL,
-			G_PARAM_READWRITE |
-			G_PARAM_STATIC_STRINGS));
-
-	g_object_class_install_property (
-		object_class,
-		PROP_PROXY_RESOLVER,
-		g_param_spec_object (
-			"proxy-resolver",
-			"Proxy Resolver",
-			"The proxy resolver for this backend",
-			G_TYPE_PROXY_RESOLVER,
-			G_PARAM_READWRITE |
-			G_PARAM_STATIC_STRINGS));
-
-	g_object_class_install_property (
-		object_class,
-		PROP_SETTINGS,
-		g_param_spec_object (
-			"settings",
-			"Settings",
-			"Connection settings",
-			CAMEL_TYPE_EWS_SETTINGS,
-			G_PARAM_READWRITE |
-			G_PARAM_CONSTRUCT_ONLY |
-			G_PARAM_STATIC_STRINGS));
-
-	signals[SERVER_NOTIFICATION] = g_signal_new (
-		"server-notification",
-		G_OBJECT_CLASS_TYPE (object_class),
-		G_SIGNAL_RUN_FIRST | G_SIGNAL_DETAILED | G_SIGNAL_ACTION,
-		0, NULL, NULL,
-		g_cclosure_marshal_VOID__POINTER,
-		G_TYPE_NONE, 1,
-		G_TYPE_POINTER);
-}
-
-static void
-e_ews_connection_folders_list_free (gpointer data)
-{
-	g_slist_free_full ((GSList *) data, g_free);
-}
-
 static gpointer
 e_ews_soup_thread (gpointer user_data)
 {
@@ -1791,14 +1749,108 @@ e_ews_soup_log_printer (SoupLogger *logger,
 }
 
 static void
-e_ews_connection_init (EEwsConnection *cnc)
+ews_connection_set_settings (EEwsConnection *connection,
+                             CamelEwsSettings *settings)
 {
+	g_return_if_fail (CAMEL_IS_EWS_SETTINGS (settings));
+	g_return_if_fail (connection->priv->settings == NULL);
+
+	connection->priv->settings = g_object_ref (settings);
+}
+
+static void
+ews_connection_set_source (EEwsConnection *connection,
+			   ESource *source)
+{
+	if (source)
+		g_return_if_fail (E_IS_SOURCE (source));
+	g_return_if_fail (connection->priv->source == NULL);
+
+	connection->priv->source = source ? g_object_ref (source) : NULL;
+}
+
+static void
+ews_connection_set_property (GObject *object,
+                             guint property_id,
+                             const GValue *value,
+                             GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_PASSWORD:
+			e_ews_connection_set_password (
+				E_EWS_CONNECTION (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_PROXY_RESOLVER:
+			e_ews_connection_set_proxy_resolver (
+				E_EWS_CONNECTION (object),
+				g_value_get_object (value));
+			return;
+
+		case PROP_SETTINGS:
+			ews_connection_set_settings (
+				E_EWS_CONNECTION (object),
+				g_value_get_object (value));
+			return;
+
+		case PROP_SOURCE:
+			ews_connection_set_source (
+				E_EWS_CONNECTION (object),
+				g_value_get_object (value));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+ews_connection_get_property (GObject *object,
+                             guint property_id,
+                             GValue *value,
+                             GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_PASSWORD:
+			g_value_take_string (
+				value,
+				e_ews_connection_dup_password (
+				E_EWS_CONNECTION (object)));
+			return;
+
+		case PROP_PROXY_RESOLVER:
+			g_value_take_object (
+				value,
+				e_ews_connection_ref_proxy_resolver (
+				E_EWS_CONNECTION (object)));
+			return;
+
+		case PROP_SETTINGS:
+			g_value_take_object (
+				value,
+				e_ews_connection_ref_settings (
+				E_EWS_CONNECTION (object)));
+			return;
+
+		case PROP_SOURCE:
+			g_value_set_object (
+				value,
+				e_ews_connection_get_source (
+				E_EWS_CONNECTION (object)));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+ews_connection_constructed (GObject *object)
+{
+	EEwsConnection *cnc = E_EWS_CONNECTION (object);
 	gint log_level;
 
-	cnc->priv = E_EWS_CONNECTION_GET_PRIVATE (cnc);
-
-	cnc->priv->soup_context = g_main_context_new ();
-	cnc->priv->soup_loop = g_main_loop_new (cnc->priv->soup_context, FALSE);
+	/* Chain up to parent's method. */
+	G_OBJECT_CLASS (e_ews_connection_parent_class)->constructed (object);
 
 	cnc->priv->soup_thread = g_thread_new (NULL, e_ews_soup_thread, cnc);
 
@@ -1839,6 +1891,192 @@ e_ews_connection_init (EEwsConnection *cnc)
 	soup_session_add_feature_by_type (cnc->priv->soup_session,
 					  SOUP_TYPE_COOKIE_JAR);
 
+	g_signal_connect (
+		cnc->priv->soup_session, "authenticate",
+		G_CALLBACK (ews_connection_authenticate), cnc);
+
+	e_ews_connection_utils_prepare_auth_method (cnc->priv->soup_session,
+		camel_ews_settings_get_auth_mechanism (cnc->priv->settings));
+}
+
+static void
+ews_connection_dispose (GObject *object)
+{
+	EEwsConnectionPrivate *priv;
+
+	priv = E_EWS_CONNECTION_GET_PRIVATE (object);
+
+	g_mutex_lock (&connecting);
+
+	/* remove the connection from the hash table */
+	if (loaded_connections_permissions != NULL &&
+	    g_hash_table_lookup (loaded_connections_permissions, priv->hash_key) == (gpointer) object) {
+		g_hash_table_remove (loaded_connections_permissions, priv->hash_key);
+		if (g_hash_table_size (loaded_connections_permissions) == 0) {
+			g_hash_table_destroy (loaded_connections_permissions);
+			loaded_connections_permissions = NULL;
+		}
+	}
+
+	g_mutex_unlock (&connecting);
+
+	if (priv->soup_session) {
+		g_signal_handlers_disconnect_by_func (
+			priv->soup_session,
+			ews_connection_authenticate, object);
+
+		g_main_loop_quit (priv->soup_loop);
+		g_thread_join (priv->soup_thread);
+		priv->soup_thread = NULL;
+
+		g_main_loop_unref (priv->soup_loop);
+		priv->soup_loop = NULL;
+		g_main_context_unref (priv->soup_context);
+		priv->soup_context = NULL;
+	}
+
+	g_clear_object (&priv->proxy_resolver);
+	g_clear_object (&priv->source);
+	g_clear_object (&priv->settings);
+
+	e_ews_connection_set_password (E_EWS_CONNECTION (object), NULL);
+
+	g_slist_free (priv->jobs);
+	priv->jobs = NULL;
+
+	g_slist_free (priv->active_job_queue);
+	priv->active_job_queue = NULL;
+
+	g_slist_free_full (priv->subscribed_folders, g_free);
+	priv->subscribed_folders = NULL;
+
+	if (priv->subscriptions != NULL) {
+		g_hash_table_destroy (priv->subscriptions);
+		priv->subscriptions = NULL;
+	}
+
+	/* Chain up to parent's dispose() method. */
+	G_OBJECT_CLASS (e_ews_connection_parent_class)->dispose (object);
+}
+
+static void
+ews_connection_finalize (GObject *object)
+{
+	EEwsConnectionPrivate *priv;
+
+	priv = E_EWS_CONNECTION_GET_PRIVATE (object);
+
+	g_free (priv->uri);
+	g_free (priv->password);
+	g_free (priv->email);
+	g_free (priv->hash_key);
+	g_free (priv->impersonate_user);
+
+	g_clear_object (&priv->bearer_auth);
+
+	g_mutex_clear (&priv->property_lock);
+	g_rec_mutex_clear (&priv->queue_lock);
+	g_mutex_clear (&priv->notification_lock);
+
+	/* Chain up to parent's finalize() method. */
+	G_OBJECT_CLASS (e_ews_connection_parent_class)->finalize (object);
+}
+
+static void
+e_ews_connection_class_init (EEwsConnectionClass *class)
+{
+	GObjectClass *object_class;
+
+	g_type_class_add_private (class, sizeof (EEwsConnectionPrivate));
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->set_property = ews_connection_set_property;
+	object_class->get_property = ews_connection_get_property;
+	object_class->constructed = ews_connection_constructed;
+	object_class->dispose = ews_connection_dispose;
+	object_class->finalize = ews_connection_finalize;
+
+	g_object_class_install_property (
+		object_class,
+		PROP_PASSWORD,
+		g_param_spec_string (
+			"password",
+			"Password",
+			"Authentication password",
+			NULL,
+			G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_PROXY_RESOLVER,
+		g_param_spec_object (
+			"proxy-resolver",
+			"Proxy Resolver",
+			"The proxy resolver for this backend",
+			G_TYPE_PROXY_RESOLVER,
+			G_PARAM_READWRITE |
+			G_PARAM_STATIC_STRINGS));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_SETTINGS,
+		g_param_spec_object (
+			"settings",
+			"Settings",
+			"Connection settings",
+			CAMEL_TYPE_EWS_SETTINGS,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT_ONLY |
+			G_PARAM_STATIC_STRINGS));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_SOURCE,
+		g_param_spec_object (
+			"source",
+			"Source",
+			"Corresponding ESource",
+			E_TYPE_SOURCE,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT_ONLY |
+			G_PARAM_STATIC_STRINGS));
+
+	signals[SERVER_NOTIFICATION] = g_signal_new (
+		"server-notification",
+		G_OBJECT_CLASS_TYPE (object_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_DETAILED | G_SIGNAL_ACTION,
+		0, NULL, NULL,
+		g_cclosure_marshal_VOID__POINTER,
+		G_TYPE_NONE, 1,
+		G_TYPE_POINTER);
+
+	signals[PASSWORD_WILL_EXPIRE] = g_signal_new (
+		"password-will-expire",
+		G_OBJECT_CLASS_TYPE (object_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_DETAILED | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET (EEwsConnectionClass, password_will_expire),
+		NULL, NULL, NULL,
+		G_TYPE_NONE, 2,
+		G_TYPE_INT,
+		G_TYPE_STRING);
+}
+
+static void
+e_ews_connection_folders_list_free (gpointer data)
+{
+	g_slist_free_full ((GSList *) data, g_free);
+}
+
+static void
+e_ews_connection_init (EEwsConnection *cnc)
+{
+	cnc->priv = E_EWS_CONNECTION_GET_PRIVATE (cnc);
+
+	cnc->priv->soup_context = g_main_context_new ();
+	cnc->priv->soup_loop = g_main_loop_new (cnc->priv->soup_context, FALSE);
+	cnc->priv->disconnected_flag = FALSE;
+
 	cnc->priv->subscriptions = g_hash_table_new_full (
 			g_direct_hash, g_direct_equal,
 			NULL, e_ews_connection_folders_list_free);
@@ -1846,10 +2084,6 @@ e_ews_connection_init (EEwsConnection *cnc)
 	g_mutex_init (&cnc->priv->property_lock);
 	g_rec_mutex_init (&cnc->priv->queue_lock);
 	g_mutex_init (&cnc->priv->notification_lock);
-
-	g_signal_connect (
-		cnc->priv->soup_session, "authenticate",
-		G_CALLBACK (ews_connection_authenticate), cnc);
 }
 
 static void
@@ -1860,36 +2094,10 @@ ews_connection_authenticate (SoupSession *sess,
                              gpointer data)
 {
 	EEwsConnection *cnc = data;
-	CamelNetworkSettings *network_settings;
-	gchar *user, *password;
 
 	g_return_if_fail (cnc != NULL);
 
-	if (retrying)
-		e_ews_connection_set_password (cnc, NULL);
-
-	network_settings = CAMEL_NETWORK_SETTINGS (cnc->priv->settings);
-	user = camel_network_settings_dup_user (network_settings);
-
-	password = e_ews_connection_dup_password (cnc);
-	if (password != NULL) {
-		soup_auth_authenticate (auth, user, password);
-	} else {
-		/* The NTLM implementation in libsoup doesn't cope very well
-		 * with recovering from authentication failures (bug 703181).
-		 * So cancel the message now while it's in-flight, and we'll
-		 * get a shiny new connection for the next attempt. */
-		const char *scheme = soup_auth_get_scheme_name (auth);
-
-		if (!g_ascii_strcasecmp(scheme, "NTLM")) {
-			soup_session_cancel_message(cnc->priv->soup_session,
-						    msg,
-						    SOUP_STATUS_UNAUTHORIZED);
-		}
-	}
-
-	g_free (password);
-	g_free (user);
+	e_ews_connection_utils_authenticate (cnc, sess, msg, auth, retrying);
 }
 
 void
@@ -1968,6 +2176,7 @@ e_ews_attachment_info_free (EEwsAttachmentInfo *info)
 	}
 
 	g_free (info->prefer_filename);
+	g_free (info->id);
 	g_free (info);
 }
 
@@ -2062,7 +2271,6 @@ e_ews_attachment_info_set_filename (EEwsAttachmentInfo *info,
 	info->data.inlined.filename = g_strdup (filename);
 }
 
-
 const gchar *
 e_ews_attachment_info_get_uri (EEwsAttachmentInfo *info)
 {
@@ -2081,6 +2289,26 @@ e_ews_attachment_info_set_uri (EEwsAttachmentInfo *info,
 
 	g_free (info->data.uri);
 	info->data.uri = g_strdup (uri);
+}
+
+const gchar *
+e_ews_attachment_info_get_id (EEwsAttachmentInfo *info)
+{
+	g_return_val_if_fail (info != NULL, NULL);
+
+	return info->id;
+}
+
+void
+e_ews_attachment_info_set_id (EEwsAttachmentInfo *info,
+			      const gchar *id)
+{
+	g_return_if_fail (info != NULL);
+
+	if (info->id != id) {
+		g_free (info->id);
+		info->id = g_strdup (id);
+	}
 }
 
 /* Connection APIS */
@@ -2113,7 +2341,8 @@ e_ews_connection_find (const gchar *uri,
 			loaded_connections_permissions, hash_key);
 		g_free (hash_key);
 
-		if (E_IS_EWS_CONNECTION (cnc)) {
+		if (E_IS_EWS_CONNECTION (cnc) &&
+		    !e_ews_connection_get_disconnected_flag (cnc)) {
 			g_object_ref (cnc);
 			g_mutex_unlock (&connecting);
 			return cnc;
@@ -2126,7 +2355,40 @@ e_ews_connection_find (const gchar *uri,
 }
 
 /**
+ * e_ews_connection_list_existing:
+ *
+ * Returns: (transfer full) (element-type EEwsConnection): a new #GSList of all currently
+ *    opened connections to all servers. Free the returned #GSList with
+ *    g_slist_free_full (connections, g_object_unref);
+ *    when no longer needed.
+ **/
+GSList * /* EEwsConnection * */
+e_ews_connection_list_existing (void)
+{
+	GSList *connections = NULL;
+
+	g_mutex_lock (&connecting);
+
+	/* search the connection in our hash table */
+	if (loaded_connections_permissions != NULL) {
+		GHashTableIter iter;
+		gpointer value;
+
+		g_hash_table_iter_init (&iter, loaded_connections_permissions);
+		while (g_hash_table_iter_next (&iter, NULL, &value)) {
+			if (value && !e_ews_connection_get_disconnected_flag (value))
+				connections = g_slist_prepend (connections, g_object_ref (value));
+		}
+	}
+
+	g_mutex_unlock (&connecting);
+
+	return connections;
+}
+
+/**
  * e_ews_connection_new_full
+ * @source: corresponding #ESource
  * @uri: Exchange server uri
  * @settings: a #CamelEwsSettings
  * @allow_connection_reuse: whether can return already created connection
@@ -2137,7 +2399,8 @@ e_ews_connection_find (const gchar *uri,
  * Returns: EEwsConnection
  **/
 EEwsConnection *
-e_ews_connection_new_full (const gchar *uri,
+e_ews_connection_new_full (ESource *source,
+			   const gchar *uri,
 			   CamelEwsSettings *settings,
 			   gboolean allow_connection_reuse)
 {
@@ -2146,6 +2409,8 @@ e_ews_connection_new_full (const gchar *uri,
 	gchar *hash_key;
 	gchar *user;
 
+	if (source)
+		g_return_val_if_fail (E_IS_SOURCE (source), NULL);
 	g_return_val_if_fail (uri != NULL, NULL);
 	g_return_val_if_fail (CAMEL_IS_EWS_SETTINGS (settings), NULL);
 
@@ -2161,7 +2426,8 @@ e_ews_connection_new_full (const gchar *uri,
 		cnc = g_hash_table_lookup (
 			loaded_connections_permissions, hash_key);
 
-		if (E_IS_EWS_CONNECTION (cnc)) {
+		if (E_IS_EWS_CONNECTION (cnc) &&
+		    !e_ews_connection_get_disconnected_flag (cnc)) {
 			g_object_ref (cnc);
 
 			g_free (hash_key);
@@ -2172,9 +2438,10 @@ e_ews_connection_new_full (const gchar *uri,
 	}
 
 	/* not found, so create a new connection */
-	cnc = g_object_new (
-		E_TYPE_EWS_CONNECTION,
-		"settings", settings, NULL);
+	cnc = g_object_new (E_TYPE_EWS_CONNECTION,
+		"settings", settings,
+		"source", source,
+		NULL);
 
 	cnc->priv->uri = g_strdup (uri);
 	cnc->priv->hash_key = hash_key;  /* takes ownership */
@@ -2213,10 +2480,53 @@ e_ews_connection_new_full (const gchar *uri,
 }
 
 EEwsConnection *
-e_ews_connection_new (const gchar *uri,
+e_ews_connection_new (ESource *source,
+		      const gchar *uri,
 		      CamelEwsSettings *settings)
 {
-	return e_ews_connection_new_full (uri, settings, TRUE);
+	return e_ews_connection_new_full (source, uri, settings, TRUE);
+}
+
+EEwsConnection *
+e_ews_connection_new_for_backend (EBackend *backend,
+				  ESourceRegistry *registry,
+				  const gchar *uri,
+				  CamelEwsSettings *settings)
+{
+	ESource *source;
+	EEwsConnection *cnc;
+
+	g_return_val_if_fail (E_IS_BACKEND (backend), NULL);
+	g_return_val_if_fail (E_IS_SOURCE_REGISTRY (registry), NULL);
+
+	source = e_backend_get_source (backend);
+	if (!source)
+		return e_ews_connection_new (source, uri, settings);
+
+	g_object_ref (source);
+
+	while (source && !e_source_has_extension (source, E_SOURCE_EXTENSION_COLLECTION) &&
+	       e_source_get_parent (source)) {
+		ESource *parent;
+
+		parent = e_source_registry_ref_source (registry, e_source_get_parent (source));
+		if (!parent) {
+			g_clear_object (&source);
+			break;
+		}
+
+		g_object_unref (source);
+		source = parent;
+	}
+
+	if (source)
+		cnc = e_ews_connection_new (source, uri, settings);
+	else
+		cnc = e_ews_connection_new (e_backend_get_source (backend), uri, settings);
+
+	g_clear_object (&source);
+
+	return cnc;
 }
 
 void
@@ -2226,7 +2536,12 @@ e_ews_connection_update_credentials (EEwsConnection *cnc,
 	g_return_if_fail (E_IS_EWS_CONNECTION (cnc));
 
 	if (credentials) {
-		e_ews_connection_set_password (cnc, e_named_parameters_get (credentials, E_SOURCE_CREDENTIAL_PASSWORD));
+		const gchar *password;
+
+		/* Update password only if it's provided, otherwise keep the previously set, if any */
+		password = e_named_parameters_get (credentials, E_SOURCE_CREDENTIAL_PASSWORD);
+		if (password && *password)
+			e_ews_connection_set_password (cnc, password);
 
 		if (e_named_parameters_get (credentials, E_SOURCE_CREDENTIAL_USERNAME)) {
 			CamelNetworkSettings *network_settings;
@@ -2276,7 +2591,14 @@ e_ews_connection_try_credentials_sync (EEwsConnection *cnc,
 
 		if (auth_failed) {
 			g_clear_error (&local_error);
-			result = E_SOURCE_AUTHENTICATION_REJECTED;
+
+			if (camel_ews_settings_get_auth_mechanism (cnc->priv->settings) != EWS_AUTH_TYPE_GSSAPI &&
+			    camel_ews_settings_get_auth_mechanism (cnc->priv->settings) != EWS_AUTH_TYPE_OAUTH2 &&
+			    (!credentials || !e_named_parameters_exists (credentials, E_SOURCE_CREDENTIAL_PASSWORD))) {
+				result = E_SOURCE_AUTHENTICATION_REQUIRED;
+			} else {
+				result = E_SOURCE_AUTHENTICATION_REJECTED;
+			}
 		} else {
 			g_propagate_error (error, local_error);
 			result = E_SOURCE_AUTHENTICATION_ERROR;
@@ -2288,12 +2610,57 @@ e_ews_connection_try_credentials_sync (EEwsConnection *cnc,
 	return result;
 }
 
+ESource *
+e_ews_connection_get_source (EEwsConnection *cnc)
+{
+	g_return_val_if_fail (E_IS_EWS_CONNECTION (cnc), NULL);
+
+	return cnc->priv->source;
+}
+
 const gchar *
 e_ews_connection_get_uri (EEwsConnection *cnc)
 {
 	g_return_val_if_fail (E_IS_EWS_CONNECTION (cnc), NULL);
 
 	return cnc->priv->uri;
+}
+
+ESoupAuthBearer *
+e_ews_connection_ref_bearer_auth (EEwsConnection *cnc)
+{
+	ESoupAuthBearer *bearer_auth;
+
+	g_return_val_if_fail (E_IS_EWS_CONNECTION (cnc), NULL);
+
+	g_mutex_lock (&cnc->priv->property_lock);
+	bearer_auth = cnc->priv->bearer_auth;
+	if (bearer_auth)
+		g_object_ref (bearer_auth);
+	g_mutex_unlock (&cnc->priv->property_lock);
+
+	return bearer_auth;
+}
+
+void
+e_ews_connection_set_bearer_auth (EEwsConnection *cnc,
+				  ESoupAuthBearer *bearer_auth)
+{
+	g_return_if_fail (E_IS_EWS_CONNECTION (cnc));
+	if (bearer_auth)
+		g_return_if_fail (E_IS_SOUP_AUTH_BEARER (bearer_auth));
+
+	g_mutex_lock (&cnc->priv->property_lock);
+
+	if (bearer_auth != cnc->priv->bearer_auth) {
+		g_clear_object (&cnc->priv->bearer_auth);
+		cnc->priv->bearer_auth = bearer_auth;
+
+		if (cnc->priv->bearer_auth)
+			g_object_ref (cnc->priv->bearer_auth);
+	}
+
+	g_mutex_unlock (&cnc->priv->property_lock);
 }
 
 const gchar *
@@ -2413,6 +2780,23 @@ e_ews_connection_ref_soup_session (EEwsConnection *cnc)
 	return g_object_ref (cnc->priv->soup_session);
 }
 
+gboolean
+e_ews_connection_get_disconnected_flag (EEwsConnection *cnc)
+{
+	g_return_val_if_fail (E_IS_EWS_CONNECTION (cnc), FALSE);
+
+	return cnc->priv->disconnected_flag;
+}
+
+void
+e_ews_connection_set_disconnected_flag (EEwsConnection *cnc,
+					gboolean disconnected_flag)
+{
+	g_return_if_fail (E_IS_EWS_CONNECTION (cnc));
+
+	cnc->priv->disconnected_flag = disconnected_flag;
+}
+
 static xmlDoc *
 e_ews_autodiscover_ws_xml (const gchar *email_address)
 {
@@ -2441,7 +2825,7 @@ e_ews_autodiscover_ws_xml (const gchar *email_address)
 struct _autodiscover_data {
 	EEwsConnection *cnc;
 	xmlOutputBuffer *buf;
-	SoupMessage *msgs[4];
+	SoupMessage *msgs[5];
 
 	GCancellable *cancellable;
 	gulong cancel_id;
@@ -2501,11 +2885,11 @@ autodiscover_response_cb (SoupSession *session,
 
 	ad = g_simple_async_result_get_op_res_gpointer (simple);
 
-	for (idx = 0; idx < 4; idx++) {
+	for (idx = 0; idx < 5; idx++) {
 		if (ad->msgs[idx] == msg)
 			break;
 	}
-	if (idx == 4) {
+	if (idx == 5) {
 		/* We already got removed (cancelled). Do nothing */
 		goto unref;
 	}
@@ -2513,9 +2897,19 @@ autodiscover_response_cb (SoupSession *session,
 	ad->msgs[idx] = NULL;
 
 	if (status != 200) {
-		g_set_error (
-			&error, SOUP_HTTP_ERROR, status,
-			"%d %s", status, msg->reason_phrase);
+		gboolean expired = FALSE;
+		gchar *service_url = NULL;
+
+		if (e_ews_connection_utils_check_x_ms_credential_headers (msg, NULL, &expired, &service_url) && expired) {
+			e_ews_connection_utils_expired_password_to_error (service_url, &error);
+		} else {
+			g_set_error (
+				&error, SOUP_HTTP_ERROR, status,
+				"%d %s", status, msg->reason_phrase);
+		}
+
+		g_free (service_url);
+
 		goto failed;
 	}
 
@@ -2586,7 +2980,7 @@ autodiscover_response_cb (SoupSession *session,
 	}
 
 	/* We have a good response; cancel all the others */
-	for (idx = 0; idx < 4; idx++) {
+	for (idx = 0; idx < 5; idx++) {
 		if (ad->msgs[idx]) {
 			SoupMessage *m = ad->msgs[idx];
 			ad->msgs[idx] = NULL;
@@ -2609,7 +3003,7 @@ autodiscover_response_cb (SoupSession *session,
 	goto exit;
 
  failed:
-	for (idx = 0; idx < 4; idx++) {
+	for (idx = 0; idx < 5; idx++) {
 		if (ad->msgs[idx]) {
 			/* There's another request outstanding.
 			 * Hope that it has better luck. */
@@ -2680,7 +3074,7 @@ e_ews_get_msg_for_url (CamelEwsSettings *settings,
 	if (!msg) {
 		g_set_error (
 			error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-			_("URL '%s' is not valid"), url);
+			_("URL “%s” is not valid"), url);
 		return NULL;
 	}
 
@@ -2709,7 +3103,8 @@ e_ews_get_msg_for_url (CamelEwsSettings *settings,
 }
 
 gboolean
-e_ews_autodiscover_ws_url_sync (CamelEwsSettings *settings,
+e_ews_autodiscover_ws_url_sync (ESource *source,
+				CamelEwsSettings *settings,
                                 const gchar *email_address,
                                 const gchar *password,
                                 GCancellable *cancellable,
@@ -2725,8 +3120,7 @@ e_ews_autodiscover_ws_url_sync (CamelEwsSettings *settings,
 
 	closure = e_async_closure_new ();
 
-	e_ews_autodiscover_ws_url (
-		settings, email_address, password, cancellable,
+	e_ews_autodiscover_ws_url (source, settings, email_address, password, cancellable,
 		e_async_closure_callback, closure);
 
 	result = e_async_closure_wait (closure);
@@ -2739,7 +3133,8 @@ e_ews_autodiscover_ws_url_sync (CamelEwsSettings *settings,
 }
 
 void
-e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
+e_ews_autodiscover_ws_url (ESource *source,
+			   CamelEwsSettings *settings,
                            const gchar *email_address,
                            const gchar *password,
                            GCancellable *cancellable,
@@ -2749,7 +3144,7 @@ e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
 	GSimpleAsyncResult *simple;
 	struct _autodiscover_data *ad;
 	xmlOutputBuffer *buf;
-	gchar *url1, *url2, *url3, *url4;
+	gchar *url1, *url2, *url3, *url4, *url5;
 	gchar *domain;
 	xmlDoc *doc;
 	EEwsConnection *cnc;
@@ -2786,6 +3181,7 @@ e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
 	url2 = NULL;
 	url3 = NULL;
 	url4 = NULL;
+	url5 = NULL;
 
 	host_url = camel_ews_settings_get_hosturl (settings);
 	if (host_url != NULL)
@@ -2800,13 +3196,19 @@ e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
 		url1 = g_strdup_printf ("http%s://%s/autodiscover/autodiscover.xml", use_secure ? "s" : "", host);
 		url2 = g_strdup_printf ("http%s://autodiscover.%s/autodiscover/autodiscover.xml", use_secure ? "s" : "", host);
 
+		/* outlook.office365.com has its autodiscovery at outlook.com */
+		if (host && g_ascii_strcasecmp (host, "outlook.office365.com") == 0 &&
+		   domain && g_ascii_strcasecmp (host, "outlook.com") != 0) {
+			url5 = g_strdup_printf ("https://outlook.com/autodiscover/autodiscover.xml");
+		}
+
 		soup_uri_free (soup_uri);
 	}
 
 	url3 = g_strdup_printf ("http%s://%s/autodiscover/autodiscover.xml", use_secure ? "s" : "", domain);
 	url4 = g_strdup_printf ("http%s://autodiscover.%s/autodiscover/autodiscover.xml", use_secure ? "s" : "", domain);
 
-	cnc = e_ews_connection_new (url3, settings);
+	cnc = e_ews_connection_new (source, url3, settings);
 	e_ews_connection_set_password (cnc, password);
 
 	/*
@@ -2838,6 +3240,7 @@ e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
 	ad->msgs[1] = e_ews_get_msg_for_url (settings, url2, buf, NULL);
 	ad->msgs[2] = e_ews_get_msg_for_url (settings, url3, buf, NULL);
 	ad->msgs[3] = e_ews_get_msg_for_url (settings, url4, buf, NULL);
+	ad->msgs[4] = e_ews_get_msg_for_url (settings, url5, buf, NULL);
 
 	/* These have to be submitted only after they're both set in ad->msgs[]
 	 * or there will be races with fast completion */
@@ -2849,6 +3252,8 @@ e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
 		ews_connection_schedule_queue_message (cnc, ad->msgs[2], autodiscover_response_cb, g_object_ref (simple));
 	if (ad->msgs[3] != NULL)
 		ews_connection_schedule_queue_message (cnc, ad->msgs[3], autodiscover_response_cb, g_object_ref (simple));
+	if (ad->msgs[4] != NULL)
+		ews_connection_schedule_queue_message (cnc, ad->msgs[4], autodiscover_response_cb, g_object_ref (simple));
 
 	xmlFreeDoc (doc);
 	g_free (url1);
@@ -2856,7 +3261,7 @@ e_ews_autodiscover_ws_url (CamelEwsSettings *settings,
 	g_free (url3);
 	g_free (url4);
 
-	if (error && !ad->msgs[0] && !ad->msgs[1] && !ad->msgs[2] && !ad->msgs[3]) {
+	if (error && !ad->msgs[0] && !ad->msgs[1] && !ad->msgs[2] && !ad->msgs[3] && !ad->msgs[4]) {
 		g_simple_async_result_take_error (simple, error);
 		g_simple_async_result_complete_in_idle (simple);
 	} else {
@@ -3068,7 +3473,30 @@ oal_response_cb (SoupSession *soup_session,
 	simple = G_SIMPLE_ASYNC_RESULT (user_data);
 	data = g_simple_async_result_get_op_res_gpointer (simple);
 
-	if (soup_message->status_code != 200) {
+	if (ews_connection_credentials_failed (data->cnc, soup_message, simple)) {
+		goto exit;
+	} else if (soup_message->status_code != 200) {
+		if (soup_message->status_code == SOUP_STATUS_UNAUTHORIZED &&
+		    soup_message->response_headers) {
+			const gchar *diagnostics;
+
+			diagnostics = soup_message_headers_get_list (soup_message->response_headers, "X-MS-DIAGNOSTICS");
+			if (diagnostics && strstr (diagnostics, "invalid_grant")) {
+				g_simple_async_result_set_error (
+					simple,
+					EWS_CONNECTION_ERROR,
+					EWS_CONNECTION_ERROR_ACCESSDENIED,
+					"%s", diagnostics);
+				goto exit;
+			} else if (diagnostics && *diagnostics) {
+				g_simple_async_result_set_error (
+					simple,
+					EWS_CONNECTION_ERROR,
+					EWS_CONNECTION_ERROR_AUTHENTICATION_FAILED,
+					"%s", diagnostics);
+				goto exit;
+			}
+		}
 		g_simple_async_result_set_error (
 			simple, SOUP_HTTP_ERROR,
 			soup_message->status_code,
@@ -3398,7 +3826,9 @@ oal_download_response_cb (SoupSession *soup_session,
 	simple = G_SIMPLE_ASYNC_RESULT (user_data);
 	data = g_simple_async_result_get_op_res_gpointer (simple);
 
-	if (soup_message->status_code != 200) {
+	if (ews_connection_credentials_failed (data->cnc, soup_message, simple)) {
+		g_unlink (data->cache_filename);
+	} else if (soup_message->status_code != 200) {
 		g_simple_async_result_set_error (
 			simple, SOUP_HTTP_ERROR,
 			soup_message->status_code,
@@ -3467,13 +3897,13 @@ ews_soup_got_chunk (SoupMessage *msg,
 		if (write (fd, (const gchar *) chunk->data, chunk->length) != chunk->length) {
 			g_set_error (
 				&data->error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_UNKNOWN,
-				"Failed to write streaming data to file : %d ", errno);
+				"Failed to write streaming data to file '%s': %s", data->cache_filename, g_strerror (errno));
 		}
 		close (fd);
 	} else {
 		g_set_error (
 			&data->error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_UNKNOWN,
-			"Failed to open the cache file : %d ", errno);
+			"Failed to open the cache file '%s': %s", data->cache_filename, g_strerror (errno));
 	}
 }
 
@@ -3916,6 +4346,27 @@ ews_append_folder_ids_to_msg (ESoapMessage *msg,
 	}
 }
 
+static void
+ews_connection_write_only_ids_restriction (ESoapMessage *msg,
+					   GPtrArray *only_ids)
+{
+	guint ii;
+
+	g_return_if_fail (E_IS_SOAP_MESSAGE (msg));
+	g_return_if_fail (only_ids && only_ids->len);
+
+	for (ii = 0; ii < only_ids->len; ii++) {
+		const gchar *itemid = g_ptr_array_index (only_ids, ii);
+
+		e_soap_message_start_element (msg, "IsEqualTo", NULL, NULL);
+		e_ews_message_write_string_parameter_with_attribute (msg, "FieldURI", NULL, NULL, "FieldURI", "item:ItemId");
+		e_soap_message_start_element (msg, "FieldURIOrConstant", NULL, NULL);
+		e_ews_message_write_string_parameter_with_attribute (msg, "Constant", NULL, NULL, "Value", itemid);
+		e_soap_message_end_element (msg); /* FieldURIOrConstant */
+		e_soap_message_end_element (msg); /* IsEqualTo */
+	}
+}
+
 /**
  * e_ews_connection_find_folder_items:
  * @cnc: The EWS Connection
@@ -3925,6 +4376,7 @@ ews_append_folder_ids_to_msg (ESoapMessage *msg,
  * @add_props: Specify any additional properties to be fetched
  * @sort_order: Specific sorting order for items
  * @query: evo query based on which items will be fetched
+ * @only_ids: (element-type utf8) (nullable): a gchar * with item IDs, to check with only; can be %NULL
  * @type: type of folder
  * @convert_query_cb: a callback method to convert query to ews restiction
  * @cancellable: a GCancellable to monitor cancelled operations
@@ -3939,6 +4391,7 @@ e_ews_connection_find_folder_items (EEwsConnection *cnc,
                                     const EEwsAdditionalProps *add_props,
                                     EwsSortOrder *sort_order,
                                     const gchar *query,
+				    GPtrArray *only_ids, /* element-type utf8 */
                                     EEwsFolderType type,
                                     EwsConvertQueryCallback convert_query_cb,
                                     GCancellable *cancellable,
@@ -3970,8 +4423,27 @@ e_ews_connection_find_folder_items (EEwsConnection *cnc,
 	e_soap_message_end_element (msg);
 
 	/*write restriction message based on query*/
-	if (convert_query_cb)
+	if (convert_query_cb) {
+		e_soap_message_start_element (msg, "Restriction", "messages", NULL);
+
+		if (only_ids && only_ids->len) {
+			e_soap_message_start_element (msg, "And", "messages", NULL);
+			e_soap_message_start_element (msg, "Or", "messages", NULL);
+			ews_connection_write_only_ids_restriction (msg, only_ids);
+			e_soap_message_end_element (msg); /* Or */
+		}
+
 		convert_query_cb (msg, query, type);
+
+		if (only_ids && only_ids->len)
+			e_soap_message_end_element (msg); /* And */
+
+		e_soap_message_end_element (msg); /* Restriction */
+	} else if (only_ids && only_ids->len) {
+		e_soap_message_start_element (msg, "Restriction", "messages", NULL);
+		ews_connection_write_only_ids_restriction (msg, only_ids);
+		e_soap_message_end_element (msg);
+	}
 
 	if (sort_order)
 		ews_write_sort_order_to_msg (msg, sort_order);
@@ -4039,6 +4511,7 @@ e_ews_connection_find_folder_items_sync (EEwsConnection *cnc,
                                          const EEwsAdditionalProps *add_props,
                                          EwsSortOrder *sort_order,
                                          const gchar *query,
+					 GPtrArray *only_ids, /* element-type utf8 */
                                          EEwsFolderType type,
                                          gboolean *includes_last_item,
                                          GSList **items,
@@ -4057,7 +4530,7 @@ e_ews_connection_find_folder_items_sync (EEwsConnection *cnc,
 	e_ews_connection_find_folder_items (
 		cnc, pri, fid, default_props,
 		add_props, sort_order, query,
-		type, convert_query_cb, NULL,
+		only_ids, type, convert_query_cb, NULL,
 		e_async_closure_callback, closure);
 
 	result = e_async_closure_wait (closure);
@@ -4443,6 +4916,8 @@ static const gchar *
 ews_affected_tasks_to_str (EwsAffectedTaskOccurrencesType affected_tasks)
 {
 	switch (affected_tasks) {
+		case EWS_NONE_OCCURRENCES:
+			return NULL;
 		case EWS_ALL_OCCURRENCES:
 			return "AllOccurrences";
 		case EWS_SPECIFIED_OCCURRENCE_ONLY:
@@ -4584,7 +5059,7 @@ e_ews_connection_delete_item (EEwsConnection *cnc,
 			msg, "SendMeetingCancellations",
 			ews_send_cancels_to_str (send_cancels), NULL, NULL);
 
-	if (affected_tasks)
+	if (affected_tasks != EWS_NONE_OCCURRENCES)
 		e_soap_message_add_attribute (
 			msg, "AffectedTaskOccurrences",
 			ews_affected_tasks_to_str (affected_tasks), NULL, NULL);
@@ -4708,6 +5183,69 @@ e_ews_connection_delete_item_sync (EEwsConnection *cnc,
 	success = e_ews_connection_delete_items_finish (cnc, result, error);
 
 	e_async_closure_free (closure);
+
+	return success;
+}
+
+gboolean
+e_ews_connection_delete_items_in_chunks_sync (EEwsConnection *cnc,
+					      gint pri,
+					      const GSList *ids,
+					      EwsDeleteType delete_type,
+					      EwsSendMeetingCancellationsType send_cancels,
+					      EwsAffectedTaskOccurrencesType affected_tasks,
+					      GCancellable *cancellable,
+					      GError **error)
+{
+	const GSList *iter;
+	guint total_ids = 0, done_ids = 0;
+	gboolean success = TRUE;
+
+	g_return_val_if_fail (E_IS_EWS_CONNECTION (cnc), FALSE);
+
+	g_object_ref (cnc);
+
+	iter = ids;
+
+	while (success && iter) {
+		guint n_ids;
+		const GSList *tmp_iter;
+
+		for (tmp_iter = iter, n_ids = 0; tmp_iter && n_ids < EWS_MOVE_ITEMS_CHUNK_SIZE; tmp_iter = g_slist_next (tmp_iter), n_ids++) {
+			/* Only check bounds first, to avoid unnecessary allocations */
+		}
+
+		if (tmp_iter) {
+			GSList *shorter = NULL;
+
+			if (total_ids == 0)
+				total_ids = g_slist_length ((GSList *) ids);
+
+			for (n_ids = 0; iter && n_ids < EWS_MOVE_ITEMS_CHUNK_SIZE; iter = g_slist_next (iter), n_ids++) {
+				shorter = g_slist_prepend (shorter, iter->data);
+			}
+
+			shorter = g_slist_reverse (shorter);
+
+			success = e_ews_connection_delete_items_sync (cnc, pri, shorter, delete_type, send_cancels,
+				affected_tasks, cancellable, error);
+
+			g_slist_free (shorter);
+
+			done_ids += n_ids;
+		} else {
+			success = e_ews_connection_delete_items_sync (cnc, pri, iter, delete_type, send_cancels,
+				affected_tasks, cancellable, error);
+
+			iter = NULL;
+			done_ids = total_ids;
+		}
+
+		if (total_ids > 0)
+			camel_operation_progress (cancellable, 100 * (gdouble) done_ids / (gdouble) total_ids);
+	}
+
+	g_object_unref (cnc);
 
 	return success;
 }
@@ -6796,6 +7334,7 @@ e_ews_connection_create_attachments (EEwsConnection *cnc,
 	GError *local_error = NULL;
 
 	g_return_if_fail (cnc != NULL);
+	g_return_if_fail (parent != NULL);
 
 	simple = g_simple_async_result_new (
 		G_OBJECT (cnc), callback, user_data,
@@ -6898,6 +7437,7 @@ e_ews_connection_create_attachments_sync (EEwsConnection *cnc,
 	gboolean ret;
 
 	g_return_val_if_fail (cnc != NULL, FALSE);
+	g_return_val_if_fail (parent != NULL, FALSE);
 
 	closure = e_async_closure_new ();
 
@@ -6929,9 +7469,7 @@ ews_handle_root_item_id_param (ESoapParameter *subparam,
 	if (attspara == NULL)
 		return;
 
-	async_data->items = g_slist_append (
-		async_data->items,
-		e_soap_parameter_get_property (attspara, "RootItemChangeKey"));
+	async_data->sync_state = e_soap_parameter_get_property (attspara, "RootItemChangeKey");
 }
 
 static void
@@ -7031,7 +7569,7 @@ e_ews_connection_delete_attachments (EEwsConnection *cnc,
 gboolean
 e_ews_connection_delete_attachments_finish (EEwsConnection *cnc,
                                             GAsyncResult *result,
-					    GSList **parents_ids,
+					    gchar **new_change_key,
                                             GError **error)
 {
 	GSimpleAsyncResult *simple;
@@ -7049,10 +7587,10 @@ e_ews_connection_delete_attachments_finish (EEwsConnection *cnc,
 	if (g_simple_async_result_propagate_error (simple, error))
 		return FALSE;
 
-	if (parents_ids)
-		*parents_ids = async_data->items;
+	if (new_change_key)
+		*new_change_key = async_data->sync_state;
 	else
-		g_slist_free_full (async_data->items, g_free);
+		g_free (async_data->sync_state);
 
 	return TRUE;
 }
@@ -7061,7 +7599,7 @@ gboolean
 e_ews_connection_delete_attachments_sync (EEwsConnection *cnc,
                                           gint pri,
                                           const GSList *attachments_ids,
-					  GSList **parents_ids,
+					  gchar **new_change_key,
                                           GCancellable *cancellable,
                                           GError **error)
 {
@@ -7080,7 +7618,7 @@ e_ews_connection_delete_attachments_sync (EEwsConnection *cnc,
 	result = e_async_closure_wait (closure);
 
 	ret = e_ews_connection_delete_attachments_finish (
-		cnc, result, parents_ids, error);
+		cnc, result, new_change_key, error);
 
 	e_async_closure_free (closure);
 
@@ -7309,13 +7847,15 @@ ews_handle_free_busy_view (ESoapParameter *param,
 	ESoapParameter *viewparam, *eventarray, *event_param, *subparam;
 	GTimeVal t_val;
 	const gchar *name;
-	gchar *value, *new_val = NULL, *summary = NULL, *location = NULL;
+	gchar *value, *new_val = NULL, *summary = NULL, *location = NULL, *id = NULL;
 
 	viewparam = e_soap_parameter_get_first_child_by_name (param, "FreeBusyView");
 	if (!viewparam) return;
 	vfb = icalcomponent_new_vfreebusy ();
 	eventarray = e_soap_parameter_get_first_child_by_name (viewparam, "CalendarEventArray");
-	for (event_param = e_soap_parameter_get_first_child (eventarray); event_param != NULL; event_param = e_soap_parameter_get_next_child (event_param), icalprop = NULL) {
+	for (event_param = eventarray ? e_soap_parameter_get_first_child (eventarray) : NULL;
+	     event_param != NULL;
+	     event_param = e_soap_parameter_get_next_child (event_param), icalprop = NULL) {
 		for (subparam = e_soap_parameter_get_first_child (event_param); subparam != NULL; subparam = e_soap_parameter_get_next_child (subparam)) {
 			name = e_soap_parameter_get_name (subparam);
 
@@ -7372,6 +7912,10 @@ ews_handle_free_busy_view (ESoapParameter *param,
 			} else if (!g_ascii_strcasecmp (name, "CalendarEventDetails")) {
 				ESoapParameter *dparam;
 
+				dparam = e_soap_parameter_get_first_child_by_name (subparam, "ID");
+				if (dparam)
+					id = e_soap_parameter_get_string_value (dparam);
+
 				dparam = e_soap_parameter_get_first_child_by_name (subparam, "Subject");
 				if (dparam)
 					summary = e_soap_parameter_get_string_value (dparam);
@@ -7382,6 +7926,8 @@ ews_handle_free_busy_view (ESoapParameter *param,
 			}
 		}
 		if (icalprop != NULL) {
+			if (id)
+				icalproperty_set_parameter_from_string (icalprop, "X-EWS-ID", id);
 			if (summary)
 				icalproperty_set_parameter_from_string (icalprop, "X-SUMMARY", summary);
 			if (location)
@@ -7389,10 +7935,9 @@ ews_handle_free_busy_view (ESoapParameter *param,
 			icalcomponent_add_property (vfb, icalprop);
 		}
 
-		g_free (summary);
-		g_free (location);
-		summary = NULL;
-		location = NULL;
+		g_clear_pointer (&summary, g_free);
+		g_clear_pointer (&location, g_free);
+		g_clear_pointer (&id, g_free);
 	}
 
 	async_data->items = g_slist_append (async_data->items, vfb);
@@ -9217,6 +9762,7 @@ ews_connection_gather_auth_methods_cb (SoupMessage *message,
 {
 	EwsAsyncData *async_data;
 	const gchar *auths_lst;
+	gboolean has_bearer = FALSE;
 	gchar **auths;
 	gint ii;
 
@@ -9238,6 +9784,7 @@ ews_connection_gather_auth_methods_cb (SoupMessage *message,
 			if (space)
 				*space = '\0';
 
+			has_bearer = has_bearer || g_ascii_strcasecmp (auth, "Bearer") == 0;
 			async_data->items = g_slist_prepend (async_data->items, auth);
 		} else {
 			g_free (auth);
@@ -9245,6 +9792,17 @@ ews_connection_gather_auth_methods_cb (SoupMessage *message,
 	}
 
 	g_strfreev (auths);
+
+	if (!has_bearer) {
+		/* Special-case Office365 OAuth2, because outlook.office365.com doesn't advertise Bearer */
+		SoupURI *suri;
+
+		suri = soup_message_get_uri (message);
+		if (suri && soup_uri_get_host (suri) &&
+		    g_ascii_strcasecmp (soup_uri_get_host (suri), "outlook.office365.com") == 0) {
+			async_data->items = g_slist_prepend (async_data->items, g_strdup ("Bearer"));
+		}
+	}
 
 	g_object_set_data (G_OBJECT (simple), EWS_OBJECT_KEY_AUTHS_GATHERED, GINT_TO_POINTER (1));
 
@@ -10124,6 +10682,155 @@ e_ews_connection_get_server_time_zones_sync (EEwsConnection *cnc,
 	result = e_async_closure_wait (closure);
 
 	success = e_ews_connection_get_server_time_zones_finish (cnc, result, tzds, error);
+
+	e_async_closure_free (closure);
+
+	return success;
+}
+
+static void
+get_user_photo_response_cb (ESoapResponse *response,
+			    GSimpleAsyncResult *simple)
+{
+	EwsAsyncData *async_data;
+	ESoapParameter *param;
+	GError *error = NULL;
+
+	async_data = g_simple_async_result_get_op_res_gpointer (simple);
+
+	param = e_soap_response_get_first_parameter_by_name (
+		response, "PictureData", &error);
+
+	/* Sanity check */
+	g_return_if_fail (
+		(param != NULL && error == NULL) ||
+		(param == NULL && error != NULL));
+
+	if (error != NULL) {
+		g_simple_async_result_take_error (simple, error);
+		return;
+	}
+
+	async_data->user_photo = e_soap_parameter_get_string_value (param);
+	if (async_data->user_photo && !*async_data->user_photo) {
+		g_free (async_data->user_photo);
+		async_data->user_photo = NULL;
+	}
+}
+
+void
+e_ews_connection_get_user_photo (EEwsConnection *cnc,
+				 gint pri,
+				 const gchar *email,
+				 EEwsSizeRequested size_requested,
+				 GCancellable *cancellable,
+				 GAsyncReadyCallback callback,
+				 gpointer user_data)
+{
+	ESoapMessage *msg;
+	GSimpleAsyncResult *simple;
+	EwsAsyncData *async_data;
+	gchar *tmp;
+
+	g_return_if_fail (cnc != NULL);
+	g_return_if_fail (cnc->priv != NULL);
+	g_return_if_fail (email != NULL);
+
+	simple = g_simple_async_result_new (G_OBJECT (cnc), callback, user_data, e_ews_connection_get_user_photo);
+	async_data = g_new0 (EwsAsyncData, 1);
+	g_simple_async_result_set_op_res_gpointer (simple, async_data, (GDestroyNotify) async_data_free);
+
+	/*
+	 * EWS server version earlier than 2013 doesn't have support to "GetUserPhoto".
+	 */
+	if (!e_ews_connection_satisfies_server_version (cnc, E_EWS_EXCHANGE_2013)) {
+		g_simple_async_result_complete_in_idle (simple);
+		g_object_unref (simple);
+		return;
+	}
+
+	msg = e_ews_message_new_with_header (
+		cnc->priv->settings,
+		cnc->priv->uri,
+		cnc->priv->impersonate_user,
+		"GetUserPhoto",
+		NULL,
+		NULL,
+		cnc->priv->version,
+		E_EWS_EXCHANGE_2013,
+		FALSE,
+		TRUE);
+
+	e_soap_message_start_element (msg, "Email", "messages", NULL);
+	e_soap_message_write_string (msg, email);
+	e_soap_message_end_element (msg); /* Email */
+
+	e_soap_message_start_element (msg, "SizeRequested", "messages", NULL);
+	tmp = g_strdup_printf ("HR%dx%d", (gint) size_requested, size_requested);
+	e_soap_message_write_string (msg, tmp);
+	g_free (tmp);
+	e_soap_message_end_element (msg); /* SizeRequested */
+
+	e_ews_message_write_footer (msg); /* Complete the footer and print the request */
+
+	e_ews_connection_queue_request (cnc, msg, get_user_photo_response_cb, pri, cancellable, simple);
+
+	g_object_unref (simple);
+}
+
+gboolean
+e_ews_connection_get_user_photo_finish (EEwsConnection *cnc,
+					GAsyncResult *result,
+					gchar **out_picture_data, /* base64-encoded */
+					GError **error)
+{
+	GSimpleAsyncResult *simple;
+	EwsAsyncData *async_data;
+
+	g_return_val_if_fail (cnc != NULL, FALSE);
+	g_return_val_if_fail (
+		g_simple_async_result_is_valid (result, G_OBJECT (cnc), e_ews_connection_get_user_photo),
+		FALSE);
+	g_return_val_if_fail (out_picture_data != NULL, FALSE);
+
+	simple = G_SIMPLE_ASYNC_RESULT (result);
+	async_data = g_simple_async_result_get_op_res_gpointer (simple);
+
+	if (g_simple_async_result_propagate_error (simple, error))
+		return FALSE;
+
+	if (!async_data->user_photo)
+		return FALSE;
+
+	*out_picture_data = async_data->user_photo;
+	async_data->user_photo = NULL;
+
+	return TRUE;
+}
+
+gboolean
+e_ews_connection_get_user_photo_sync (EEwsConnection *cnc,
+				      gint pri,
+				      const gchar *email,
+				      EEwsSizeRequested size_requested,
+				      gchar **out_picture_data, /* base64-encoded */
+				      GCancellable *cancellable,
+				      GError **error)
+{
+	EAsyncClosure *closure;
+	GAsyncResult *result;
+	gboolean success;
+
+	g_return_val_if_fail (cnc != NULL, FALSE);
+
+	closure = e_async_closure_new ();
+
+	e_ews_connection_get_user_photo (
+		cnc, pri, email, size_requested, cancellable, e_async_closure_callback, closure);
+
+	result = e_async_closure_wait (closure);
+
+	success = e_ews_connection_get_user_photo_finish (cnc, result, out_picture_data, error);
 
 	e_async_closure_free (closure);
 

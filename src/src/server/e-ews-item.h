@@ -129,6 +129,7 @@ typedef struct {
 		gchar *uri;
 	} data;
 	gchar *prefer_filename;
+	gchar *id;
 } EEwsAttachmentInfo;
 
 typedef enum {
@@ -185,9 +186,12 @@ const gchar *	e_ews_item_get_msg_id		(EEwsItem *item);
 const gchar *	e_ews_item_get_uid		(EEwsItem *item);
 const gchar *	e_ews_item_get_in_replyto	(EEwsItem *item);
 const gchar *	e_ews_item_get_references	(EEwsItem *item);
+const gchar *	e_ews_item_get_date_header	(EEwsItem *item);
 time_t		e_ews_item_get_date_received	(EEwsItem *item);
 time_t		e_ews_item_get_date_sent	(EEwsItem *item);
 time_t		e_ews_item_get_date_created	(EEwsItem *item);
+time_t		e_ews_item_get_last_modified_time
+						(EEwsItem *item);
 gboolean	e_ews_item_has_attachments	(EEwsItem *item,
 						 gboolean *has_attachments);
 gboolean	e_ews_item_is_read		(EEwsItem *item,
@@ -213,6 +217,9 @@ EwsMailbox *
 						(ESoapParameter *param);
 void		e_ews_mailbox_free		(EwsMailbox *mailbox);
 
+gboolean	e_ews_item_get_is_meeting	(EEwsItem *item);
+gboolean	e_ews_item_get_is_response_requested
+						(EEwsItem *item);
 const GSList *	e_ews_item_get_modified_occurrences
 						(EEwsItem *item);
 gchar *		e_ews_embed_attachment_id_in_uri (const gchar *olduri, const gchar *attach_id);
@@ -295,6 +302,10 @@ void		e_ews_attachment_info_set_filename
 const gchar *	e_ews_attachment_info_get_uri	(EEwsAttachmentInfo *info);
 void		e_ews_attachment_info_set_uri	(EEwsAttachmentInfo *info,
 						 const gchar *uri);
+const gchar *	e_ews_attachment_info_get_id	(EEwsAttachmentInfo *info);
+void		e_ews_attachment_info_set_id	(EEwsAttachmentInfo *info,
+						 const gchar *id);
+
 
 /* Contact fields */
 const gchar *	e_ews_item_get_fileas		(EEwsItem *item);

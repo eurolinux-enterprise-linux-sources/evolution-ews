@@ -19,9 +19,7 @@
  *    Vadim Rutkovsky <vrutkovs@redhat.com>
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <string.h>
 
@@ -247,7 +245,7 @@ ews_test_init (gint argc,
 				NULL);
 
 			etd->version = g_list_nth_data (versions, i);
-			etd->connection = e_ews_connection_new (g_list_nth_data (server_uris, i), settings);
+			etd->connection = e_ews_connection_new (NULL, g_list_nth_data (server_uris, i), settings);
 			e_ews_connection_set_password (etd->connection, g_list_nth_data (passwords, i));
 			e_ews_connection_set_server_version_from_string (etd->connection, etd->version);
 
@@ -323,7 +321,7 @@ ews_test_set_https_port (UhmServer *server,
 		"user", "foo",
 		NULL);
 
-	etd->connection = e_ews_connection_new (uri, ews_settings);
+	etd->connection = e_ews_connection_new (NULL, uri, ews_settings);
 	e_ews_connection_set_password (etd->connection, "bar");
 	e_ews_connection_set_server_version_from_string (etd->connection, etd->version);
 
@@ -351,7 +349,7 @@ ews_test_server_set_trace_directory (UhmServer *server,
 	gchar *path;
 	GFile *trace_directory;
 
-	path = g_strdup_printf (TEST_FILE_DIR "traces/%s/%s", version, tests);
+	path = g_strdup_printf (TEST_FILE_DIR "/traces/%s/%s", version, tests);
 	trace_directory = g_file_new_for_path (path);
 	g_free (path);
 	uhm_server_set_trace_directory (server, trace_directory);

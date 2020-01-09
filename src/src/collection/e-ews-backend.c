@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include "e-ews-backend.h"
 
@@ -170,6 +168,86 @@ ews_backend_get_settings (EEwsBackend *backend)
 	return CAMEL_EWS_SETTINGS (settings);
 }
 
+static void
+ews_backend_update_enabled (ESource *data_source,
+			    ESource *collection_source)
+{
+	ESourceCollection *collection_extension = NULL;
+	gboolean part_enabled = TRUE;
+
+	g_return_if_fail (E_IS_SOURCE (data_source));
+
+	if (!collection_source || !e_source_get_enabled (collection_source)) {
+		e_source_set_enabled (data_source, FALSE);
+		return;
+	}
+
+	if (e_source_has_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION))
+		collection_extension = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_COLLECTION);
+
+	if (e_source_has_extension (data_source, E_SOURCE_EXTENSION_CALENDAR) ||
+	    e_source_has_extension (data_source, E_SOURCE_EXTENSION_TASK_LIST) ||
+	    e_source_has_extension (data_source, E_SOURCE_EXTENSION_MEMO_LIST)) {
+		part_enabled = !collection_extension || e_source_collection_get_calendar_enabled (collection_extension);
+	} else if (e_source_has_extension (data_source, E_SOURCE_EXTENSION_ADDRESS_BOOK)) {
+		part_enabled = !collection_extension || e_source_collection_get_contacts_enabled (collection_extension);
+	} else if (e_source_has_extension (data_source, E_SOURCE_EXTENSION_MAIL_ACCOUNT) ||
+		   e_source_has_extension (data_source, E_SOURCE_EXTENSION_MAIL_IDENTITY) ||
+		   e_source_has_extension (data_source, E_SOURCE_EXTENSION_MAIL_TRANSPORT)) {
+		part_enabled = !collection_extension || e_source_collection_get_mail_enabled (collection_extension);
+	}
+
+	e_source_set_enabled (data_source, part_enabled);
+}
+
+static void
+ews_backend_sync_authentication (EEwsBackend *ews_backend,
+				 ESource *child_source)
+{
+	ESourceAuthentication *coll_authentication_extension, *child_authentication_extension;
+	ESource *collection_source;
+
+	g_return_if_fail (E_IS_EWS_BACKEND (ews_backend));
+	g_return_if_fail (E_IS_SOURCE (child_source));
+
+	collection_source = e_backend_get_source (E_BACKEND (ews_backend));
+
+	coll_authentication_extension = e_source_get_extension (collection_source, E_SOURCE_EXTENSION_AUTHENTICATION);
+	child_authentication_extension = e_source_get_extension (child_source, E_SOURCE_EXTENSION_AUTHENTICATION);
+
+	e_source_authentication_set_host (child_authentication_extension,
+		e_source_authentication_get_host (coll_authentication_extension));
+
+	e_source_authentication_set_user (child_authentication_extension,
+		e_source_authentication_get_user (coll_authentication_extension));
+}
+
+static gboolean
+ews_backend_is_uuid_like_name (const gchar *name)
+{
+	const gchar *uuid_mask = "{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}";
+	const gchar *ptr, *msk_ptr;
+	gint len;
+
+	if (!name || *name != '{')
+		return FALSE;
+
+	len = strlen (name);
+	if (name[len - 1] != '}' || len != strlen (uuid_mask))
+		return FALSE;
+
+	for (ptr = name, msk_ptr = uuid_mask; *ptr && *msk_ptr; ptr++, msk_ptr++) {
+		if (*msk_ptr == 'X') {
+			if (!g_ascii_isxdigit (*ptr))
+				break;
+		} else if (*msk_ptr != *ptr) {
+			break;
+		}
+	}
+
+	return *msk_ptr == *ptr && !*msk_ptr;
+}
+
 static ESource *
 ews_backend_new_child (EEwsBackend *backend,
                        EEwsFolder *folder)
@@ -183,12 +261,20 @@ ews_backend_new_child (EEwsBackend *backend,
 
 	fid = e_ews_folder_get_id (folder);
 
+	g_return_val_if_fail (fid != NULL, NULL);
+
+	display_name = e_ews_folder_get_name (folder);
+
+	if (e_ews_folder_get_folder_type (folder) == E_EWS_FOLDER_TYPE_CONTACTS &&
+	    ews_backend_is_uuid_like_name (display_name)) {
+		/* Ignore address books with UUID-like name */
+		return NULL;
+	}
+
 	collection_backend = E_COLLECTION_BACKEND (backend);
 	source = e_collection_backend_new_child (collection_backend, fid->id);
 
-	display_name = e_ews_folder_get_name (folder);
 	e_source_set_display_name (source, display_name);
-	e_source_set_enabled (source, TRUE);
 
 	switch (e_ews_folder_get_folder_type (folder)) {
 		case E_EWS_FOLDER_TYPE_CALENDAR:
@@ -210,6 +296,8 @@ ews_backend_new_child (EEwsBackend *backend,
 	extension = e_source_get_extension (source, extension_name);
 	e_source_backend_set_backend_name (
 		E_SOURCE_BACKEND (extension), "ews");
+	ews_backend_sync_authentication (backend, source);
+	ews_backend_update_enabled (source, e_backend_get_source (E_BACKEND (backend)));
 
 	if (e_ews_folder_get_folder_type (folder) != E_EWS_FOLDER_TYPE_CONTACTS &&
 	    !e_source_has_extension (source, E_SOURCE_EXTENSION_EWS_FOLDER) &&
@@ -301,7 +389,7 @@ ews_backend_sync_created_folders (EEwsBackend *backend,
 
 		/* If we already know about this folder, skip it. */
 		fid = e_ews_folder_get_id (folder);
-		if (fid->id == NULL)
+		if (!fid || !fid->id)
 			continue;  /* not a valid ID anyway */
 		if (ews_backend_folders_contains (backend, fid->id))
 			continue;
@@ -378,9 +466,22 @@ ews_backend_add_gal_source (EEwsBackend *backend)
 	const gchar *oal_id = NULL;
 	const gchar *uid;
 	gchar *oal_selected;
+	gboolean can_enable;
 
 	settings = ews_backend_get_settings (backend);
 	collection_backend = E_COLLECTION_BACKEND (backend);
+	source = e_backend_get_source (E_BACKEND (backend));
+	if (source) {
+		ESourceCollection *collection_extension = NULL;
+
+		if (e_source_has_extension (source, E_SOURCE_EXTENSION_COLLECTION))
+			collection_extension = e_source_get_extension (source, E_SOURCE_EXTENSION_COLLECTION);
+
+		can_enable = !collection_extension || (e_source_get_enabled (source) &&
+			e_source_collection_get_contacts_enabled (collection_extension));
+	} else {
+		can_enable = FALSE;
+	}
 
 	gal_uid = camel_ews_settings_get_gal_uid (settings);
 
@@ -390,7 +491,7 @@ ews_backend_add_gal_source (EEwsBackend *backend)
 		g_object_unref (server);
 
 		if (source != NULL) {
-			e_source_set_enabled (source, TRUE);
+			e_source_set_enabled (source, can_enable);
 			g_object_unref (source);
 			return;
 		}
@@ -427,7 +528,8 @@ ews_backend_add_gal_source (EEwsBackend *backend)
 
 	source = e_collection_backend_new_child (
 		collection_backend, oal_id);
-	e_source_set_enabled (source, TRUE);
+	e_source_set_enabled (source, can_enable);
+	ews_backend_sync_authentication (backend, source);
 
 	e_source_set_display_name (source, display_name);
 
@@ -507,7 +609,7 @@ add_remote_sources (EEwsBackend *backend)
 				E_SERVER_SIDE_SOURCE (source), TRUE);
 			e_server_side_source_set_remote_deletable (
 				E_SERVER_SIDE_SOURCE (source), TRUE);
-			e_source_set_enabled (source, TRUE);
+			ews_backend_update_enabled (source, e_backend_get_source (E_BACKEND (backend)));
 			e_source_registry_server_add_source (registry, source);
 		} else {
 			GError *error = NULL;
@@ -635,7 +737,7 @@ ews_backend_claim_old_resources (ECollectionBackend *backend)
 	for (iter = old_resources; iter; iter = g_list_next (iter)) {
 		ESource *source = iter->data;
 
-		e_source_set_enabled (source, TRUE);
+		ews_backend_update_enabled (source, e_backend_get_source (E_BACKEND (backend)));
 		e_source_registry_server_add_source (registry, source);
 	}
 
@@ -855,7 +957,7 @@ ews_backend_create_resource_sync (ECollectionBackend *backend,
 				error, G_IO_ERROR,
 				G_IO_ERROR_INVALID_ARGUMENT,
 				_("Could not determine a suitable folder "
-				"class for a new folder named '%s'"),
+				"class for a new folder named “%s”"),
 				e_source_get_display_name (source));
 			goto exit;
 		}
@@ -942,7 +1044,7 @@ ews_backend_delete_resource_sync (ECollectionBackend *backend,
 		g_set_error (
 			error, G_IO_ERROR,
 			G_IO_ERROR_INVALID_ARGUMENT,
-			_("Data source '%s' does not represent "
+			_("Data source “%s” does not represent "
 			"an Exchange Web Services folder"),
 			e_source_get_display_name (source));
 		goto exit;
@@ -1160,7 +1262,7 @@ e_ews_backend_ref_connection_sync (EEwsBackend *backend,
 
 	settings = ews_backend_get_settings (backend);
 	hosturl = camel_ews_settings_dup_hosturl (settings);
-	connection = e_ews_connection_new_full (hosturl, settings, FALSE);
+	connection = e_ews_connection_new_full (e_backend_get_source (E_BACKEND (backend)), hosturl, settings, FALSE);
 	g_free (hosturl);
 
 	e_binding_bind_property (

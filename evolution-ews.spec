@@ -1,95 +1,72 @@
-%global evo_base_version 3.22
-%global libmspack_version 0.5-0.5
-%global with_libmspack 1
+%global libmspack_version 0.4
 
 Name: evolution-ews
-Version: 3.22.6
-Release: 6%{?dist}
+Version: 3.28.5
+Release: 1%{?dist}
 Group: Applications/Productivity
 Summary: Evolution extension for Exchange Web Services
 License: LGPLv2
 URL: https://wiki.gnome.org/Apps/Evolution
-Source: http://download.gnome.org/sources/%{name}/3.22/%{name}-%{version}.tar.xz
+Source: http://download.gnome.org/sources/%{name}/3.28/%{name}-%{version}.tar.xz
 
-# RH bug #1433268
-Patch01: evolution-ews-3.22.6-message-date-in-utc.patch
+%global eds_evo_version %{version}
 
-# RH bug #1434758
-Patch02: evolution-ews-3.22.6-truncate-before-resave-mail.patch
+Patch01: evolution-ews-3.28.2-cmake-version.patch
 
-# RH bug #1435552
-Patch03: evolution-ews-3.22.6-subsources-enabled-state.patch
-
-# RH bug #1450022
-Patch04: evolution-ews-3.22.6-free-busy-calendar.patch
-
-Requires: evolution >= %{version}
-Requires: evolution-data-server >= %{version}
-%if %{with_libmspack}
+Requires: evolution >= %{eds_evo_version}
+Requires: evolution-data-server >= %{eds_evo_version}
+Requires: %{name}-langpacks = %{version}-%{release}
 Requires: libmspack >= %{libmspack_version}
-%endif
 
-BuildRequires: gettext
-BuildRequires: gnome-common
+BuildRequires: cmake
+BuildRequires: gcc
 BuildRequires: intltool
-BuildRequires: libtool
-BuildRequires: pkgconfig(camel-1.2) >= %{version}
-BuildRequires: pkgconfig(evolution-data-server-1.2) >= %{version}
-BuildRequires: pkgconfig(evolution-mail-3.0) >= %{version}
-BuildRequires: pkgconfig(evolution-shell-3.0) >= %{version}
+BuildRequires: pkgconfig(camel-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(evolution-data-server-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(evolution-mail-3.0) >= %{eds_evo_version}
+BuildRequires: pkgconfig(evolution-shell-3.0) >= %{eds_evo_version}
 BuildRequires: pkgconfig(glib-2.0)
 BuildRequires: pkgconfig(gtk+-3.0)
-BuildRequires: pkgconfig(libebackend-1.2) >= %{version}
-BuildRequires: pkgconfig(libebook-1.2) >= %{version}
-BuildRequires: pkgconfig(libecal-1.2) >= %{version}
-BuildRequires: pkgconfig(libedata-book-1.2) >= %{version}
-BuildRequires: pkgconfig(libedata-cal-1.2) >= %{version}
-BuildRequires: pkgconfig(libemail-engine) >= %{version}
+BuildRequires: pkgconfig(libebackend-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(libebook-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(libecal-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(libedata-book-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(libedata-cal-1.2) >= %{eds_evo_version}
+BuildRequires: pkgconfig(libemail-engine) >= %{eds_evo_version}
 BuildRequires: pkgconfig(libical)
-%if %{with_libmspack}
 BuildRequires: pkgconfig(libmspack) >= %{libmspack_version}
-%endif
 BuildRequires: pkgconfig(libsoup-2.4)
 
 %description
 This package allows Evolution to interact with Microsoft Exchange servers,
 versions 2007 and later, through its Exchange Web Services (EWS) interface.
 
+%package langpacks
+Summary: Translations for %{name}
+BuildArch: noarch
+Requires: %{name} = %{version}-%{release}
+
+%description langpacks
+This package contains translations for %{name}.
+
 %prep
 %setup -q
-%patch01 -p1 -b .message-date-in-utc
-%patch02 -p1 -b .truncate-before-resave-mail
-%patch03 -p1 -b .subsources-enabled-state
-%patch04 -p1 -b .free-busy-calendar
+%patch01 -p1 -b .cmake-version
 
 %build
 
+mkdir _build
+cd _build
+
 export CFLAGS="$RPM_OPT_FLAGS -Wno-deprecated-declarations"
-
-aclocal -I m4
-autoheader
-automake --add-missing
-libtoolize
-intltoolize --force
-autoconf
-
-%if %{with_libmspack}
-%configure
-%else
-%configure --with-internal-lzx
-%endif
+%cmake -G "Unix Makefiles" ..
 make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make install DESTDIR=$RPM_BUILD_ROOT
 
-# Remove files we don't want packaged (no devel subpackage).
-rm -r $RPM_BUILD_ROOT%{_includedir}/evolution-data-server/
-rm $RPM_BUILD_ROOT%{_libdir}/evolution-data-server/*.la
-rm $RPM_BUILD_ROOT%{_libdir}/evolution-data-server/*.so
-rm $RPM_BUILD_ROOT%{_libdir}/evolution-data-server/*/*.la
-rm $RPM_BUILD_ROOT%{_libdir}/evolution/modules/*.la
+cd _build
+make install DESTDIR=$RPM_BUILD_ROOT
 
 %find_lang %{name}
 
@@ -97,21 +74,41 @@ rm $RPM_BUILD_ROOT%{_libdir}/evolution/modules/*.la
 
 %postun -p /sbin/ldconfig
 
-%files -f %{name}.lang
-%doc COPYING NEWS README
-%{_libdir}/evolution-data-server/libeews-1.2.so.*
-%{_libdir}/evolution-data-server/libewsutils.so.*
+%files
+%license COPYING
+%doc NEWS README
+%{_libdir}/evolution/modules/module-ews-configuration.so
 %{_libdir}/evolution-data-server/camel-providers/libcamelews.so
 %{_libdir}/evolution-data-server/camel-providers/libcamelews.urls
 %{_libdir}/evolution-data-server/addressbook-backends/libebookbackendews.so
 %{_libdir}/evolution-data-server/calendar-backends/libecalbackendews.so
 %{_libdir}/evolution-data-server/registry-modules/module-ews-backend.so
-%{_libdir}/evolution/modules/module-ews-configuration.so
-%{_datadir}/appdata/evolution-ews.metainfo.xml
+%{_libdir}/evolution-ews/libcamelews-priv.so
+%{_libdir}/evolution-ews/libevolution-ews.so
+%{_datadir}/metainfo/org.gnome.Evolution-ews.metainfo.xml
 %{_datadir}/evolution/errors/module-ews-configuration.error
 %{_datadir}/evolution-data-server/ews/windowsZones.xml
 
+%files langpacks -f _build/%{name}.lang
+
 %changelog
+* Mon Jul 30 2018 Milan Crha <mcrha@redhat.com> - 3.28.5-1
+- Update to 3.28.5
+
+* Mon Jul 16 2018 Milan Crha <mcrha@redhat.com> - 3.28.4-1
+- Update to 3.28.4
+- Remove patch for GNOME bug #796297 (fixed upstream)
+
+* Mon Jun 25 2018 Milan Crha <mcrha@redhat.com> - 3.28.3-2
+- Add patch for GNOME bug #796297 (Cannot modify existing meeting after fix for this bug)
+
+* Mon Jun 18 2018 Milan Crha <mcrha@redhat.com> - 3.28.3-1
+- Update to 3.28.3
+
+* Wed May 30 2018 Milan Crha <mcrha@redhat.com> - 3.28.2-1
+- Update to 3.28.2
+- Resolves: #1575499
+
 * Wed May 24 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-6
 - Add patch for RH bug #1450022 (Allow adding Free/Busy as a foreign Calendar)
 

@@ -23,9 +23,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -75,6 +73,7 @@ struct _CamelEwsStorePrivate {
 	GMutex connection_lock;
 	gboolean has_ooo_set;
 	CamelEwsStoreOooAlertState ooo_alert_state;
+	gint password_expires_in_days;
 
 	gboolean listen_notifications;
 	guint subscription_key;
@@ -279,10 +278,10 @@ ews_store_initable_init (GInitable *initable,
 	store = CAMEL_STORE (initable);
 	service = CAMEL_SERVICE (initable);
 
-	store->flags |= CAMEL_STORE_USE_CACHE_DIR | CAMEL_STORE_SUPPORTS_INITIAL_SETUP;
+	camel_store_set_flags (store, camel_store_get_flags (store) | CAMEL_STORE_USE_CACHE_DIR | CAMEL_STORE_SUPPORTS_INITIAL_SETUP);
 	ews_migrate_to_user_cache_dir (service);
 
-	store->flags |= CAMEL_STORE_CAN_DELETE_FOLDERS_AT_ONCE;
+	camel_store_set_flags (store, camel_store_get_flags (store) | CAMEL_STORE_CAN_DELETE_FOLDERS_AT_ONCE);
 
 	/* Chain up to parent interface's init() method. */
 	if (!parent_initable_interface->init (initable, cancellable, error))
@@ -315,13 +314,17 @@ ews_store_construct (CamelService *service,
 {
 	CamelEwsStore *ews_store;
 	gchar *summary_file, *session_storage_path;
+	guint32 store_flags;
 
 	ews_store = (CamelEwsStore *) service;
 
+	store_flags = camel_store_get_flags (CAMEL_STORE (ews_store));
+
 	/* Disable virtual trash and junk folders. Exchange has real
 	 * folders for that */
-	((CamelStore *) ews_store)->flags &= ~(CAMEL_STORE_VTRASH | CAMEL_STORE_VJUNK);
-	((CamelStore *) ews_store)->flags |= CAMEL_STORE_REAL_JUNK_FOLDER;
+	store_flags &= ~(CAMEL_STORE_VTRASH | CAMEL_STORE_VJUNK);
+	store_flags |= CAMEL_STORE_REAL_JUNK_FOLDER;
+	camel_store_set_flags (CAMEL_STORE (ews_store), store_flags);
 
 	/*storage path*/
 	session_storage_path = g_strdup (camel_service_get_user_cache_dir (service));
@@ -361,11 +364,11 @@ ews_store_get_public_folders_name (CamelEwsStore *ews_store)
 		g_free (tmp_fid);
 		g_free (use_name);
 
-		/* Translators: This composes a "Public Folders" folder name for case when
-		 * user has such in his store already. The %s is replaced with "Public Folders",
-		 * the %d with counter, thus it composes name like "Public Folders_1"
-		*/
 		use_name = g_strdup_printf (
+			/* Translators: This composes a "Public Folders" folder name for case when
+			 * user has such in his store already. The %s is replaced with "Public Folders",
+			 * the %d with counter, thus it composes name like "Public Folders_1"
+			 */
 			C_("PublicFolders", "%s_%d"),
 			EWS_PUBLIC_FOLDER_ROOT_DISPLAY_NAME, counter);
 
@@ -490,11 +493,11 @@ camel_ews_store_ensure_virtual_folders (CamelEwsStore *ews_store)
 			g_free (tmp_fid);
 			g_free (use_name);
 
-			/* Translators: This composes a "Foreign Folders" folder name for case when
-			 * user has such in his store already. The %s is replaced with "Foreign Folders",
-			 * the %d with counter, thus it composes name like "Foreign Folders_1"
-			*/
 			use_name = g_strdup_printf (
+				/* Translators: This composes a "Foreign Folders" folder name for case when
+				 * user has such in his store already. The %s is replaced with "Foreign Folders",
+				 * the %d with counter, thus it composes name like "Foreign Folders_1"
+				 */
 				C_("ForeignFolders", "%s_%d"),
 				EWS_FOREIGN_FOLDER_ROOT_DISPLAY_NAME, counter);
 
@@ -641,7 +644,7 @@ ews_update_has_ooo_set (CamelSession *session,
 	if (!cnc)
 		return;
 
-	camel_operation_push_message (cancellable, _("Checking \"Out of Office\" settings"));
+	camel_operation_push_message (cancellable, _("Checking “Out of Office” settings"));
 
 	oof_settings = e_ews_oof_settings_new_sync (cnc, cancellable, &local_error);
 
@@ -1244,7 +1247,7 @@ ews_connect_sync (CamelService *service,
 		state = camel_ews_store_get_ooo_alert_state (ews_store);
 		if (state == CAMEL_EWS_STORE_OOO_ALERT_STATE_UNKNOWN)
 			camel_session_submit_job (
-				session, _("Checking \"Out of Office\" settings"),
+				session, _("Checking “Out of Office” settings"),
 				ews_update_has_ooo_set,
 				g_object_ref (ews_store),
 				g_object_unref);
@@ -1286,6 +1289,52 @@ ews_connect_sync (CamelService *service,
 	g_object_unref (settings);
 
 	return success;
+}
+
+static void
+camel_ews_store_password_will_expire_cb (EEwsConnection *connection,
+					 gint in_days,
+					 const gchar *service_url,
+					 gpointer user_data)
+{
+	CamelEwsStore *ews_store = user_data;
+
+	g_return_if_fail (CAMEL_IS_EWS_STORE (ews_store));
+
+	if (ews_store->priv->password_expires_in_days < 0 ||
+	    ews_store->priv->password_expires_in_days > in_days) {
+		CamelService *service;
+		CamelSession *session;
+
+		ews_store->priv->password_expires_in_days = in_days;
+
+		service = CAMEL_SERVICE (ews_store);
+		session = camel_service_ref_session (service);
+
+		if (session) {
+			gchar *msg;
+
+			if (service_url) {
+				msg = g_strdup_printf (g_dngettext (GETTEXT_PACKAGE,
+					/* Translators: The "%s" is a service URL, provided by the server */
+					"Password will expire in %d day. Open “%s” to change it.",
+					"Password will expire in %d days. Open “%s” to change it.",
+					in_days),
+					in_days, service_url);
+			} else {
+				msg = g_strdup_printf (g_dngettext (GETTEXT_PACKAGE,
+					"Password will expire in one day.",
+					"Password will expire in %d days.",
+					in_days),
+					in_days);
+			}
+
+			camel_session_user_alert (session, service, CAMEL_SESSION_ALERT_WARNING, msg);
+
+			g_object_unref (session);
+			g_free (msg);
+		}
+	}
 }
 
 static void
@@ -1346,8 +1395,10 @@ ews_store_unset_connection_locked (CamelEwsStore *ews_store)
 			ews_store->priv->listen_notifications = FALSE;
 		}
 
-		e_ews_connection_set_password (
-			ews_store->priv->connection, NULL);
+		e_ews_connection_set_password (ews_store->priv->connection, NULL);
+		e_ews_connection_set_disconnected_flag (ews_store->priv->connection, TRUE);
+		g_signal_handlers_disconnect_by_func (ews_store->priv->connection,
+			G_CALLBACK (camel_ews_store_password_will_expire_cb), ews_store);
 		g_object_unref (ews_store->priv->connection);
 		ews_store->priv->connection = NULL;
 	}
@@ -1769,6 +1820,7 @@ ews_authenticate_sync (CamelService *service,
 	CamelSettings *settings;
 	CamelEwsSettings *ews_settings;
 	EEwsConnection *connection;
+	ESource *source;
 	GSList *folders_created = NULL;
 	GSList *folders_updated = NULL;
 	GSList *folders_deleted = NULL;
@@ -1789,10 +1841,12 @@ ews_authenticate_sync (CamelService *service,
 
 	ews_settings = CAMEL_EWS_SETTINGS (settings);
 	hosturl = camel_ews_settings_dup_hosturl (ews_settings);
+	source = camel_ews_utils_ref_corresponding_source (service, cancellable);
 
-	connection = e_ews_connection_new (hosturl, ews_settings);
+	connection = e_ews_connection_new (source, hosturl, ews_settings);
 	e_ews_connection_set_password (connection, password);
 
+	g_clear_object (&source);
 	g_free (hosturl);
 
 	g_object_unref (settings);
@@ -1853,6 +1907,8 @@ ews_authenticate_sync (CamelService *service,
 		g_mutex_lock (&ews_store->priv->connection_lock);
 		ews_store_unset_connection_locked (ews_store);
 		ews_store->priv->connection = g_object_ref (connection);
+		g_signal_connect (ews_store->priv->connection, "password-will-expire",
+			G_CALLBACK (camel_ews_store_password_will_expire_cb), ews_store);
 		g_mutex_unlock (&ews_store->priv->connection_lock);
 
 		/* This consumes all allocated result data. */
@@ -1924,6 +1980,7 @@ ews_store_query_auth_types_sync (CamelService *service,
                                  GError **error)
 {
 	EEwsConnection *connection;
+	ESource *source;
 	CamelSettings *settings;
 	CamelEwsSettings *ews_settings;
 	GList *auth_types = NULL;
@@ -1935,7 +1992,11 @@ ews_store_query_auth_types_sync (CamelService *service,
 	settings = camel_service_ref_settings (service);
 	ews_settings = CAMEL_EWS_SETTINGS (settings);
 	hosturl = camel_ews_settings_dup_hosturl (ews_settings);
-	connection = e_ews_connection_new_full (hosturl, ews_settings, FALSE);
+	source = camel_ews_utils_ref_corresponding_source (service, cancellable);
+
+	connection = e_ews_connection_new_full (source, hosturl, ews_settings, FALSE);
+
+	g_clear_object (&source);
 	g_free (hosturl);
 	g_object_unref (settings);
 
@@ -1964,6 +2025,16 @@ ews_store_query_auth_types_sync (CamelService *service,
 				auth = "PLAIN";
 			else if (g_ascii_strcasecmp (auth, "Negotiate") == 0)
 				auth = "GSSAPI";
+			else if (e_oauth2_services_is_supported () &&
+				 g_ascii_strcasecmp (auth, "Bearer") == 0) {
+				/* Use Camel name for OAuth2. It's up to the caller to decide whether
+				   it can be used or not. */
+				authtype = camel_sasl_authtype ("XOAUTH2");
+				if (authtype)
+					auth_types = g_list_prepend (auth_types, authtype);
+
+				continue;
+			}
 
 			for (siter = provider->authtypes; siter; siter = siter->next) {
 				authtype = siter->data;
@@ -2482,7 +2553,7 @@ ews_create_folder_sync (CamelStore *store,
 		g_free (fid);
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Cannot create folder '%s', folder already exists"),
+			_("Cannot create folder “%s”, folder already exists"),
 			full_name);
 		g_free (full_name);
 		return NULL;
@@ -2507,7 +2578,7 @@ ews_create_folder_sync (CamelStore *store,
 
 			g_set_error (
 				error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-				_("Cannot create folder under '%s', it is used for folders of other users only"),
+				_("Cannot create folder under “%s”, it is used for folders of other users only"),
 				parent_name);
 			return NULL;
 		}
@@ -2517,7 +2588,7 @@ ews_create_folder_sync (CamelStore *store,
 
 			g_set_error (
 				error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-				_("Cannot create folder under '%s', it is used for public folders only"),
+				_("Cannot create folder under “%s”, it is used for public folders only"),
 				parent_name);
 			return NULL;
 		}
@@ -2631,7 +2702,7 @@ ews_delete_folder_sync (CamelStore *store,
 
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Cannot remove folder '%s', it is used for folders of other users only"),
+			_("Cannot remove folder “%s”, it is used for folders of other users only"),
 			folder_name);
 		return FALSE;
 	}
@@ -2642,7 +2713,7 @@ ews_delete_folder_sync (CamelStore *store,
 
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Cannot remove folder '%s', it is used for public folders only"),
+			_("Cannot remove folder “%s”, it is used for public folders only"),
 			folder_name);
 		return FALSE;
 	}
@@ -3005,12 +3076,12 @@ ews_get_trash_folder_sync (CamelStore *store,
 		   are moved to the Deleted Items folder first, thus in case of the trash
 		   folder instance being used to expunge messages will contain all of them.
 		*/
-		folders = camel_object_bag_list (store->folders);
+		folders = camel_store_dup_opened_folders (store);
 		for (ii = 0; ii < folders->len; ii++) {
 			CamelFolder *secfolder = folders->pdata[ii];
 
 			if (secfolder != folder && can)
-			    can = camel_folder_synchronize_sync (secfolder, FALSE, cancellable, NULL);
+				can = camel_folder_synchronize_sync (secfolder, FALSE, cancellable, NULL);
 
 			g_object_unref (secfolder);
 		}
@@ -3257,7 +3328,7 @@ ews_store_subscribe_folder_sync (CamelSubscribable *subscribable,
 
 		g_set_error (
 			error, CAMEL_STORE_ERROR, CAMEL_STORE_ERROR_NO_FOLDER,
-			_("Cannot subscribe folder '%s', no public folder available"), folder_name);
+			_("Cannot subscribe folder “%s”, no public folder available"), folder_name);
 		return FALSE;
 	}
 
@@ -3267,7 +3338,7 @@ ews_store_subscribe_folder_sync (CamelSubscribable *subscribable,
 
 		g_set_error (
 			error, CAMEL_STORE_ERROR, CAMEL_STORE_ERROR_NO_FOLDER,
-			_("Cannot subscribe folder '%s', folder not found"), folder_name);
+			_("Cannot subscribe folder “%s”, folder not found"), folder_name);
 		return FALSE;
 	}
 
@@ -3519,7 +3590,7 @@ ews_store_unset_oof_settings_state (CamelSession *session,
 	EEwsOofState state;
 	GError *local_error = NULL;
 
-	camel_operation_push_message (cancellable, _("Unsetting the \"Out of Office\" status"));
+	camel_operation_push_message (cancellable, _("Unsetting the “Out of Office” status"));
 
 	connection = camel_ews_store_ref_connection (ews_store);
 	oof_settings = e_ews_oof_settings_new_sync (connection, cancellable, &local_error);
@@ -3556,7 +3627,7 @@ camel_ews_store_unset_oof_settings_state (CamelEwsStore *ews_store)
 	session = camel_service_ref_session (service);
 
 	camel_session_submit_job (
-		session, _("Unsetting the \"Out of Office\" status"),
+		session, _("Unsetting the “Out of Office” status"),
 		ews_store_unset_oof_settings_state,
 		g_object_ref (ews_store),
 		g_object_unref);
@@ -3705,6 +3776,7 @@ camel_ews_store_init (CamelEwsStore *ews_store)
 	ews_store->priv->subscription_key = 0;
 	ews_store->priv->update_folder_id = 0;
 	ews_store->priv->update_folder_list_id = 0;
+	ews_store->priv->password_expires_in_days = -1;
 	g_mutex_init (&ews_store->priv->get_finfo_lock);
 	g_mutex_init (&ews_store->priv->connection_lock);
 	g_rec_mutex_init (&ews_store->priv->update_lock);

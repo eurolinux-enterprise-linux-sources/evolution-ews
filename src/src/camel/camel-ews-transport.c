@@ -22,9 +22,7 @@
  * USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <string.h>
 
@@ -33,8 +31,7 @@
 #include <libemail-engine/libemail-engine.h>
 
 #include "server/camel-ews-settings.h"
-
-#include "utils/ews-camel-common.h"
+#include "server/e-ews-camel-common.h"
 
 #include "camel-ews-store.h"
 #include "camel-ews-transport.h"
@@ -224,6 +221,7 @@ ews_transport_authenticate_sync (CamelService *service,
 	CamelSettings *settings;
 	CamelEwsSettings *ews_settings;
 	EEwsConnection *connection;
+	ESource *source;
 	const gchar *password;
 	gchar *hosturl, *new_sync_state = NULL;
 	GSList *folders_created = NULL;
@@ -240,10 +238,12 @@ ews_transport_authenticate_sync (CamelService *service,
 
 	ews_settings = CAMEL_EWS_SETTINGS (settings);
 	hosturl = camel_ews_settings_dup_hosturl (ews_settings);
+	source = camel_ews_utils_ref_corresponding_source (service, cancellable);
 
-	connection = e_ews_connection_new (hosturl, ews_settings);
+	connection = e_ews_connection_new (source, hosturl, ews_settings);
 	e_ews_connection_set_password (connection, password);
 
+	g_clear_object (&source);
 	g_free (hosturl);
 
 	g_object_unref (settings);

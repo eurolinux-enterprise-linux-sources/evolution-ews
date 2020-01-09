@@ -16,9 +16,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <glib/gi18n-lib.h>
 
@@ -30,11 +28,16 @@
 #include "e-mail-config-ews-notebook.h"
 #include "e-mail-config-ews-oal-combo-box.h"
 #include "e-mail-config-ews-delegates-page.h"
+#include "e-mail-config-ews-offline-options.h"
 #include "e-mail-config-ews-ooo-page.h"
 #include "e-mail-config-ews-folder-sizes-page.h"
 #include "e-ews-ooo-notificator.h"
+#include "e-ews-config-lookup.h"
+#include "e-ews-photo-source.h"
 
 #include "e-ews-config-ui-extension.h"
+#include "server/camel-sasl-xoauth2-office365.h"
+#include "server/e-oauth2-service-office365.h"
 #include "server/e-source-ews-folder.h"
 
 /* Module Entry Points */
@@ -51,14 +54,19 @@ e_module_load (GTypeModule *type_module)
 	e_book_config_ews_type_register (type_module);
 	e_mail_config_ews_autodiscover_type_register (type_module);
 	e_mail_config_ews_backend_type_register (type_module);
+	e_mail_config_ews_offline_options_type_register (type_module);
 	e_mail_config_ews_gal_type_register (type_module);
 	e_mail_config_ews_notebook_type_register (type_module);
 	e_mail_config_ews_oal_combo_box_type_register (type_module);
 	e_mail_config_ews_delegates_page_type_register (type_module);
 	e_mail_config_ews_ooo_page_type_register (type_module);
 	e_mail_config_ews_folder_sizes_page_type_register (type_module);
+	e_ews_config_lookup_type_register (type_module);
 	e_ews_config_ui_extension_type_register (type_module);
 	e_ews_ooo_notificator_type_register (type_module);
+	e_ews_photo_source_type_register (type_module);
+	camel_sasl_xoauth2_office365_type_register (type_module);
+	e_oauth2_service_office365_type_register (type_module);
 
 	e_source_ews_folder_type_register (type_module);
 }

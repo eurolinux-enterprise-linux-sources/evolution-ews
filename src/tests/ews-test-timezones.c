@@ -146,7 +146,7 @@ test_time_zones_sync (gconstpointer user_data)
 	UhmServer *local_server;
 	EwsTestData *etd = (gpointer) user_data;
 	EwsCalendarConvertData convert_data;
-	EwsFolderId *calendar_fid;
+	EwsFolderId *calendar_fid = NULL;
 	gboolean includes_last_folder = FALSE;
 	gchar *old_sync_state = NULL;
 	gchar **tokens;
@@ -217,6 +217,11 @@ test_time_zones_sync (gconstpointer user_data)
 			g_free (new_sync_state);
 			break;
 		}
+	}
+
+	if (!calendar_fid) {
+		g_printerr ("No calendar folder found\n");
+		goto exit;
 	}
 
 	convert_data.connection = etd->connection;
@@ -307,28 +312,37 @@ int main (int argc,
 	gint retval;
 	GList *etds, *l;
 	UhmServer *server;
-	gchar *module_path = NULL;
+	const gchar *module_path;
 	GModule *module = NULL;
 
 	retval = ews_test_init (argc, argv);
 
-	if (retval < 0)
+	if (retval < 0) {
+		g_printerr ("Failed to initialize test\n");
 		goto exit;
+	}
 
-	if (!g_module_supported ())
+	if (!g_module_supported ()) {
+		g_printerr ("GModule not supported\n");
+		retval = 1;
 		goto exit;
+	}
 
-	module_path = g_module_build_path (CALENDAR_MODULE_DIR, "libecalbackendews");
+	module_path = CALENDAR_MODULE_DIR "libecalbackendews.so";
 	module = g_module_open (module_path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
 
-	if (module == NULL)
+	if (module == NULL) {
+		g_printerr ("Failed to load module '%s': %s\n", module_path, g_module_error ());
+		retval = 2;
 		goto exit;
+	}
 
 	if (!g_module_symbol (
 		module,
 		"e_cal_backend_ews_populate_windows_zones",
 		(gpointer *) &populate_windows_zones)) {
 			g_printerr ("\n%s\n", g_module_error ());
+			retval = 3;
 			goto exit;
 	}
 
@@ -337,6 +351,7 @@ int main (int argc,
 		"e_cal_backend_ews_tz_util_get_msdn_equivalent",
 		(gpointer *) &ical_to_msdn_equivalent)) {
 			g_printerr ("\n%s\n", g_module_error ());
+			retval = 4;
 			goto exit;
 	}
 
@@ -345,6 +360,7 @@ int main (int argc,
 		"e_cal_backend_ews_convert_calcomp_to_xml",
 		(gpointer *) &convert_calcomp_to_xml)) {
 			g_printerr ("\n%s\n", g_module_error ());
+			retval = 5;
 			goto exit;
 	}
 
@@ -382,7 +398,6 @@ int main (int argc,
 			g_signal_handlers_disconnect_by_func (server, server_notify_resolver_cb, l->data);
 
  exit:
-	g_free (module_path);
 	if (module != NULL)
 		g_module_close (module);
 	if (builtin_timezones != NULL)

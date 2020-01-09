@@ -24,6 +24,10 @@
 
 #include <camel/camel.h>
 
+#include "camel-ews-message-info.h"
+
+#define CAMEL_EWS_SUMMARY_VERSION (2)
+
 /* Standard GObject macros */
 #define CAMEL_TYPE_EWS_SUMMARY \
 	(camel_ews_summary_get_type ())
@@ -48,25 +52,6 @@ G_BEGIN_DECLS
 typedef struct _CamelEwsSummary CamelEwsSummary;
 typedef struct _CamelEwsSummaryClass CamelEwsSummaryClass;
 typedef struct _CamelEwsSummaryPrivate CamelEwsSummaryPrivate;
-typedef struct _CamelEwsMessageInfo CamelEwsMessageInfo;
-typedef struct _CamelEwsMessageContentInfo CamelEwsMessageContentInfo;
-
-/* extra summary flags*/
-enum {
-	CAMEL_EWS_MESSAGE_MSGFLAG_RN_PENDING = CAMEL_MESSAGE_FOLDER_FLAGGED << 1
-};
-
-struct _CamelEwsMessageInfo {
-	CamelMessageInfoBase info;
-
-	guint32 server_flags;
-	gint32 item_type;
-	gchar *change_key;
-} ;
-
-struct _CamelEwsMessageContentInfo {
-	CamelMessageContentInfo info;
-} ;
 
 struct _CamelEwsSummary {
 	CamelFolderSummary parent;
@@ -86,7 +71,7 @@ gboolean
 					(CamelFolderSummary *summary,
 					 CamelMessageInfo *info,
 					 guint32 server_flags,
-					 CamelFlag *server_user_flags);
+					 const CamelNamedFlags *server_user_flags);
 gboolean
 	camel_ews_summary_add_message	(CamelFolderSummary *summary,
 					 const gchar *uid,
@@ -95,6 +80,7 @@ gboolean
 					 CamelMimeMessage *message);
 void	ews_summary_clear		(CamelFolderSummary *summary,
 					 gboolean uncache);
+gint32	camel_ews_summary_get_version	(CamelEwsSummary *ews_summary);
 void	camel_ews_summary_set_sync_state(CamelEwsSummary *ews_summary,
 					 const gchar *sync_state);
 gchar *	camel_ews_summary_dup_sync_state(CamelEwsSummary *ews_summary);

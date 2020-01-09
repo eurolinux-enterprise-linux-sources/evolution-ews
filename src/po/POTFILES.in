@@ -1,7 +1,7 @@
 # List of source files containing translatable strings.
 # Please keep this list in alphabetic order.
 [encoding: UTF-8]
-evolution-ews.metainfo.xml.in
+org.gnome.Evolution-ews.metainfo.xml.in
 src/addressbook/e-book-backend-ews.c
 src/calendar/e-cal-backend-ews.c
 src/camel/camel-ews-folder.c
@@ -11,6 +11,7 @@ src/camel/camel-ews-transport.c
 src/camel/camel-ews-utils.c
 src/collection/e-ews-backend.c
 src/collection/module-ews-backend.c
+src/configuration/e-ews-config-lookup.c
 src/configuration/e-ews-config-utils.c
 src/configuration/e-ews-edit-folder-permissions.c
 src/configuration/e-ews-ooo-notificator.c
@@ -23,6 +24,9 @@ src/configuration/e-mail-config-ews-folder-sizes-page.c
 src/configuration/e-mail-config-ews-gal.c
 src/configuration/e-mail-config-ews-ooo-page.c
 src/configuration/module-ews-configuration.error.xml
+src/server/camel-sasl-xoauth2-office365.c
+src/server/e-ews-camel-common.c
 src/server/e-ews-connection.c
+src/server/e-ews-connection-utils.c
 src/server/e-ews-folder.c
-src/utils/ews-camel-common.c
+src/server/e-oauth2-service-office365.c

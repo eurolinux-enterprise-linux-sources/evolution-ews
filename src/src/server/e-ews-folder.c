@@ -19,9 +19,7 @@
  * USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "evolution-ews-config.h"
 
 #include <string.h>
 #include <glib/gi18n-lib.h>
@@ -47,6 +45,7 @@ struct _EEwsFolderPrivate {
 	guint32 child_count;
 	guint64 size;
 	gboolean foreign;
+	gchar *foreign_mail;
 };
 
 static void
@@ -70,14 +69,9 @@ e_ews_folder_finalize (GObject *object)
 	priv = folder->priv;
 
 	g_clear_error (&priv->error);
-
-	if (priv->name) {
-		g_free (priv->name);
-		priv->name = NULL;
-	}
-
-	g_free (priv->escaped_name);
-	priv->escaped_name = NULL;
+	g_clear_pointer (&priv->name, g_free);
+	g_clear_pointer (&priv->escaped_name, g_free);
+	g_clear_pointer (&priv->foreign_mail, g_free);
 
 	if (priv->fid) {
 		g_free (priv->fid->id);
@@ -153,21 +147,24 @@ e_ews_folder_set_from_soap_parameter (EEwsFolder *folder,
 	if (priv->folder_type == E_EWS_FOLDER_TYPE_MAILBOX) {
 		subparam = e_soap_parameter_get_first_child_by_name (node, "FolderClass");
 		if (subparam) {
+			EEwsFolderType folder_type;
 			gchar *folder_class = e_soap_parameter_get_string_value (subparam);
 
-			priv->folder_type = E_EWS_FOLDER_TYPE_UNKNOWN;
+			folder_type = E_EWS_FOLDER_TYPE_UNKNOWN;
 
 			if (g_strcmp0 (folder_class, "IPF.Note") == 0 || (folder_class && g_str_has_prefix (folder_class, "IPF.Note."))) {
-				priv->folder_type = E_EWS_FOLDER_TYPE_MAILBOX;
+				folder_type = E_EWS_FOLDER_TYPE_MAILBOX;
 			} else if (g_strcmp0 (folder_class, "IPF.Contact") == 0) {
-				priv->folder_type = E_EWS_FOLDER_TYPE_CONTACTS;
+				folder_type = E_EWS_FOLDER_TYPE_CONTACTS;
 			} else if (g_strcmp0 (folder_class, "IPF.Appointment") == 0) {
-				priv->folder_type = E_EWS_FOLDER_TYPE_CALENDAR;
+				folder_type = E_EWS_FOLDER_TYPE_CALENDAR;
 			} else if (g_strcmp0 (folder_class, "IPF.Task") == 0) {
-				priv->folder_type = E_EWS_FOLDER_TYPE_TASKS;
+				folder_type = E_EWS_FOLDER_TYPE_TASKS;
 			} else if (g_strcmp0 (folder_class, "IPF.StickyNote") == 0) {
-				priv->folder_type = E_EWS_FOLDER_TYPE_MEMOS;
+				folder_type = E_EWS_FOLDER_TYPE_MEMOS;
 			}
+
+			priv->folder_type = folder_type;
 
 			g_free (folder_class);
 		}
@@ -303,7 +300,7 @@ e_ews_folder_new_from_error (const GError *error)
 }
 
 gboolean
-e_ews_folder_is_error (EEwsFolder *folder)
+e_ews_folder_is_error (const EEwsFolder *folder)
 {
 	g_return_val_if_fail (E_IS_EWS_FOLDER (folder), TRUE);
 
@@ -409,6 +406,16 @@ e_ews_folder_get_id (const EEwsFolder *folder)
 	return (const EwsFolderId *) folder->priv->fid;
 }
 
+void
+e_ews_folder_set_id (EEwsFolder *folder,
+		     EwsFolderId *fid)
+{
+	g_return_if_fail (E_IS_EWS_FOLDER (folder));
+
+	e_ews_folder_id_free (folder->priv->fid);
+	folder->priv->fid = fid;
+}
+
 const EwsFolderId *
 e_ews_folder_get_parent_id (const EEwsFolder *folder)
 {
@@ -501,6 +508,24 @@ e_ews_folder_set_foreign (EEwsFolder *folder,
 	g_return_if_fail (E_IS_EWS_FOLDER (folder));
 
 	folder->priv->foreign = is_foreign;
+}
+
+const gchar *
+e_ews_folder_get_foreign_mail (const EEwsFolder *folder)
+{
+	g_return_val_if_fail (E_IS_EWS_FOLDER (folder), NULL);
+
+	return folder->priv->foreign_mail;
+}
+
+void
+e_ews_folder_set_foreign_mail (EEwsFolder *folder,
+			       const gchar *foreign_mail)
+{
+	g_return_if_fail (E_IS_EWS_FOLDER (folder));
+
+	g_free (folder->priv->foreign_mail);
+	folder->priv->foreign_mail = g_strdup (foreign_mail);
 }
 
 /* escapes backslashes with \5C and forward slashes with \2F */
@@ -678,6 +703,7 @@ e_ews_folder_utils_populate_esource (ESource *source,
 			e_source_ews_folder_set_change_key (folder_ext, NULL);
 			e_source_ews_folder_set_foreign (folder_ext, e_ews_folder_get_foreign (folder));
 			e_source_ews_folder_set_foreign_subfolders (folder_ext, (flags & E_EWS_ESOURCE_FLAG_INCLUDE_SUBFOLDERS) != 0);
+			e_source_ews_folder_set_foreign_mail (folder_ext, e_ews_folder_get_foreign_mail (folder));
 			e_source_ews_folder_set_public (folder_ext, (flags & E_EWS_ESOURCE_FLAG_PUBLIC_FOLDER) != 0);
 
 			offline_ext = e_source_get_extension (source, E_SOURCE_EXTENSION_OFFLINE);
@@ -747,7 +773,7 @@ e_ews_folder_utils_add_as_esource (ESourceRegistry *pregistry,
 		g_propagate_error (
 			perror,
 			g_error_new (EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDEREXISTS,
-			_("Cannot add folder, folder already exists as '%s'"), e_source_get_display_name (old_source)));
+			_("Cannot add folder, folder already exists as “%s”"), e_source_get_display_name (old_source)));
 	} else if (e_ews_folder_utils_populate_esource (
 		source,
 		sources,
