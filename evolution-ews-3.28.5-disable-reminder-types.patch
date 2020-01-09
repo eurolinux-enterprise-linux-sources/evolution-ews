@@ -1,0 +1,12 @@
+diff -up evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c.disable-reminder-types evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c
+--- evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c.disable-reminder-types	2018-07-30 16:01:00.000000000 +0200
++++ evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c	2018-09-27 18:30:08.889040518 +0200
+@@ -3675,6 +3675,8 @@ ecb_ews_get_backend_property (ECalBacken
+ 		return g_strjoin (
+ 			",",
+ 			CAL_STATIC_CAPABILITY_NO_EMAIL_ALARMS,
++			CAL_STATIC_CAPABILITY_NO_AUDIO_ALARMS,
++			CAL_STATIC_CAPABILITY_NO_PROCEDURE_ALARMS,
+ 			CAL_STATIC_CAPABILITY_ONE_ALARM_ONLY,
+ 			CAL_STATIC_CAPABILITY_REMOVE_ALARMS,
+ 			CAL_STATIC_CAPABILITY_NO_THISANDPRIOR,

@@ -1,0 +1,22 @@
+From 6d3dc9c50be654a9e250cfd53626f8526ff9eb70 Mon Sep 17 00:00:00 2001
+From: Milan Crha <mcrha@redhat.com>
+Date: Tue, 25 Sep 2018 16:20:12 +0200
+Subject: Treat 'Unknown' ResponseType as Needs-Action
+
+When creating a new meeting the attendees have returned by the server
+an 'Unknown' ResponseType, which turned into 'Unknown' in the Evolution
+UI (meeting editor). Treat it as Needs-Action instead.
+
+diff --git a/src/calendar/e-cal-backend-ews.c b/src/calendar/e-cal-backend-ews.c
+index bf995813..06d56fa0 100644
+--- a/src/calendar/e-cal-backend-ews.c
++++ b/src/calendar/e-cal-backend-ews.c
+@@ -311,7 +311,7 @@ ecb_ews_responsetype_to_partstat (const gchar *responsetype)
+ 	else if (g_ascii_strcasecmp (responsetype, "NoResponseReceived") == 0)
+ 		param = icalparameter_new_partstat (ICAL_PARTSTAT_NEEDSACTION);
+ 	else if (g_ascii_strcasecmp (responsetype, "Unknown") == 0)
+-		param = icalparameter_new_partstat (ICAL_PARTSTAT_NONE);
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_NEEDSACTION);
+ 
+ 	if (!param)
+ 		param = icalparameter_new_partstat (ICAL_PARTSTAT_NONE);

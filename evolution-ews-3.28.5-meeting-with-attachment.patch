@@ -1,0 +1,114 @@
+diff -up evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c.meeting-with-attachment evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c
+--- evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c.meeting-with-attachment	2018-09-27 18:32:25.783038625 +0200
++++ evolution-ews-3.28.5/src/calendar/e-cal-backend-ews.c	2018-09-27 18:32:25.786038625 +0200
+@@ -2598,7 +2598,7 @@ ecb_ews_save_component_sync (ECalMetaBac
+ 		GHashTable *removed_indexes;
+ 		EwsCalendarConvertData convert_data = { 0 };
+ 		EEwsItem *item = NULL;
+-		const EwsId *ews_id = NULL;
++		EwsId *ews_id = NULL;
+ 		const gchar *send_meeting_invitations;
+ 		icalcomponent *icalcomp;
+ 		icalproperty *prop;
+@@ -2642,7 +2642,7 @@ ecb_ews_save_component_sync (ECalMetaBac
+ 			if (item) {
+ 				g_object_ref (item);
+ 
+-				ews_id = e_ews_item_get_id (item);
++				ews_id = e_ews_id_copy (e_ews_item_get_id (item));
+ 			}
+ 		}
+ 
+@@ -2666,6 +2666,8 @@ ecb_ews_save_component_sync (ECalMetaBac
+ 				g_clear_object (&item);
+ 
+ 				item = items_req->data;
++
++				e_ews_id_free (ews_id);
+ 				ews_id = NULL;
+ 
+ 				if (e_ews_item_get_item_type (item) == E_EWS_ITEM_TYPE_ERROR) {
+@@ -2674,7 +2676,7 @@ ecb_ews_save_component_sync (ECalMetaBac
+ 					success = FALSE;
+ 				} else {
+ 					item = g_object_ref (item);
+-					ews_id = e_ews_item_get_id (item);
++					ews_id = e_ews_id_copy (e_ews_item_get_id (item));
+ 				}
+ 			}
+ 
+@@ -2689,13 +2691,21 @@ ecb_ews_save_component_sync (ECalMetaBac
+ 			g_warn_if_fail (ews_id != NULL);
+ 
+ 			if (ews_id && ecb_ews_extract_attachments (icalcomp, &info_attachments)) {
++				gchar *changekey = NULL;
+ 				GSList *ids = NULL;
+ 
+ 				success = e_ews_connection_create_attachments_sync (cbews->priv->cnc, EWS_PRIORITY_MEDIUM,
+-					ews_id, info_attachments, FALSE, NULL, &ids, cancellable, error);
++					ews_id, info_attachments, FALSE, &changekey, &ids, cancellable, error);
+ 
+ 				g_slist_free_full (info_attachments, (GDestroyNotify) e_ews_attachment_info_free);
+ 				g_slist_free_full (ids, g_free);
++
++				if (success && changekey) {
++					g_free (ews_id->change_key);
++					ews_id->change_key = changekey;
++				} else {
++					g_free (changekey);
++				}
+ 			}
+ 		}
+ 
+@@ -2730,6 +2740,7 @@ ecb_ews_save_component_sync (ECalMetaBac
+ 		}
+ 
+ 		icalcomponent_free (icalcomp);
++		e_ews_id_free (ews_id);
+ 		g_clear_object (&item);
+ 
+ 		for (link = (GSList *) instances; link && success; link = g_slist_next (link)) {
+diff -up evolution-ews-3.28.5/src/server/e-ews-item.c.meeting-with-attachment evolution-ews-3.28.5/src/server/e-ews-item.c
+--- evolution-ews-3.28.5/src/server/e-ews-item.c.meeting-with-attachment	2018-09-27 18:32:25.785038625 +0200
++++ evolution-ews-3.28.5/src/server/e-ews-item.c	2018-09-27 18:32:25.787038625 +0200
+@@ -2695,3 +2695,28 @@ e_ews_item_util_strip_ex_address (const
+ 
+ 	return ex_address;
+ }
++
++EwsId *
++e_ews_id_copy (const EwsId *ews_id)
++{
++	EwsId *copy;
++
++	if (!ews_id)
++		return NULL;
++
++	copy = g_new0 (EwsId, 1);
++	copy->id = g_strdup (ews_id->id);
++	copy->change_key = g_strdup (ews_id->change_key);
++
++	return copy;
++}
++
++void
++e_ews_id_free (EwsId *ews_id)
++{
++	if (ews_id) {
++		g_free (ews_id->id);
++		g_free (ews_id->change_key);
++		g_free (ews_id);
++	}
++}
+diff -up evolution-ews-3.28.5/src/server/e-ews-item.h.meeting-with-attachment evolution-ews-3.28.5/src/server/e-ews-item.h
+--- evolution-ews-3.28.5/src/server/e-ews-item.h.meeting-with-attachment	2018-07-30 16:01:00.000000000 +0200
++++ evolution-ews-3.28.5/src/server/e-ews-item.h	2018-09-27 18:32:25.787038625 +0200
+@@ -384,6 +384,8 @@ void		e_ews_permissions_free (GSList *pe
+ /* Utility functions */
+ const gchar *	e_ews_item_util_strip_ex_address
+ 						(const gchar *ex_address);
++EwsId *		e_ews_id_copy			(const EwsId *ews_id);
++void		e_ews_id_free			(EwsId *ews_id);
+ 
+ G_END_DECLS
+ 

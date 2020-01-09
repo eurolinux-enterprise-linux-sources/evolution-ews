@@ -2,7 +2,7 @@
 
 Name: evolution-ews
 Version: 3.28.5
-Release: 1%{?dist}
+Release: 2%{?dist}
 Group: Applications/Productivity
 Summary: Evolution extension for Exchange Web Services
 License: LGPLv2
@@ -12,6 +12,21 @@ Source: http://download.gnome.org/sources/%{name}/3.28/%{name}-%{version}.tar.xz
 %global eds_evo_version %{version}
 
 Patch01: evolution-ews-3.28.2-cmake-version.patch
+
+# RH bug #1633711 - 1/5 - https://gitlab.gnome.org/GNOME/evolution-ews/commit/dc50ba5a50a7b74f1d2710e5f860a7e81ab60d0b
+Patch02: evolution-ews-3.28.5-disable-reminder-types.patch
+
+# RH bug #1633711 - 2/5 - https://gitlab.gnome.org/GNOME/evolution-ews/commit/6d3dc9c50be654a9e250cfd53626f8526ff9eb70
+Patch03: evolution-ews-3.28.5-unknown-responsetype-as-needs-action.patch
+
+# RH bug #1633711 - 3/5 - https://gitlab.gnome.org/GNOME/evolution-ews/issues/19
+Patch04: evolution-ews-3.28.5-contact-country-forgotten.patch
+
+# RH bug #1633711 - 4/5 - https://gitlab.gnome.org/GNOME/evolution-ews/issues/21
+Patch05: evolution-ews-3.28.5-meeting-with-attachment.patch
+
+# RH bug #1633711 - 5/5 - https://gitlab.gnome.org/GNOME/evolution-ews/commit/f50530ad101b47d461a345ff2b8b295b86c05d3a
+Patch06: evolution-ews-3.28.5-double-collection-backend-populate.patch
 
 Requires: evolution >= %{eds_evo_version}
 Requires: evolution-data-server >= %{eds_evo_version}
@@ -52,6 +67,11 @@ This package contains translations for %{name}.
 %prep
 %setup -q
 %patch01 -p1 -b .cmake-version
+%patch02 -p1 -b .disable-reminder-types
+%patch03 -p1 -b .unknown-responsetype-as-needs-action
+%patch04 -p1 -b .contact-country-forgotten
+%patch05 -p1 -b .meeting-with-attachment
+%patch06 -p1 -b .double-collection-backend-populate
 
 %build
 
@@ -92,6 +112,9 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %files langpacks -f _build/%{name}.lang
 
 %changelog
+* Fri Nov 09 2018 Milan Crha <mcrha@redhat.com> - 3.28.5-2
+- Add patches for RH bug #1633711 (Backport few minor regression fixes from 3.30)
+
 * Mon Jul 30 2018 Milan Crha <mcrha@redhat.com> - 3.28.5-1
 - Update to 3.28.5
 

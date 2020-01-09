@@ -1,0 +1,32 @@
+diff -up evolution-ews-3.28.5/src/addressbook/e-book-backend-ews.c.contact-country-forgotten evolution-ews-3.28.5/src/addressbook/e-book-backend-ews.c
+--- evolution-ews-3.28.5/src/addressbook/e-book-backend-ews.c.contact-country-forgotten	2018-07-30 16:01:00.000000000 +0200
++++ evolution-ews-3.28.5/src/addressbook/e-book-backend-ews.c	2018-09-27 18:31:47.485039155 +0200
+@@ -700,6 +700,7 @@ add_physical_address (ESoapMessage *msg,
+ 	e_ews_message_write_string_parameter (msg, "Street", NULL, contact_addr->street);
+ 	e_ews_message_write_string_parameter (msg, "City", NULL, contact_addr->locality);
+ 	e_ews_message_write_string_parameter (msg, "State", NULL, contact_addr->region);
++	e_ews_message_write_string_parameter (msg, "CountryOrRegion", NULL, contact_addr->country);
+ 	e_ews_message_write_string_parameter (msg, "PostalCode", NULL, contact_addr->code);
+ 
+ 	e_soap_message_end_element (msg);
+@@ -1191,6 +1192,8 @@ compare_address (ESoapMessage *message,
+ 		convert_indexed_contact_property_to_updatexml_physical_address (message, "PhysicalAddress", "City", new_address->locality, "contacts", "PhysicalAddresses", key);
+ 	if (set || g_strcmp0 (new_address->region, old_address->region) != 0)
+ 		convert_indexed_contact_property_to_updatexml_physical_address (message, "PhysicalAddress", "State", new_address->region, "contacts", "PhysicalAddresses", key);
++	if (set || g_strcmp0 (new_address->country, old_address->country) != 0)
++		convert_indexed_contact_property_to_updatexml_physical_address (message, "PhysicalAddress", "CountryOrRegion", new_address->country, "contacts", "PhysicalAddresses", key);
+ 	if (set || g_strcmp0 (new_address->code, old_address->code) != 0)
+ 		convert_indexed_contact_property_to_updatexml_physical_address (message, "PhysicalAddress", "PostalCode", new_address->code, "contacts", "PhysicalAddresses", key);
+ 
+diff -up evolution-ews-3.28.5/src/server/e-ews-item.c.contact-country-forgotten evolution-ews-3.28.5/src/server/e-ews-item.c
+--- evolution-ews-3.28.5/src/server/e-ews-item.c.contact-country-forgotten	2018-07-30 16:01:00.000000000 +0200
++++ evolution-ews-3.28.5/src/server/e-ews-item.c	2018-09-27 18:31:47.485039155 +0200
+@@ -686,7 +686,7 @@ ews_get_physical_address (ESoapParameter
+ 	if (subparam)
+ 		address->state = e_soap_parameter_get_string_value (subparam);
+ 
+-	subparam = e_soap_parameter_get_first_child_by_name (param, "Country");
++	subparam = e_soap_parameter_get_first_child_by_name (param, "CountryOrRegion");
+ 	if (subparam)
+ 		address->country = e_soap_parameter_get_string_value (subparam);
+ 
