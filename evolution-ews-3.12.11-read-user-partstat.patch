@@ -1,0 +1,126 @@
+diff -up evolution-ews-3.12.11/src/calendar/e-cal-backend-ews.c.read-user-partstat evolution-ews-3.12.11/src/calendar/e-cal-backend-ews.c
+--- evolution-ews-3.12.11/src/calendar/e-cal-backend-ews.c.read-user-partstat	2015-01-05 17:44:34.000000000 +0100
++++ evolution-ews-3.12.11/src/calendar/e-cal-backend-ews.c	2016-03-31 17:51:29.593214663 +0200
+@@ -103,6 +103,7 @@ struct _ECalBackendEwsPrivate {
+ 	" calendar:UID" \
+ 	" calendar:Resources" \
+ 	" calendar:ModifiedOccurrences" \
++	" calendar:MyResponseType" \
+ 	" calendar:RequiredAttendees" \
+ 	" calendar:OptionalAttendees"
+ 
+@@ -2891,6 +2892,32 @@ get_timezone (ETimezoneCache *timezone_c
+ 	return zone;
+ }
+ 
++static icalparameter *
++cal_backend_ews_responsetype_to_partstat (const gchar *responsetype)
++{
++	icalparameter *param = NULL;
++
++	g_return_val_if_fail (responsetype != NULL, NULL);
++
++	if (g_ascii_strcasecmp (responsetype, "Organizer") == 0)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_ACCEPTED);
++	else if (g_ascii_strcasecmp (responsetype, "Tentative") == 0)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_TENTATIVE);
++	else if (g_ascii_strcasecmp (responsetype, "Accept") == 0)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_ACCEPTED);
++	else if (g_ascii_strcasecmp (responsetype, "Decline") == 0)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_DECLINED);
++	else if (g_ascii_strcasecmp (responsetype, "NoResponseReceived") == 0)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_NEEDSACTION);
++	else if (g_ascii_strcasecmp (responsetype, "Unknown") == 0)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_NONE);
++
++	if (!param)
++		param = icalparameter_new_partstat (ICAL_PARTSTAT_NONE);
++
++	return param;
++}
++
+ static void
+ add_item_to_cache (ECalBackendEws *cbews,
+                    EEwsItem *item)
+@@ -3214,18 +3241,12 @@ add_item_to_cache (ECalBackendEws *cbews
+ 			icalproperty_add_parameter (icalprop, cu_type);
+ 			icalproperty_add_parameter (icalprop, param);
+ 
+-			if (g_ascii_strcasecmp (attendee->responsetype, "Organizer") == 0)
+-				param = icalparameter_new_partstat (ICAL_PARTSTAT_ACCEPTED);
+-			else if (g_ascii_strcasecmp (attendee->responsetype, "Tentative") == 0)
+-				param = icalparameter_new_partstat (ICAL_PARTSTAT_TENTATIVE);
+-			else if (g_ascii_strcasecmp (attendee->responsetype, "Accept") == 0)
+-				param = icalparameter_new_partstat (ICAL_PARTSTAT_ACCEPTED);
+-			else if (g_ascii_strcasecmp (attendee->responsetype, "Decline") == 0)
+-				param = icalparameter_new_partstat (ICAL_PARTSTAT_DECLINED);
+-			else if (g_ascii_strcasecmp (attendee->responsetype, "NoResponseReceived") == 0)
+-				param = icalparameter_new_partstat (ICAL_PARTSTAT_NEEDSACTION);
+-			else if (g_ascii_strcasecmp (attendee->responsetype, "Unknown") == 0)
+-				param = icalparameter_new_partstat (ICAL_PARTSTAT_NONE);
++			if (cbews->priv->user_email && (email || attendee->mailbox->email) && e_ews_item_get_my_response_type (item) &&
++			    g_ascii_strcasecmp (email ? email : attendee->mailbox->email, cbews->priv->user_email) == 0) {
++				param = cal_backend_ews_responsetype_to_partstat (e_ews_item_get_my_response_type (item));
++			} else {
++				param = cal_backend_ews_responsetype_to_partstat (attendee->responsetype);
++			}
+ 			icalproperty_add_parameter (icalprop, param);
+ 
+ 			icalcomponent_add_property (icalcomp, icalprop);
+diff -up evolution-ews-3.12.11/src/server/e-ews-item.c.read-user-partstat evolution-ews-3.12.11/src/server/e-ews-item.c
+--- evolution-ews-3.12.11/src/server/e-ews-item.c.read-user-partstat	2014-09-01 16:50:38.000000000 +0200
++++ evolution-ews-3.12.11/src/server/e-ews-item.c	2016-03-31 17:51:29.608214662 +0200
+@@ -134,6 +134,7 @@ struct _EEwsItemPrivate {
+ 
+ 	GSList *modified_occurrences;
+ 	GSList *attachments_ids;
++	gchar *my_response_type;
+ 	GSList *attendees;
+ 
+ 	EwsId *calendar_item_accept_id;
+@@ -239,6 +240,9 @@ e_ews_item_dispose (GObject *object)
+ 	g_slist_free_full (priv->attachments_ids, g_free);
+ 	priv->attachments_ids = NULL;
+ 
++	g_free (priv->my_response_type);
++	priv->my_response_type = NULL;
++
+ 	g_slist_free_full (priv->attendees, (GDestroyNotify) ews_item_free_attendee);
+ 	priv->attendees = NULL;
+ 
+@@ -1106,6 +1110,9 @@ e_ews_item_set_from_soap_parameter (EEws
+ 			parse_extended_property (priv, subparam);
+ 		} else if (!g_ascii_strcasecmp (name, "ModifiedOccurrences")) {
+ 			process_modified_occurrences (priv, subparam);
++		} else if (!g_ascii_strcasecmp (name, "MyResponseType")) {
++			g_free (priv->my_response_type);
++			priv->my_response_type = e_soap_parameter_get_string_value (subparam);
+ 		} else if (!g_ascii_strcasecmp (name, "RequiredAttendees")) {
+ 			process_attendees (priv, subparam, "Required");
+ 		} else if (!g_ascii_strcasecmp (name, "OptionalAttendees")) {
+@@ -1803,6 +1810,14 @@ e_ews_item_dump_mime_content (EEwsItem *
+ 	return info;
+ }
+ 
++const gchar *
++e_ews_item_get_my_response_type (EEwsItem *item)
++{
++	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
++
++	return item->priv->my_response_type;
++}
++
+ const GSList *
+ e_ews_item_get_attendees (EEwsItem *item)
+ {
+diff -up evolution-ews-3.12.11/src/server/e-ews-item.h.read-user-partstat evolution-ews-3.12.11/src/server/e-ews-item.h
+--- evolution-ews-3.12.11/src/server/e-ews-item.h.read-user-partstat	2014-05-07 12:49:13.000000000 +0200
++++ evolution-ews-3.12.11/src/server/e-ews-item.h	2016-03-31 17:51:29.608214662 +0200
+@@ -267,6 +267,7 @@ e_ews_item_ical_dump (EEwsItem *item);
+ EEwsAttachmentInfo *
+ e_ews_item_dump_mime_content (EEwsItem *item, const gchar *cache);
+ 
++const gchar *	e_ews_item_get_my_response_type	(EEwsItem *item);
+ const GSList *	e_ews_item_get_attendees	(EEwsItem *item);
+ 
+ const EwsId *	e_ews_item_get_calendar_item_accept_id

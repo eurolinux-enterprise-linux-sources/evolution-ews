@@ -1,8 +1,9 @@
 %global evo_base_version 3.12
+%global libmspack_version 0.4
 
 Name: evolution-ews
 Version: 3.12.11
-Release: 5%{?dist}
+Release: 9%{?dist}
 Group: Applications/Productivity
 Summary: Evolution extension for Exchange Web Services
 License: LGPLv2
@@ -18,8 +19,18 @@ Patch02: evolution-ews-3.12.11-book-lock-fix.patch
 # Coverity Scan issues
 Patch03: evolution-ews-3.12.11-coverity-scan.patch
 
+# RH bug #1221520
+Patch04: evolution-ews-3.12.11-translations2.patch
+
+# RH bug #1322908
+Patch05: evolution-ews-3.12.11-read-user-partstat.patch
+
 Requires: evolution >= %{version}
 Requires: evolution-data-server >= %{version}
+
+%ifarch x86_64
+Requires: libmspack >= %{libmspack_version}
+%endif
 
 BuildRequires: intltool
 BuildRequires: pkgconfig(camel-1.2) >= %{version}
@@ -35,6 +46,9 @@ BuildRequires: pkgconfig(libedata-book-1.2) >= %{version}
 BuildRequires: pkgconfig(libedata-cal-1.2) >= %{version}
 BuildRequires: pkgconfig(libemail-engine) >= %{version}
 BuildRequires: pkgconfig(libical) >= 1.0
+%ifarch x86_64
+BuildRequires: pkgconfig(libmspack) >= %{libmspack_version}
+%endif
 BuildRequires: pkgconfig(libsoup-2.4)
 
 %description
@@ -47,10 +61,21 @@ versions 2007 and later, through its Exchange Web Services (EWS) interface.
 %patch02 -p1 -b .book-lock-fix
 %patch03 -p1 -b .coverity-scan
 
+# we got broken rendering for zh_TW.po
+# this is creating issues for diff command
+rm -f po/zh_TW.po
+
+%patch04 -p1 -b .translations2
+%patch05 -p1 -b .read-user-partstat
+
 %build
 
 export CFLAGS="$RPM_OPT_FLAGS -Wno-deprecated-declarations"
+%ifarch x86_64
+%configure
+%else
 %configure --with-internal-lzx
+%endif
 make %{?_smp_mflags}
 
 %install
@@ -86,6 +111,18 @@ rm $RPM_BUILD_ROOT%{_libdir}/evolution/%{evo_base_version}/modules/*.la
 %{_datadir}/evolution-data-server/ews/windowsZones.xml
 
 %changelog
+* Tue Jun 21 2016 Milan Crha <mcrha@redhat.com> - 3.12.11-9
+- Update patch for RH bug #1221520 (Update translations, for it and ko)
+
+* Fri Apr 01 2016 Milan Crha <mcrha@redhat.com> - 3.12.11-8
+- Add patch for RH bug #1322908 (Show user's meeting response in the Calendar view)
+
+* Tue Mar 15 2016 Milan Crha <mcrha@redhat.com> - 3.12.11-7
+- Add patch for RH bug #1221520 (Update translations)
+
+* Fri Mar 04 2016 Milan Crha <mcrha@redhat.com> - 3.12.11-6
+- Add dependency on libmspack 0.4+ for x86_64
+
 * Wed Jul 08 2015 Milan Crha <mcrha@redhat.com> - 3.12.11-5
 - Rebuild against updated libical
 
