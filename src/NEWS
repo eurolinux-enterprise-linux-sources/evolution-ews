@@ -1,45 +1,469 @@
-Evolution-EWS 3.12.11 2015-02-09
---------------------------------
+Evolution-EWS 3.22.6 2017-03-13
+-------------------------------
 
 Translations:
 	Inaki Larranaga Murgoitio (eu)
 
-Evolution-EWS 3.12.10 2015-01-12
---------------------------------
-
-Bug Fixes:
-	Bug 695754 - Reuse existing ESourceRegistry from EMailSession, if possible (Milan Crha)
-	Bug 729286 - [Calendar] Update stored user email after successful connect (William Shuman)
-
-Evolution-EWS 3.12.9 2014-12-08
+Evolution-EWS 3.22.5 2017-02-13
 -------------------------------
 
 Bug Fixes:
-	Bug 738945 - Missing folder changed notify after message append (Milan Crha)
-	Bug 738093 - Show folder names with slash properly (Milan Crha)
+	Bug 777946 - Fails to import regular appointment (Milan Crha)
+
+Evolution-EWS 3.22.4 2017-01-16
+-------------------------------
+
+Bug Fixes:
+	Bug 775951 - Folder permission level change doesn't change read permission (Milan Crha)
+	Bug 775649 - Monthly recurrence on the last day refused by the server (Milan Crha)
+
+Miscellaneous:
+	Fix few memory leaks (Milan Crha)
+
+Evolution-EWS 3.22.3 2016-12-12
+-------------------------------
+
+Miscellaneous:
+	Autodiscover can cause deadlock in GCancellable code (Milan Crha)
+
+Evolution-EWS 3.22.2 2016-11-07
+-------------------------------
+
+Bug Fixes:
+	Bug 770936 - BAD REQUEST due to empty Categories element (Milan Crha)
+	Bug 738093 - Show folder names with slash properly ][ (Milan Crha)
+	Bug 773379 - Cannot add more than one user into folder permissions (Milan Crha)
+
+Miscellaneous:
+	Runtime warnings when calling ResolveNames (Milan Crha)
+
+Evolution-EWS 3.22.1 2016-10-10
+-------------------------------
+
+Bug Fixes:
+	Bug 771370 - Exchange 2016 returns broken MIME content for events with detached instances (Milan Crha)
+	Bug 771931 - Add missing Camel cflags/libs to src/server/ (Milan Crha)
+
+Evolution-EWS 3.22.0 2016-09-19
+-------------------------------
+
+Translations:
+	Daniel Mustieles (es)
+
+Evolution-EWS 3.21.92 2016-09-12
+--------------------------------
+
+Bug Fixes:
+	Bug 758374 - Do not restrict/remove From address on message send (Milan Crha)
+
+Translations:
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.21.91 2016-08-29
+--------------------------------
+
+Translations:
+	Piotr Drąg (pl)
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+	Matej Urbančič (sl)
+
+Evolution-EWS 3.21.90 2016-08-15
+--------------------------------
+
+Bug Fixes:
+	Bug 769044 - Customized timezones not recognized (Milan Crha)
+
+Translations:
+	Anders Jonsson (sv)
+	Aurimas Černius (lt)
+
+Evolution-EWS 3.21.4 2016-07-18
+-------------------------------
+
+Bug Fixes:
+	Bug 764065 - [Camel] Use get methods for CamelMessageInfo fields (Corentin Noël)
+
+Miscellaneous:
+	Always build ESExp structure as a GObject descendant (Milan Crha)
+	Add Language headers to po files (Piotr Drąg)
+
+Translations:
+	Andika Triwidada (id)
+
+Evolution-EWS 3.21.3 2016-06-20
+-------------------------------
+
+Bug Fixes:
+	Bug 767030 - GivenName element written twice when creating contact (Milan Crha)
+	Bug 722193 - Possible use-after-free in ews_response_cb() after cancel (Milan Crha)
+	Bug 767335 - Attachment names are not URL-decoded (Milan Crha)
+	Bug 634294 - Calendar factory crash under e-cal-recur (Milan Crha)
+
+Miscellaneous:
+	Initialize connection variable to NULL in camel_ews_folder_get_message() (Milan Crha)
+	Fix a memory leak when creating a contact (Milan Crha)
+	Address some of the clang compiler warnings (Milan Crha)
+
+Translations:
+	Tiago Santos (pt)
+	Marek Černocký (cs)
+	Andika Triwidada (id)
+
+Evolution-EWS 3.21.2 2016-05-23
+-------------------------------
+
+Bug Fixes:
+	Bug 765398 - Online GAL contacts can have incorrect email address (Milan Crha)
+	Bug 766021 - Messages are downloaded for offline multiple times (Milan Crha)
+
+Miscellaneous:
+	Fix some issues found by Coverity Scan (Milan Crha)
+
+Translations:
+	Daniel Mustieles (es)
+	Balázs Meskó (hu)
+
+Evolution-EWS 3.21.1 2016-04-25
+-------------------------------
+
+Bug Fixes:
+	Bug 763991 - Add User-Agent setting in mail Properties (Milan Crha)
+	Bug 763719 - Reconnect or use its own connection for message send (Milan Crha)
+	Bug 764110 - Typo in error message (Sebastian Rasmussen)
+	Bug 743654 - Show user's meeting response in the Calendar view (Milan Crha)
+	Bug 764442 - Expand Distribution Lists from online GAL (not OAB) (Milan Crha)
+	Bug 764977 - Manual folder Refresh should fully resync with the server (Milan Crha)
+	Bug 764976 - Failed message move processed as successful (Milan Crha)
+	Bug 765209 - Correct server version set from string (Milan Crha)
+
+Miscellaneous:
+	Add thread safety around ECalBackendEws::priv::cancellable (Milan Crha)
+	Ask for password after NTLM/SSO authentication failure (Milan Crha)
+
+Translations:
+	Tom Tryfonidis (el)
+	Sebastian Rasmussen (sv)
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+	Balázs Úr (hu)
+	Piotr Drąg (pl)
+	Mario Blättermann (de)
+	Rafael Fontenelle (pt_BR)
+	Marek Černocký (cs)
+	Balázs Meskó (hu)
+	Daniel Mustieles (es)
+
+Evolution-EWS 3.20.0 2016-03-21
+-------------------------------
+
+Miscellaneous:
+	No code/translation changes
+
+Evolution-EWS 3.19.92 2016-03-14
+--------------------------------
+
+Bug Fixes:
+	Bug 763430 - Show additional GAL Attributes in Contacts (Milan Crha)
+
+Translations:
+	Balázs Úr (hu)
+	Rūdolfs Mazurs (lv)
+	Matej Urbančič (sl)
+	Cédric Valmary (oc)
+
+Evolution-EWS 3.19.91 2016-02-29
+--------------------------------
+
+Bug Fixes:
+	Bug 760319 - [EEwsNotification] Abort session on idle, to avoid deadlock (Milan Crha)
+
+Translations:
+	Rafael Fontenelle (pt_BR)
+
+Evolution-EWS 3.19.90 2016-02-15
+--------------------------------
+
+Bug Fixes:
+	Bug 725320 - [Camel] Let the store preconfigure settings the first time (Milan Crha)
+	Bug 761346 - More Camel introspection fixes (Milan Crha)
+
+Miscellaneous:
+	Contact photos from offline GAL not shown (Milan Crha)
+	Do not require gnome-common to run autogen.sh (Milan Crha)
+	Correct indentation in e_book_backend_ews_get_contact_list() (Milan Crha)
+
+Translations:
+	Aurimas Černius (lt)
+
+Evolution-EWS 3.19.4 2016-01-18
+-------------------------------
+
+Translations:
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+	Mario Blättermann (de)
+
+Evolution-EWS 3.19.3 2015-12-14
+-------------------------------
+
+Bug Fixes:
+	Bug 758375 - Avoid server side copy when Save replies to original folder is set (Milan Crha)
+
+Miscellaneous:
+	[Camel] Fill message From header if missing in received MIME content (Milan Crha)
+	Add <kudos/> into a metainfo file (Milan Crha)
+	Visualize incorrect values in an account editor (Milan Crha)
+
+Translations:
+	Daniel Mustieles (es)
+	Pedro Albuquerque (pt)
+	Piotr Drąg (pl)
+	Marek Černocký (cs)
+
+Evolution-EWS 3.19.2 2015-11-23
+-------------------------------
+
+Bug Fixes:
+	Bug 757458 - Server-side mail message flag change ignored (Milan Crha)
+	Bug 757477 - Sent/Drafts folders always reset from default to remote (Milan Crha)
+	Bug 757525 - Hang on network connection change (Milan Crha)
+
+Translations:
+	Pedro Albuquerque (pt)
+
+Evolution-EWS 3.19.1 2015-10-26
+-------------------------------
+
+Bug Fixes:
+	Bug 255032 - Be able to write a note on a mail (Milan Crha)
+
+Miscellaneous:
+	Show only mail messages in mail folders (Milan Crha)
+	Extend error messages in camel_ews_folder_get_message() (Milan Crha)
+
+Translations:
+	Marek Černocký (cs)
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.18.0 2015-09-21
+-------------------------------
+
+Miscellaneous:
+	No code/translation changes
+
+Evolution-EWS 3.17.92 2015-09-14
+--------------------------------
+
+Miscellaneous:
+	Do not reuse connections in the source-registry backend (Milan Crha)
+
+Translations:
+	Pedro Albuquerque (pt)
+
+Evolution-EWS 3.17.91 2015-08-31
+--------------------------------
+
+Miscellaneous:
+	Add safety check when replacing folder hierarchy info in hash tables (Milan Crha)
+
+Translations:
+	Piotr Drąg (pl)
+
+Evolution-EWS 3.17.90 2015-08-17
+--------------------------------
+
+Bug Fixes:
+	Bug 751703 - Skip mail folders out of mail hierarchy (Milan Crha)
+	Bug 233140 - Show message counts in subscribe folders dialog (Milan Crha)
+	Bug 753543 - All-day events should have set date and time (Milan Crha)
+
+Miscellaneous:
+	Avoid %ld in printf formats (Milan Crha)
+	Correct use-after-free in notification code when EWS debugging is on (Milan Crha)
+	Use only personal mail folders for change notification listener (Milan Crha)
+	Do not loop in the notification code on fatal client/server errors (Milan Crha)
+
+Translations:
+	Necdet Yücel (tr)
+
+Evolution-EWS 3.17.4 2015-07-20
+-------------------------------
+
+Bug Fixes:
+	Bug 751547 - Foreign calendars hidden after account enable (Milan Crha)
+	Bug 751725 - Enhance thread safety around CamelEwsStore::connection (Milan Crha)
+	Bug 692361 - e_cal_client_get_free_busy() broken (Milan Crha)
+
+Miscellaneous:
+	Differentiate between Unavailable and No response errors (Milan Crha)
+	e_ews_debug_dump_raw_soup_message: Check for non-NULL hdrs and body arguments (Milan Crha)
+
+Evolution-EWS 3.17.3 2015-06-22
+-------------------------------
+
+Bug Fixes:
+	Bug 471791 - Move away from g_asserts to g_ret* (Milan Crha)
+	Bug 751001 - Permissions on context menu for GAL should be disabled (Milan Crha)
+
+Miscellaneous:
+	Remove unused variable (Milan Crha)
+	configure.ac: Do not override localedir variable (Milan Crha)
+	Use e_source_remove_sync() instead of e_source_registry_server_remove_source() (Milan Crha)
+	Make sure collection child sources are enabled when created (Milan Crha)
+
+Evolution-EWS 3.17.2 2015-05-25
+-------------------------------
+
+Bug Fixes:
+	Bug 729989 - Reuses obsolete connection after network change (Milan Crha)
+	Bug 671546 - Search with 'contains' in composer auto-completion (Milan Crha)
+
+Miscellaneous:
+	Correct locking in e_book_backend_ews_set_locale() (Milan Crha)
+	Address some of the Coverity Scan issues (Milan Crha)
+
+Evolution-EWS 3.17.1 2015-04-27
+-------------------------------
+
+Bug Fixes:
+	Bug 746513 - Constant stream of invalid requests for subscription events (Fabiano Fidêncio)
+	Bug 746395 - Let the provider store sent messages on its own (Milan Crha)
+	Bug 709924 - Cannot turn off offline GAL once selected (Milan Crha)
+	Bug 747500 - Mail account connection settings change requires restart (Milan Crha)
+	Bug 748242 - Abort with invalid free() (Fabiano Fidêncio)
+
+Miscellaneous:
+	Use common property lock provided by ESourceExtension (Milan Crha)
+	Query auth methods right from the got-headers signal (Milan Crha)
+	notification: Try to re-subscribe in case of failure (Fabiano Fidêncio)
+	Move ews_dump_raw_soup_{request,response} to e-ews-debug.[ch] (Fabiano Fidêncio)
+	Log the request/response of EEwsNotification (Fabiano Fidêncio)
+	Fix various memory leaks (Milan Crha)
+
+Evolution-EWS 3.16.0 2015-03-23
+-------------------------------
+
+Translations:
+	Daniel Mustieles (es)
+
+Evolution-EWS 3.15.92 2015-03-16
+--------------------------------
+
+Bug Fixes:
+	Bug 745457 - Crash under e_ews_notification_subscribe_folder_sync() (Milan Crha)
+	Bug 695911 - Creates long and cryptic calendar attachment names (Milan Crha)
+
+Miscellaneous:
+	Correct 'Listen for server change notification' for books and calendars (Milan Crha)
+	DOAP: Add programming language (Andre Klapper)
+	DOAP: Fix category error (Andre Klapper)
+	DOAP: Add description property (Andre Klapper)
+	Memory leak in e_ews_dump_file_attachment_from_soap_parameter() (Milan Crha)
+
+Translations:
+	Rafael Ferreira (pt_BR)
+	Dušan Kazik (sk)
+	Samir Ribic (bs)
+	Aurimas Černius (lt)
+
+Evolution-EWS 3.15.91 2015-03-02
+--------------------------------
+
+Miscellaneous:
+	Use thread safe variants of g_object_bind_property*() functions from evolution-data-server (Milan Crha)
+	Update devel-doc Since from 3.14 to 3.16 (Milan Crha)
+	Sync version with GNOME 3.15 series (Milan Crha)
+
+Translations:
+	Matej Urbančič (sl)
+
+Evolution-EWS 3.13.90 2015-02-16
+--------------------------------
+
+Bug Fixes:
+	Bug 743705 - No cancellation sent for deleted meeting (Milan Crha)
+	Bug 741855 - Too often folder change notifications on folder refresh (Milan Crha)
+
+Miscellaneous:
+	Move authentication of backends back to the client (Milan Crha)
+	Use automake subdir-objects option (Milan Crha)
+	Adapt to camel_session_submit_job() API change (Milan Crha)
+	Remove unused declaration of camel_application_is_exiting variable (Milan Crha)
+
+Translations:
+	Marek Černocký (cs)
+	Inaki Larranaga Murgoitio (eu)
+	Piotr Drąg (pl)
+	Balázs Úr (hu)
+
+Evolution-EWS 3.13.10 2015-01-26
+--------------------------------
+
+Bug Fixes:
+	Bug 729286 - [Calendar] Update stored user email after successful connect (William Shuman)
+
+Translations:
+	Daniel Mustieles (es)
+
+Evolution-EWS 3.13.9 2014-12-22
+-------------------------------
+
+Bug Fixes:
 	Bug 734747 - Fails to provide "Eastern Standard Time" timezone (Milan Crha)
 	Bug 740772 - Use-after-free when adding attachments to events (Milan Crha)
+	Bug 695754 - Reuse existing ESourceRegistry from EMailSession, if possible (Milan Crha)
 
 Miscellaneous:
 	Set max-width-chars to wrapped GtkLabel-s (Milan Crha)
 
-Evolution-EWS 3.12.8 2014-11-10
+Evolution-EWS 3.13.8 2014-11-24
 -------------------------------
 
 Bug Fixes:
 	Bug 738987 - Crash under e_ews_notification_unsubscribe_folder_sync() (Milan Crha)
 	Bug 691293 - Claim old resources in offline mode (Milan Crha)
+	Bug 738945 - Missing folder changed notify after message append (Milan Crha)
+	Bug 738093 - Show folder names with slash properly (Milan Crha)
 
 Miscellaneous:
 	Use G_IO_ERROR_CANCELLED instead of EWS_CONNECTION_ERROR_CANCELLED (Milan Crha)
 
-Evolution-EWS 3.12.7 2014-10-13
+Translations:
+	Marek Černocký (cs)
+	Rafael Ferreira (pt_BR)
+	Tiago S (pt)
+
+Evolution-EWS 3.13.7 2014-10-27
 -------------------------------
 
 Bug Fixes:
-	Bug 736257 - Fix cancellation of addressbook lookups (David Woodhouse)
+	Bug 653157 - Enable extra compiler warnings in maintainer mode only (Milan Crha)
 	Bug 733578 - Out of Office settings - external audience value is not saved (Milan Crha)
 	Bug 737773 - Duplicate GAL in new accounts (Milan Crha)
+
+Miscellaneous:
+	Build addressbook test binaries only with mspack library (Milan Crha)
+	Add evolution-ews.metainfo.xml file (Milan Crha)
+	Use INTLTOOL_XML_RULE for appdata files (Milan Crha)
+	Make sure deprecated EDS symbols will not be used (Milan Crha)
+	Miscellaneous Win32 related build fixes (Milan Crha)
+
+Translations:
+	Rajesh Ranjan (hi)
+	Saibal Ray (bn_IN)
+	Krishnababu Krothapalli (te)
+	Sandeep Sheshrao Shedmake (mr)
+	Мирослав Николић (sr)
+	Мирослав Николић (sr@latin)
+
+Evolution-EWS 3.13.6 2014-09-22
+-------------------------------
+
+Bug Fixes:
+	Bug 735799 - Workaround crash for messages with no item ID (Milan Crha)
+	Bug 735801 - Use-after-free in e_book_backend_ews_dispose() after resume (Milan Crha)
+	Bug 736257 - Fix cancellation of addressbook lookups (David Woodhouse)
 
 Miscellaneous:
 	Update addressbook to use ->open_sync() (David Woodhouse)
@@ -53,9 +477,6 @@ Miscellaneous:
 	Optimise EWS GAL update not to rewrite unchanged records (David Woodhouse)
 	Avoid processing OAB records which already exist (David Woodhouse)
 	Fix modify_contacts for EBookSqlite (David Woodhouse)
-	Fix addressbook upgrade from pre-SHA1 versions (David Woodhouse)
-	Reduce addressbook refresh interval to 6 hours (David Woodhouse)
-	Avoid using dynamic types for ESourceEwsFolder (David Woodhouse)
 	Add revision support for addressbook (David Woodhouse)
 	Add locale support for addressbook (David Woodhouse)
 	Make ebews_fetch_items() return a list of EContacts not EVCards (David Woodhouse)
@@ -63,97 +484,116 @@ Miscellaneous:
 	Kill store_to_cache option for ebews_fetch_items() (David Woodhouse)
 	Clean up resync code path in ews_update_items_thread() (David Woodhouse)
 	Use EBookSqlite locking (David Woodhouse)
+	Add cursor support to addressbook (David Woodhouse)
+	Add DRA support to addressbook (David Woodhouse)
 	Fix notification for non-GAL updates to only happen on commit (David Woodhouse)
+	Avoid using dynamic types for ESourceEwsFolder (David Woodhouse)
+	Reduce addressbook refresh interval to 6 hours (David Woodhouse)
+	Fix addressbook upgrade from pre-SHA1 versions (David Woodhouse)
 	Don't flush the final GAL updates if there are none (David Woodhouse)
 	Initialise filename to NULL in ews_remove_old_gal_file() (David Woodhouse)
-	Add evolution-ews.metainfo.xml file (Milan Crha)
-	Use INTLTOOL_XML_RULE for appdata files (Milan Crha)
 
 Translations:
+	Manoj Kumar Giri (or)
+	Nilamdyuti Goswami (as)
 	Shankar Prasad (kn)
+	Andika Triwidada (id)
+	Piotr Drąg (pl)
+	Marek Černocký (cs)
+	Balázs Úr (hu)
+	Shantha kumar (ta)
+	Saibal Ray (bn_IN)
+	Matej Urbančič (sl)
+	Sweta Kothari (gu)
+	Manoj Kumar Giri (or)
 	Sandeep Sheshrao Shedmake (mr)
-	Krasimir Chonov (bg)
 
-Evolution-EWS 3.12.6 2014-09-08
+Evolution-EWS 3.13.5 2014-08-25
+-------------------------------
+
+Translations:
+	Matej Urbančič (sl)
+	MarMav (el)
+
+Evolution-EWS 3.13.4 2014-07-28
 -------------------------------
 
 Bug Fixes:
-	Bug 735799 - Workaround crash for messages with no item ID (Milan Crha)
-	Bug 735801 - Use-after-free in e_book_backend_ews_dispose() after resume (Milan Crha)
-
-Evolution-EWS 3.12.5 2014-08-11
--------------------------------
-
-Bug Fixes:
+	Bug 728942 - Fails to pair user with attendee in invitation response (Milan Crha)
+	Bug 730878 - Split libcamelews into a static and a dynamic library (Milan Crha)
 	Bug 733274 - EWS is very slow to download large messages (Milan Crha)
 	Bug 703181 - Work around libsoup's failure to recover from NTLM auth failure (David Woodhouse)
 	Bug 732850 - GSSAPI authentication doesn't need a password (Daniel Sands)
 	Bug 703181 - NTLM authentication doesn't (always) need a password (David Woodhouse)
-	Bug 733663 - Do not attempt to subscribe to GAL changes (David Woodhouse)
 	Bug 732850 - Remove reachability check from ews_store_query_auth_types_sync() (Daniel Sands)
 	Bug 732850 - Not all message restarts are due to a redirect (Daniel Sands)
+	Bug 733663 - Do not attempt to subscribe to GAL changes (David Woodhouse)
 
 Miscellaneous:
+	Replace GtkSpinner with Evolution's ESpinner (Milan Crha)
+	Make Evolution-EWS build under Win32 (Milan Crha)
+	Adapt evolution-ews to support backend-per-process (Fabiano Fidêncio)
 	Add missing chain-up to parent's constructed() method (Milan Crha)
-	Handle cookies (non-persistently) (Daniel Sands)
-	SOUP_STATUS_IS_SUCCESSFUL(soup_session_send_message()) sends message twice (David Woodhouse)
 	Clean up enabling/disabling NTLM and Basic auth types (David Woodhouse)
-	Clean up logging slightly and make it more consistent (Daniel Sands)
+	Handle cookies (non-persistently) (Daniel Sands)
+	Fix string comparison for Basic auth (David Woodhouse)
+	Leave Basic auth enabled when NTLM is configured (David Woodhouse)
 	Add camel_ews_settings_get_auth_mechanism() helper function (David Woodhouse)
+	Clean up logging slightly and make it more consistent (Daniel Sands)
+	SOUP_STATUS_IS_SUCCESSFUL(soup_session_send_message()) sends message twice (David Woodhouse)
 	Clean up Negotiate auth implementation to be a SoupAuth subclass (Daniel Sands)
 
-Evolution-EWS 3.12.4 2014-07-14
+Translations:
+	Daniel Mustieles (es)
+	Marek Černocký (cs)
+	Piotr Drąg (pl)
+	Rafael Ferreira (pt_BR)
+
+Evolution-EWS 3.13.3 2014-06-23
 -------------------------------
 
 Bug Fixes:
-	Bug 731585 - evolution-ews Camel part pretends offline state (Milan Crha)
-	Bug 728942 - Fails to pair user with attendee in invitation response (Milan Crha)
-	Bug 730878 - Split libcamelews into a static and a dynamic library (Milan Crha)
-
-Miscellaneous:
-	Make Evolution-EWS build under Win32 (Milan Crha)
-
-Evolution-EWS 3.12.3 2014-06-09
--------------------------------
-
-Bug Fixes:
-	Bug 728246 - Fail creating all day event (Fabiano Fidêncio)
-	Bug 730042 - Autodiscover XML can contain multiple Protocol elements (Nathan Caza)
 	Bug 692780 - Crash under ews_get_attachments() (Milan Crha)
 	Bug 730878 - Build libcamelews as a module (Olav Vitters)
+	Bug 731585 - evolution-ews Camel part pretends offline state (Milan Crha)
+
+Translations:
+	MarMav (el)
+
+Evolution-EWS 3.13.2 2014-05-26
+-------------------------------
+
+Bug Fixes:
+	Bug #656805 - Read receipt handling doesn't work (Milan Crha)
+	Bug #728246 - Fail creating all day event (Fabiano Fidêncio)
+	Bug #730042 - Autodiscover XML can contain multiple Protocol elements (Nathan Caza)
 
 Miscellaneous:
+	Guard private update-related variables with an update lock (Milan Crha)
 	Fix g_ascii_strcasecmp: assertion 's2 != NULL' (Fabiano Fidêncio)
 	Fix 'Unintialized pointer read' (Fabiano Fidêncio)
 	Fix 'Uninitialized scalar variable' (Fabiano Fidêncio)
 	Fix 'Logically dead code' (Fabiano Fidêncio)
 
 Translations:
-	MarMav (el)
-
-Evolution-EWS 3.12.2 2014-05-12
--------------------------------
-
-Bug Fixes:
-	Bug 656805 - Read receipt handling doesn't work (Milan Crha)
-
-Translations:
 	Christian Kirbach (de)
-	Inaki Larranaga Murgoitio (eu)
 
-
-Evolution-EWS 3.12.1 2014-04-14
+Evolution-EWS 3.13.1 2014-04-28
 -------------------------------
 
 Bug Fixes:
-	Bug #684425 - Do not pass NULL text to gtk_entry_set_text()
-	              (Milan Crha)
+	Bug 684425 - Do not pass NULL text to gtk_entry_set_text() (Milan Crha)
 
 Other Changes:
+	* Add an --enable-code-coverage configure option to enable gcov
+	  support (Milan Crha)
+	* tests: Create a list of known unknown zones (Fabiano Fidêncio)
+	* Fix two memory leaks from Camel code (Milan Crha)
 	* Simplify memory management around ews_sync_mi_flags() function
 	  (Milan Crha)
 
 Translations:
+	Inaki Larranaga Murgoitio (eu)
 	Andika Triwidada (id)
 
 

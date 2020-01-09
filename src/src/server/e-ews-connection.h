@@ -85,7 +85,6 @@ typedef enum {
 	EWS_SEARCH_AD_CONTACTS,
 	EWS_SEARCH_CONTACTS,
 	EWS_SEARCH_CONTACTS_AD
-
 } EwsContactsSearchScope;
 
 typedef enum {
@@ -395,6 +394,15 @@ EEwsConnection *e_ews_connection_new		(const gchar *uri,
 EEwsConnection *e_ews_connection_new_full	(const gchar *uri,
 						 CamelEwsSettings *settings,
 						 gboolean allow_connection_reuse);
+void		e_ews_connection_update_credentials
+						(EEwsConnection *cnc,
+						 const ENamedParameters *credentials);
+ESourceAuthenticationResult
+		e_ews_connection_try_credentials_sync
+						(EEwsConnection *cnc,
+						 const ENamedParameters *credentials,
+						 GCancellable *cancellable,
+						 GError **error);
 const gchar *	e_ews_connection_get_uri	(EEwsConnection *cnc);
 const gchar *	e_ews_connection_get_password	(EEwsConnection *cnc);
 gchar *		e_ews_connection_dup_password	(EEwsConnection *cnc);
@@ -898,6 +906,15 @@ gboolean	e_ews_connection_move_items_sync
 						 gboolean docopy,
 						 const GSList *ids,
 						 GSList **items_ret,
+						 GCancellable *cancellable,
+						 GError **error);
+gboolean	e_ews_connection_move_items_in_chunks_sync
+						(EEwsConnection *cnc,
+						 gint pri,
+						 const gchar *folder_id,
+						 gboolean docopy,
+						 const GSList *ids,
+						 GSList **items,
 						 GCancellable *cancellable,
 						 GError **error);
 

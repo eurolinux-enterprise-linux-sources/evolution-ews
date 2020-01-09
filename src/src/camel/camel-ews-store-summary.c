@@ -14,7 +14,7 @@
 #define S_UNLOCK(x) (g_rec_mutex_unlock(&(x)->priv->s_lock))
 
 #define STORE_GROUP_NAME "##storepriv"
-#define CURRENT_SUMMARY_VERSION 2
+#define CURRENT_SUMMARY_VERSION 3
 
 struct _CamelEwsStoreSummaryPrivate {
 	GKeyFile *key_file;
@@ -323,7 +323,7 @@ ews_ss_hash_replace (CamelEwsStoreSummary *ews_summary,
 	if (ofname) {
 		gchar *ofid = g_hash_table_lookup (
 			ews_summary->priv->fname_id_hash, ofname);
-		if (!strcmp (folder_id, ofid)) {
+		if (ofid && !strcmp (folder_id, ofid)) {
 			g_hash_table_remove (
 				ews_summary->priv->fname_id_hash, ofname);
 			if (recurse)

@@ -1,6 +1,10 @@
 NULL =
 
+if OS_WIN32
+lib_LTLIBRARIES = libcamelews-priv.la
+else
 noinst_LTLIBRARIES = libcamelews-priv.la
+endif
 
 ENUM_TYPES = camel-ews-enums.h
 
@@ -37,6 +41,7 @@ libcamelews_priv_la_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
 	-DEXCHANGE_EWS_LOCALEDIR=\"$(localedir)\" \
+	-DG_LOG_DOMAIN=\"camel-ews-provider\" \
 	$(CAMEL_CFLAGS) \
 	$(LIBEDATASERVER_CFLAGS) \
 	$(LIBECAL_CFLAGS) \
@@ -46,7 +51,7 @@ libcamelews_priv_la_CPPFLAGS = \
 	$(SOUP_CFLAGS) \
 	$(LIBEBACKEND_CFLAGS) \
 	$(E_DATA_SERVER_CFLAGS) \
-	-DG_LOG_DOMAIN=\"camel-ews-provider\" \
+	$(CODE_COVERAGE_CFLAGS) \
 	$(NULL)
 
 libcamelews_priv_la_SOURCES = \
@@ -98,7 +103,7 @@ libcamelews_la_SOURCES = \
 	camel-ews-provider.c \
 	$(NULL)
 
-libcamelews_la_LDFLAGS = -module -avoid-version $(NO_UNDEFINED)
+libcamelews_la_LDFLAGS = -module -avoid-version $(NO_UNDEFINED) $(CODE_COVERAGE_LDFLAGS)
 
 libcamelews_la_LIBADD = \
 	libcamelews-priv.la  \

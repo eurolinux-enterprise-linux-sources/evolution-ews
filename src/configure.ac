@@ -1,14 +1,14 @@
 dnl Evolution-EWS version
 m4_define([ews_major_version], [3])
-m4_define([ews_minor_version], [12])
-m4_define([ews_micro_version], [11])
+m4_define([ews_minor_version], [22])
+m4_define([ews_micro_version], [6])
 
 m4_define([ews_version],
 	[ews_major_version.ews_minor_version.ews_micro_version])
 
 AC_PREREQ(2.58)
 AC_INIT([evolution-ews], [ews_version], [http://bugzilla.gnome.org/browse.cgi?product=evolution-ews])
-AM_INIT_AUTOMAKE([gnu 1.9 dist-xz no-dist-gzip -Wno-portability tar-ustar])
+AM_INIT_AUTOMAKE([gnu 1.9 dist-xz no-dist-gzip subdir-objects -Wno-portability tar-ustar])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR(README)
 AC_CONFIG_HEADERS(config.h)
@@ -55,8 +55,8 @@ m4_define([eds_minimum_version], [$EVOREQVER])
 m4_define([evo_minimum_version], [$EVOREQVER])
 
 dnl Keep these two definitions in agreement.
-m4_define([glib_minimum_version], [2.34])
-m4_define([glib_encoded_version], [GLIB_VERSION_2_34])
+m4_define([glib_minimum_version], [2.40])
+m4_define([glib_encoded_version], [GLIB_VERSION_2_40])
 
 dnl Keep these two definitions in agreement.
 m4_define([gdk_minimum_version], [3.0])
@@ -85,18 +85,24 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
 dnl ******************************
+dnl Initialize libtool
+dnl ******************************
+LT_PREREQ(2.2)
+LT_INIT(disable-static win32-dll)
+
+dnl ******************************
 dnl Check for Win32
 dnl ******************************
 
 AC_MSG_CHECKING([for Win32])
 case "$host" in
 *-mingw*)
-	os_win32=yes
+	os_win32='yes'
 	NO_UNDEFINED='-no-undefined'
 	SOCKET_LIBS='-lws2_32'
 	;;
 *)
-	os_win32=no
+	os_win32='no'
 	NO_UNDEFINED='-no-undefined'
 	SOCKET_LIBS=''
 	;;
@@ -113,18 +119,32 @@ AC_SUBST(LIBM)
 dnl ***********************
 dnl Compiler Warning Flags
 dnl ***********************
+proposed_warning_flags=
+append_warning_flags=
+
+if test "x$enable_maintainer_mode" = "xyes" ; then
+	proposed_warning_flags="-Wall -Wextra -Wdeprecated-declarations"
+	CFLAGS="$CFLAGS -DEDS_DISABLE_DEPRECATED"
+else
+	proposed_warning_flags="-Wno-deprecated-declarations"
+fi
+
+if test "$CC" = "clang" ; then
+	append_warning_flags="-Wno-parentheses-equality -Wno-format-nonliteral"
+fi
+
 AS_COMPILER_FLAGS(WARNING_FLAGS,
-	"-Wall -Wextra
-	-Wdeprecated-declarations
+	"$proposed_warning_flags
 	-Wno-missing-field-initializers
 	-Wno-sign-compare
 	-Wno-unused-parameter
 	-Wdeclaration-after-statement
 	-Werror-implicit-function-declaration
-	-Wformat-nonliteral -Wformat-security -Winit-self
+	-Wformat -Wformat-nonliteral -Wformat-security -Winit-self
 	-Wmissing-declarations -Wmissing-include-dirs
 	-Wmissing-noreturn -Wnested-externs -Wpointer-arith
-	-Wundef -Wwrite-strings")
+	-Wundef -Wwrite-strings
+	$append_warning_flags")
 AC_SUBST(WARNING_FLAGS)
 
 dnl Other useful compiler warnings for test builds only.
@@ -135,6 +155,7 @@ dnl	-Wshadow
 dnl	-Wredundant-decls
 
 CFLAGS="$CFLAGS $WARNING_FLAGS"
+AC_SUBST(CFLAGS)
 
 dnl *******************************
 dnl Check for --enable-strict
@@ -185,9 +206,6 @@ GETTEXT_PACKAGE=evolution-ews
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [Package name for gettext])
 
-localedir='$(prefix)/$(DATADIRNAME)/locale'
-AC_SUBST(localedir)
-
 dnl ****************************
 dnl Initialize libtool
 dnl ****************************
@@ -195,6 +213,8 @@ AM_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
 PKG_PROG_PKG_CONFIG
+
+GNOME_CODE_COVERAGE
 
 dnl ********************************
 dnl Check for evolution-data-server
@@ -336,7 +356,14 @@ AC_SUBST(camel_providerdir)
 privincludedir=`$PKG_CONFIG --variable=privincludedir libedataserver-1.2`
 AC_SUBST(privincludedir)
 
-privlibdir=`$PKG_CONFIG --variable=privlibdir evolution-data-server-1.2`
+if test "$os_win32" = yes; then
+	dnl On Win32 there is no "rpath" mechanism. We install the private
+	dnl shared libraries in $libdir, meaning the DLLs will actually be in
+	dnl $bindir. This means just having $bindir in PATH will be enough.
+	privlibdir=$libdir
+else
+	privlibdir=`$PKG_CONFIG --variable=privlibdir evolution-data-server-1.2`
+fi
 AC_SUBST(privlibdir)
 
 edataserver_privincludedir=`$PKG_CONFIG --variable=privincludedir libedataserver-1.2`
@@ -381,8 +408,9 @@ tests/Makefile
 AC_OUTPUT
 
 AC_MSG_NOTICE([
-	Strict building : $enable_strict
-	Use libmspack   : $have_mspack
-	Enable tests	: $enable_tests
+	Strict building :	$enable_strict
+	Use libmspack :		$have_mspack
+	Enable tests :		$enable_tests
+	Code coverage (gcov) :	$enable_code_coverage
 ])
 

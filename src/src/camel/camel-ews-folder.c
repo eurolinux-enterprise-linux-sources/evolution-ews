@@ -89,10 +89,8 @@ struct _CamelEwsFolderPrivate {
 	gboolean fetch_pending;
 	GMutex state_lock;
 	GCond fetch_cond;
-	GHashTable *uid_eflags;
+	GHashTable *fetching_uids;
 };
-
-extern gint camel_application_is_exiting;
 
 static gboolean ews_delete_messages (CamelFolder *folder, const GSList *deleted_items, gboolean expunge, GCancellable *cancellable, GError **error);
 static gboolean ews_refresh_info_sync (CamelFolder *folder, GCancellable *cancellable, GError **error);
@@ -490,6 +488,15 @@ ews_update_mgtrequest_mime_calendar_itemid (const gchar *mime_fname,
 	return mime_fname_new;
 }
 
+static void
+ews_fetch_cancellable_cancelled_cb (GCancellable *cancellable,
+				    GCond *fetch_cond)
+{
+	g_return_if_fail (fetch_cond != NULL);
+
+	g_cond_broadcast (fetch_cond);
+}
+
 static CamelMimeMessage *
 camel_ews_folder_get_message (CamelFolder *folder,
                               const gchar *uid,
@@ -499,7 +506,7 @@ camel_ews_folder_get_message (CamelFolder *folder,
 {
 	CamelEwsFolder *ews_folder;
 	CamelEwsFolderPrivate *priv;
-	EEwsConnection *cnc;
+	EEwsConnection *cnc = NULL;
 	EEwsAdditionalProps *add_props = NULL;
 	CamelEwsStore *ews_store;
 	const gchar *mime_content;
@@ -512,38 +519,59 @@ camel_ews_folder_get_message (CamelFolder *folder,
 	gchar *mime_fname_new = NULL;
 	GError *local_error = NULL;
 
+	g_return_val_if_fail (CAMEL_IS_EWS_FOLDER (folder), NULL);
+
 	ews_store = (CamelEwsStore *) camel_folder_get_parent_store (folder);
 	ews_folder = (CamelEwsFolder *) folder;
 	priv = ews_folder->priv;
 
-	if (!camel_ews_store_connected (ews_store, cancellable, error))
-		return NULL;
-
 	g_mutex_lock (&priv->state_lock);
 
-	/* If another thread is already fetching this message, wait for it */
-
-	/* FIXME: We might end up refetching a message anyway, if another
-	 * thread has already finished fetching it by the time we get to
-	 * this point in the code — ews_folder_get_message_sync() doesn't
-	 * hold any locks when it calls get_message_from_cache() and then
-	 * falls back to this function. */
-	if (g_hash_table_lookup (priv->uid_eflags, uid)) {
-		do {
-			g_cond_wait (&priv->fetch_cond, &priv->state_lock);
-		} while (g_hash_table_lookup (priv->uid_eflags, uid));
-
+	message = camel_ews_folder_get_message_from_cache (ews_folder, uid, cancellable, NULL);
+	if (message) {
 		g_mutex_unlock (&priv->state_lock);
 
-		message = camel_ews_folder_get_message_from_cache (ews_folder, uid, cancellable, error);
 		return message;
+	}
+
+	/* If another thread is already fetching this message, wait for it */
+	if (g_hash_table_lookup (priv->fetching_uids, uid)) {
+		gulong cancelled_handler_id = 0;
+
+		if (G_IS_CANCELLABLE (cancellable)) {
+			cancelled_handler_id = g_cancellable_connect (cancellable,
+				G_CALLBACK (ews_fetch_cancellable_cancelled_cb),
+				&priv->fetch_cond, NULL);
+		}
+
+		do {
+			g_cond_wait (&priv->fetch_cond, &priv->state_lock);
+		} while (g_hash_table_lookup (priv->fetching_uids, uid) &&
+			 !g_cancellable_is_cancelled (cancellable));
+
+		if (cancelled_handler_id && G_IS_CANCELLABLE (cancellable))
+			g_cancellable_disconnect (cancellable, cancelled_handler_id);
+
+		if (g_cancellable_set_error_if_cancelled (cancellable, error)) {
+			g_mutex_unlock (&priv->state_lock);
+			return NULL;
+		}
+
+		message = camel_ews_folder_get_message_from_cache (ews_folder, uid, cancellable, NULL);
+		if (message || g_cancellable_set_error_if_cancelled (cancellable, error)) {
+			g_mutex_unlock (&priv->state_lock);
+			return message;
+		}
 	}
 
 	/* Because we're using this as a form of mutex, we *know* that
 	 * we won't be inserting where an entry already exists. So it's
 	 * OK to insert uid itself, not g_strdup (uid) */
-	g_hash_table_insert (priv->uid_eflags, (gchar *) uid, (gchar *) uid);
+	g_hash_table_insert (priv->fetching_uids, (gchar *) uid, (gchar *) uid);
 	g_mutex_unlock (&priv->state_lock);
+
+	if (!camel_ews_store_connected (ews_store, cancellable, error))
+		goto exit;
 
 	cnc = camel_ews_store_ref_connection (ews_store);
 	ids = g_slist_append (ids, (gchar *) uid);
@@ -556,13 +584,14 @@ camel_ews_folder_get_message (CamelFolder *folder,
 	    g_mkdir_with_parents (mime_dir, 0700) == -1) {
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Unable to create cache path"));
+			_("Unable to create cache path '%s': %s"),
+			mime_dir, g_strerror (errno));
 		g_free (mime_dir);
 		goto exit;
 	}
 
 	add_props = e_ews_additional_props_new ();
-	add_props->field_uri = g_strdup ("item:MimeContent");
+	add_props->field_uri = g_strdup ("item:MimeContent message:From message:Sender");
 
 	res = e_ews_connection_get_items_sync (
 		cnc, pri, ids, "IdOnly", add_props,
@@ -647,7 +676,8 @@ camel_ews_folder_get_message (CamelFolder *folder,
 	if (g_mkdir_with_parents (dir, 0700) == -1) {
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Unable to create cache path"));
+			_("Unable to create cache path '%s': %s"),
+			dir, g_strerror (errno));
 		g_free (dir);
 		g_free (cache_file);
 		goto exit;
@@ -657,21 +687,61 @@ camel_ews_folder_get_message (CamelFolder *folder,
 	if (g_rename (mime_content, cache_file) != 0) {
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Failed to move message cache file"));
+			/* Translators: The first %s consists of the source file name,
+			   the second %s of the destination file name and
+			   the third %s of the error message. */
+			_("Failed to move message cache file from '%s' to '%s': %s"),
+			mime_content, cache_file, g_strerror (errno));
 		g_free (cache_file);
 		goto exit;
 	}
 	g_free (cache_file);
 
 	message = camel_ews_folder_get_message_from_cache (ews_folder, uid, cancellable, error);
+	if (message) {
+		CamelInternetAddress *from;
+		const gchar *email = NULL;
+
+		from = camel_mime_message_get_from (message);
+
+		if (!from || !camel_internet_address_get (from, 0, NULL, &email) || !email || !*email) {
+			const EwsMailbox *mailbox;
+
+			mailbox = e_ews_item_get_from (items->data);
+			if (!mailbox)
+				mailbox = e_ews_item_get_sender (items->data);
+			if (mailbox) {
+				CamelStream *cache_stream;
+
+				email = NULL;
+
+				if (g_strcmp0 (mailbox->routing_type, "EX") == 0)
+					email = e_ews_item_util_strip_ex_address (mailbox->email);
+
+				from = camel_internet_address_new ();
+				camel_internet_address_add (from, mailbox->name, email ? email : mailbox->email);
+				camel_mime_message_set_from (message, from);
+				g_object_unref (from);
+
+				g_rec_mutex_lock (&priv->cache_lock);
+				/* Ignore errors here, it's nothing fatal in this case */
+				cache_stream = ews_data_cache_get (ews_folder->cache, "cur", uid, NULL);
+				if (cache_stream) {
+					camel_data_wrapper_write_to_stream_sync (CAMEL_DATA_WRAPPER (message), cache_stream, cancellable, NULL);
+					g_object_unref (cache_stream);
+				}
+				g_rec_mutex_unlock (&priv->cache_lock);
+			}
+		}
+	}
 
 exit:
 	g_mutex_lock (&priv->state_lock);
-	g_hash_table_remove (priv->uid_eflags, uid);
-	g_mutex_unlock (&priv->state_lock);
+	g_hash_table_remove (priv->fetching_uids, uid);
 	g_cond_broadcast (&priv->fetch_cond);
+	g_mutex_unlock (&priv->state_lock);
 
-	if (!message && !error)
+	if (!message && error && !*error)
 		g_set_error (
 			error, CAMEL_ERROR, 1,
 			"Could not retrieve the message");
@@ -730,12 +800,11 @@ ews_folder_get_message_sync (CamelFolder *folder,
 {
 	CamelMimeMessage *message;
 
-	message = camel_ews_folder_get_message_from_cache ((CamelEwsFolder *) folder, uid, cancellable, NULL);
-	if (!message) {
-		message = camel_ews_folder_get_message (folder, uid, EWS_ITEM_HIGH, cancellable, error);
-		if (message)
-			ews_folder_maybe_update_mlist (folder, uid, message);
-	}
+	g_return_val_if_fail (CAMEL_IS_EWS_FOLDER (folder), NULL);
+
+	message = camel_ews_folder_get_message (folder, uid, EWS_ITEM_HIGH, cancellable, error);
+	if (message)
+		ews_folder_maybe_update_mlist (folder, uid, message);
 
 	return message;
 }
@@ -854,6 +923,7 @@ msg_update_flags (ESoapMessage *msg,
 
 	for (iter = mi_list; iter; iter = g_slist_next (iter)) {
 		guint32 flags_changed;
+		GSList *user_flags;
 
 		mi = iter->data;
 
@@ -914,20 +984,33 @@ msg_update_flags (ESoapMessage *msg,
 		}
 
 		/* now update the Categories */
-		e_soap_message_start_element (msg, "SetItemField", NULL, NULL);
+		user_flags = ews_utils_gather_server_user_flags (msg, mi);
+		if (user_flags) {
+			GSList *link;
 
-		e_soap_message_start_element (msg, "FieldURI", NULL, NULL);
-		e_soap_message_add_attribute (msg, "FieldURI", "item:Categories", NULL, NULL);
-		e_soap_message_end_element (msg);
+			e_soap_message_start_element (msg, "SetItemField", NULL, NULL);
 
-		e_soap_message_start_element (msg, "Message", NULL, NULL);
-		e_soap_message_start_element (msg, "Categories", NULL, NULL);
+			e_soap_message_start_element (msg, "FieldURI", NULL, NULL);
+			e_soap_message_add_attribute (msg, "FieldURI", "item:Categories", NULL, NULL);
+			e_soap_message_end_element (msg);
 
-		ews_utils_replace_server_user_flags (msg, mi);
+			e_soap_message_start_element (msg, "Message", NULL, NULL);
+			e_soap_message_start_element (msg, "Categories", NULL, NULL);
 
-		e_soap_message_end_element (msg); /* Categories */
-		e_soap_message_end_element (msg); /* Message */
-		e_soap_message_end_element (msg); /* SetItemField */
+			for (link = user_flags; link; link = g_slist_next (link)) {
+				const gchar *user_flag = link->data;
+
+				e_ews_message_write_string_parameter (msg, "String", NULL, user_flag);
+			}
+
+			e_soap_message_end_element (msg); /* Categories */
+			e_soap_message_end_element (msg); /* Message */
+			e_soap_message_end_element (msg); /* SetItemField */
+		} else {
+			e_ews_message_add_delete_item_field (msg, "Categories", "item");
+		}
+
+		g_slist_free_full (user_flags, g_free);
 
 		ews_utils_update_followup_flags (msg, (CamelMessageInfo *) mi);
 
@@ -950,7 +1033,7 @@ ews_suppress_read_receipt (ESoapMessage *msg,
 
 	for (iter = mi_list; iter; iter = g_slist_next (iter)) {
 		mi = iter->data;
-		if (!mi || (camel_message_info_flags (mi) & CAMEL_EWS_MESSAGE_MSGFLAG_RN_PENDING) == 0)
+		if (!mi || (camel_message_info_get_flags (mi) & CAMEL_EWS_MESSAGE_MSGFLAG_RN_PENDING) == 0)
 			continue;
 
 		/* There was requested a read-receipt, but it is handled by evolution-ews,
@@ -965,7 +1048,7 @@ ews_suppress_read_receipt (ESoapMessage *msg,
 		mi->info.flags = mi->info.flags & (~CAMEL_EWS_MESSAGE_MSGFLAG_RN_PENDING);
 		mi->info.dirty = TRUE;
 
-		if (!camel_message_info_user_flag ((CamelMessageInfo *) mi, "receipt-handled"))
+		if (!camel_message_info_get_user_flag ((CamelMessageInfo *) mi, "receipt-handled"))
 			camel_message_info_set_user_flag ((CamelMessageInfo *) mi, "receipt-handled", TRUE);
 
 		camel_folder_summary_touch (mi->info.summary);
@@ -995,7 +1078,7 @@ ews_sync_mi_flags (CamelFolder *folder,
 	for (iter = mi_list; iter; iter = g_slist_next (iter)) {
 		CamelEwsMessageInfo *mi = iter->data;
 
-		if (mi && (camel_message_info_flags (mi) & CAMEL_EWS_MESSAGE_MSGFLAG_RN_PENDING) != 0)
+		if (mi && (camel_message_info_get_flags (mi) & CAMEL_EWS_MESSAGE_MSGFLAG_RN_PENDING) != 0)
 			break;
 	}
 
@@ -1126,7 +1209,7 @@ ews_move_to_junk_folder (CamelFolder *folder,
 		folder_id = camel_ews_store_summary_get_folder_id_from_folder_type (
 			ews_store->summary, CAMEL_FOLDER_TYPE_JUNK);
 
-		status = e_ews_connection_move_items_sync (
+		status = e_ews_connection_move_items_in_chunks_sync (
 			cnc, EWS_PRIORITY_MEDIUM, folder_id, FALSE,
 			junk_uids, &moved_items, cancellable, &local_error);
 
@@ -1138,17 +1221,20 @@ ews_move_to_junk_folder (CamelFolder *folder,
 			status = ews_refresh_info_sync (folder, cancellable, &local_error);
 		}
 
-		g_slist_free_full (moved_items, g_object_unref);
-		g_free (folder_id);
-
-		if (status) {
+		/* Messages could be moved partially only, like when
+		   the user cancels the operation in the middle */
+		if (status || moved_items) {
 			CamelFolderChangeInfo *changes;
-			const GSList *iter;
+			const GSList *iter, *items_iter;
 
 			changes = camel_folder_change_info_new ();
 
-			for (iter = junk_uids; iter; iter = g_slist_next (iter)) {
+			for (iter = junk_uids, items_iter = moved_items; iter && items_iter; iter = g_slist_next (iter), items_iter = g_slist_next (items_iter)) {
 				const gchar *uid = iter->data;
+				EEwsItem *item = items_iter->data;
+
+				if (!item || e_ews_item_get_item_type (item) == E_EWS_ITEM_TYPE_ERROR)
+					continue;
 
 				camel_folder_summary_lock (folder->summary);
 
@@ -1165,6 +1251,9 @@ ews_move_to_junk_folder (CamelFolder *folder,
 			}
 			camel_folder_change_info_free (changes);
 		}
+
+		g_slist_free_full (moved_items, g_object_unref);
+		g_free (folder_id);
 
 		if (local_error) {
 			camel_ews_store_maybe_disconnect (ews_store, local_error);
@@ -1214,7 +1303,7 @@ ews_synchronize_sync (CamelFolder *folder,
 		if (!mi)
 			continue;
 
-		flags_set = camel_message_info_flags (mi);
+		flags_set = camel_message_info_get_flags (mi);
 		flags_changed = mi->server_flags ^ flags_set;
 
 		/* Exchange doesn't seem to have a sane representation
@@ -1409,6 +1498,7 @@ static void
 sync_updated_items (CamelEwsFolder *ews_folder,
                     EEwsConnection *cnc,
                     GSList *updated_items,
+		    CamelFolderChangeInfo *change_info,
                     GCancellable *cancellable,
                     GError **error)
 {
@@ -1423,14 +1513,17 @@ sync_updated_items (CamelEwsFolder *ews_folder,
 	for (l = updated_items; l != NULL; l = g_slist_next (l)) {
 		EEwsItem *item = (EEwsItem *) l->data;
 		const EwsId *id;
+		EEwsItemType item_type;
 		CamelMessageInfo *mi;
 
 		if (!item)
 			continue;
 
 		id = e_ews_item_get_id (item);
+		item_type = e_ews_item_get_item_type (item);
+
 		if (!id) {
-			g_warning ("%s: Missing ItemId for item type %d (subject:%s)", G_STRFUNC, e_ews_item_get_item_type (item),
+			g_warning ("%s: Missing ItemId for item type %d (subject:%s)", G_STRFUNC, item_type,
 				e_ews_item_get_subject (item) ? e_ews_item_get_subject (item) : "???");
 			g_object_unref (item);
 			continue;
@@ -1451,9 +1544,17 @@ sync_updated_items (CamelEwsFolder *ews_folder,
 			continue;
 		}
 
-		if (((CamelEwsMessageInfo *) mi)->item_type == E_EWS_ITEM_TYPE_GENERIC_ITEM)
+		if (item_type == E_EWS_ITEM_TYPE_GENERIC_ITEM)
 			generic_item_ids = g_slist_append (generic_item_ids, g_strdup (id->id));
-		else
+		else if (item_type == E_EWS_ITEM_TYPE_MESSAGE ||
+			item_type == E_EWS_ITEM_TYPE_MEETING_REQUEST ||
+			item_type == E_EWS_ITEM_TYPE_MEETING_MESSAGE ||
+			item_type == E_EWS_ITEM_TYPE_MEETING_RESPONSE ||
+			item_type == E_EWS_ITEM_TYPE_MEETING_CANCELLATION ||
+			item_type == E_EWS_ITEM_TYPE_POST_ITEM ||
+			/* Unknown for items received through the server notifications;
+		           it's part of the summary, thus it is a message anyway */
+			item_type == E_EWS_ITEM_TYPE_UNKNOWN)
 			msg_ids = g_slist_append (msg_ids, g_strdup (id->id));
 
 		camel_message_info_unref (mi);
@@ -1478,7 +1579,7 @@ sync_updated_items (CamelEwsFolder *ews_folder,
 		e_ews_additional_props_free (add_props);
 	}
 
-	camel_ews_utils_sync_updated_items (ews_folder, items);
+	camel_ews_utils_sync_updated_items (ews_folder, items, change_info);
 	items = NULL;
 	if (local_error) {
 		camel_ews_store_maybe_disconnect (ews_store, local_error);
@@ -1501,7 +1602,7 @@ sync_updated_items (CamelEwsFolder *ews_folder,
 
 		e_ews_additional_props_free (add_props);
 	}
-	camel_ews_utils_sync_updated_items (ews_folder, items);
+	camel_ews_utils_sync_updated_items (ews_folder, items, change_info);
 
 	if (local_error) {
 		camel_ews_store_maybe_disconnect (ews_store, local_error);
@@ -1524,6 +1625,7 @@ static void
 sync_created_items (CamelEwsFolder *ews_folder,
                     EEwsConnection *cnc,
                     GSList *created_items,
+		    CamelFolderChangeInfo *change_info,
                     GCancellable *cancellable,
                     GError **error)
 {
@@ -1564,7 +1666,7 @@ sync_created_items (CamelEwsFolder *ews_folder,
 			msg_ids = g_slist_append (msg_ids, g_strdup (id->id));
 		else if (item_type == E_EWS_ITEM_TYPE_POST_ITEM)
 			post_item_ids = g_slist_append (post_item_ids, g_strdup (id->id));
-		else
+		else if (item_type == E_EWS_ITEM_TYPE_GENERIC_ITEM)
 			generic_item_ids = g_slist_append (generic_item_ids, g_strdup (id->id));
 
 		g_object_unref (item);
@@ -1594,7 +1696,7 @@ sync_created_items (CamelEwsFolder *ews_folder,
 		goto exit;
 	}
 
-	camel_ews_utils_sync_created_items (ews_folder, cnc, items, cancellable);
+	camel_ews_utils_sync_created_items (ews_folder, cnc, items, change_info, cancellable);
 	items = NULL;
 
 
@@ -1620,7 +1722,7 @@ sync_created_items (CamelEwsFolder *ews_folder,
 		goto exit;
 	}
 
-	camel_ews_utils_sync_created_items (ews_folder, cnc, items, cancellable);
+	camel_ews_utils_sync_created_items (ews_folder, cnc, items, change_info, cancellable);
 	items = NULL;
 
 	if (generic_item_ids) {
@@ -1639,7 +1741,7 @@ sync_created_items (CamelEwsFolder *ews_folder,
 		e_ews_additional_props_free (add_props);
 	}
 
-	camel_ews_utils_sync_created_items (ews_folder, cnc, items, cancellable);
+	camel_ews_utils_sync_created_items (ews_folder, cnc, items, change_info, cancellable);
 
 	if (local_error) {
 		camel_ews_store_maybe_disconnect (ews_store, local_error);
@@ -1707,6 +1809,7 @@ ews_refresh_info_sync (CamelFolder *folder,
                        GCancellable *cancellable,
                        GError **error)
 {
+	CamelFolderChangeInfo *change_info;
 	CamelEwsFolder *ews_folder;
 	CamelEwsFolderPrivate *priv;
 	EEwsConnection *cnc;
@@ -1715,6 +1818,7 @@ ews_refresh_info_sync (CamelFolder *folder,
 	gchar *id;
 	gchar *sync_state;
 	gboolean includes_last_item = FALSE;
+	gint64 last_folder_update_time;
 	GError *local_error = NULL;
 
 	full_name = camel_folder_get_full_name (folder);
@@ -1741,8 +1845,12 @@ ews_refresh_info_sync (CamelFolder *folder,
 
 	camel_folder_summary_prepare_fetch_all (folder->summary, NULL);
 
+	change_info = camel_folder_change_info_new ();
+	last_folder_update_time = g_get_monotonic_time ();
 	id = camel_ews_store_summary_get_folder_id_from_name (
 		ews_store->summary, full_name);
+
+	camel_operation_push_message (cancellable, _("Refreshing folder '%s'"), camel_folder_get_display_name (folder));
 
 	/* Sync folder items does not return the fields ToRecipients,
 	 * CCRecipients. With the item_type unknown, its not possible
@@ -1750,20 +1858,24 @@ ews_refresh_info_sync (CamelFolder *folder,
 	 * Due to these reasons we just get the item ids and its type in
 	 * SyncFolderItem request and fetch the item using the
 	 * GetItem request. */
-	sync_state = ((CamelEwsSummary *) folder->summary)->sync_state;
+	sync_state = camel_ews_summary_dup_sync_state ((CamelEwsSummary *) folder->summary);
 	do {
 		GSList *items_created = NULL, *items_updated = NULL;
 		GSList *items_deleted = NULL;
+		gchar *new_sync_state = NULL;
 		guint32 total, unread;
 
 		e_ews_connection_sync_folder_items_sync (cnc, EWS_PRIORITY_MEDIUM, sync_state, id, "IdOnly", NULL, EWS_MAX_FETCH_COUNT,
-			&sync_state, &includes_last_item, &items_created, &items_updated, &items_deleted,
+			&new_sync_state, &includes_last_item, &items_created, &items_updated, &items_deleted,
 			cancellable, &local_error);
+
+		g_free (sync_state);
+		sync_state = new_sync_state;
 
 		if (g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_INVALIDSYNCSTATEDATA)) {
 			g_clear_error (&local_error);
-			g_free (((CamelEwsSummary *) folder->summary)->sync_state);
-			((CamelEwsSummary *) folder->summary)->sync_state = NULL;
+			camel_ews_summary_set_sync_state ((CamelEwsSummary *) folder->summary, NULL);
+			g_free (sync_state);
 			sync_state = NULL;
 			ews_folder_forget_all_mails (ews_folder);
 
@@ -1778,10 +1890,10 @@ ews_refresh_info_sync (CamelFolder *folder,
 		}
 
 		if (items_deleted)
-			camel_ews_utils_sync_deleted_items (ews_folder, items_deleted);
+			camel_ews_utils_sync_deleted_items (ews_folder, items_deleted, change_info);
 
 		if (items_created)
-			sync_created_items (ews_folder, cnc, items_created, cancellable, &local_error);
+			sync_created_items (ews_folder, cnc, items_created, change_info, cancellable, &local_error);
 
 		if (local_error) {
 			if (items_updated) {
@@ -1793,7 +1905,7 @@ ews_refresh_info_sync (CamelFolder *folder,
 		}
 
 		if (items_updated)
-			sync_updated_items (ews_folder, cnc, items_updated, cancellable, &local_error);
+			sync_updated_items (ews_folder, cnc, items_updated, change_info, cancellable, &local_error);
 
 		if (local_error)
 			break;
@@ -1805,13 +1917,32 @@ ews_refresh_info_sync (CamelFolder *folder,
 		camel_ews_store_summary_set_folder_unread (ews_store->summary, id, unread);
 		camel_ews_store_summary_save (ews_store->summary, NULL);
 
-		g_free (((CamelEwsSummary *) folder->summary)->sync_state);
-		((CamelEwsSummary *) folder->summary)->sync_state = sync_state;
+		camel_ews_summary_set_sync_state ((CamelEwsSummary *) folder->summary, sync_state);
 
 		camel_folder_summary_touch (folder->summary);
+
+		if (camel_folder_change_info_changed (change_info)) {
+			camel_folder_summary_save_to_db (folder->summary, NULL);
+			/* Notify any listeners only once per 10 seconds, as such notify can cause UI update */
+			if (g_get_monotonic_time () - last_folder_update_time >= 10 * G_USEC_PER_SEC) {
+				last_folder_update_time = g_get_monotonic_time ();
+				camel_folder_changed (folder, change_info);
+				camel_folder_change_info_clear (change_info);
+			}
+		}
 	} while (!local_error && !includes_last_item && !g_cancellable_is_cancelled (cancellable));
 
-	camel_folder_summary_save_to_db (folder->summary, NULL);
+	camel_operation_pop_message (cancellable);
+
+	if (camel_folder_change_info_changed (change_info)) {
+		camel_folder_summary_touch (folder->summary);
+		camel_folder_summary_save_to_db (folder->summary, NULL);
+		camel_folder_changed (folder, change_info);
+	} else {
+		camel_folder_summary_save_to_db (folder->summary, NULL);
+	}
+
+	camel_folder_change_info_free (change_info);
 
 	if (local_error)
 		g_propagate_error (error, local_error);
@@ -1819,9 +1950,9 @@ ews_refresh_info_sync (CamelFolder *folder,
 	g_mutex_lock (&priv->state_lock);
 	priv->refreshing = FALSE;
 	g_mutex_unlock (&priv->state_lock);
-	if (sync_state != ((CamelEwsSummary *) folder->summary)->sync_state)
-		g_free (sync_state);
+
 	g_object_unref (cnc);
+	g_free (sync_state);
 	g_free (id);
 
 	return !local_error;
@@ -1865,7 +1996,7 @@ ews_append_message_sync (CamelFolder *folder,
 		g_free (folder_id);
 		g_set_error (
 			error, CAMEL_ERROR, CAMEL_ERROR_GENERIC,
-			_("Cant perform actions on the folder while in offline mode"));
+			_("Cannot perform actions on the folder while in offline mode"));
 		return FALSE;
 	}
 
@@ -1947,7 +2078,7 @@ ews_transfer_messages_to_sync (CamelFolder *source,
 		if (!mi)
 			continue;
 
-		flags_set = camel_message_info_flags (mi);
+		flags_set = camel_message_info_get_flags (mi);
 
 		/* Exchange doesn't seem to have a sane representation
 		 * for most flags — not even replied/forwarded. */
@@ -1972,13 +2103,17 @@ ews_transfer_messages_to_sync (CamelFolder *source,
 
 	ids = g_slist_reverse (ids);
 
-	if (success && e_ews_connection_move_items_sync (
+	success = success && e_ews_connection_move_items_in_chunks_sync (
 		cnc, EWS_PRIORITY_MEDIUM,
 		dst_id, !delete_originals,
 		ids, &ret_items,
-		cancellable, &local_error)) {
+		cancellable, &local_error);
+
+	/* Messages could be copied/moved partially only, like when
+	   the user cancels the operation in the middle */
+	if (success || ret_items) {
 		CamelFolderChangeInfo *changes;
-		GSList *l;
+		GSList *l, *processed_items = NULL;
 
 		changes = camel_folder_change_info_new ();
 
@@ -1989,10 +2124,14 @@ ews_transfer_messages_to_sync (CamelFolder *source,
 			CamelMessageInfo *clone;
 			const EwsId *id;
 
-			if (e_ews_item_get_item_type (l->data) == E_EWS_ITEM_TYPE_ERROR)
+			if (e_ews_item_get_item_type (l->data) == E_EWS_ITEM_TYPE_ERROR) {
+				if (!local_error)
+					local_error = g_error_copy (e_ews_item_get_error (l->data));
 				continue;
+			}
 
 			id = e_ews_item_get_id (l->data);
+			processed_items = g_slist_prepend (processed_items, uids->pdata[i]);
 
 			message = ews_folder_get_message_cached (source, uids->pdata[i], cancellable);
 			if (message == NULL)
@@ -2036,10 +2175,12 @@ ews_transfer_messages_to_sync (CamelFolder *source,
 		if (delete_originals) {
 			changes = camel_folder_change_info_new ();
 
-			for (i = 0; i < uids->len; i++) {
-				camel_folder_summary_remove_uid (source->summary, uids->pdata[i]);
-				camel_folder_change_info_remove_uid (changes, uids->pdata[i]);
-				ews_data_cache_remove (CAMEL_EWS_FOLDER (source)->cache, "cur", uids->pdata[i], NULL);
+			for (l = processed_items; l; l = g_slist_next (l)) {
+				const gchar *uid = l->data;
+
+				camel_folder_summary_remove_uid (source->summary, uid);
+				camel_folder_change_info_remove_uid (changes, uid);
+				ews_data_cache_remove (CAMEL_EWS_FOLDER (source)->cache, "cur", uid, NULL);
 			}
 			if (camel_folder_change_info_changed (changes)) {
 				camel_folder_summary_touch (source->summary);
@@ -2052,8 +2193,13 @@ ews_transfer_messages_to_sync (CamelFolder *source,
 		/* update destination folder only if not frozen, to not update
 		   for each single message transfer during filtering
 		 */
-		if (!camel_folder_is_frozen (destination))
+		if (!camel_folder_is_frozen (destination)) {
+			camel_operation_progress (cancellable, -1);
+
 			ews_refresh_info_sync (destination, cancellable, NULL);
+		}
+
+		g_slist_free (processed_items);
 	}
 	g_free (dst_id);
 
@@ -2067,6 +2213,14 @@ ews_transfer_messages_to_sync (CamelFolder *source,
 	g_slist_free_full (ret_items, g_object_unref);
 
 	return !local_error;
+}
+
+static void
+ews_prepare_content_refresh (CamelFolder *folder)
+{
+	g_return_if_fail (CAMEL_IS_EWS_FOLDER (folder));
+
+	camel_ews_summary_set_sync_state (CAMEL_EWS_SUMMARY (folder->summary), NULL);
 }
 
 static gboolean
@@ -2382,7 +2536,7 @@ ews_folder_finalize (GObject *object)
 	g_mutex_clear (&ews_folder->priv->search_lock);
 	g_mutex_clear (&ews_folder->priv->state_lock);
 	g_rec_mutex_clear (&ews_folder->priv->cache_lock);
-	g_hash_table_destroy (ews_folder->priv->uid_eflags);
+	g_hash_table_destroy (ews_folder->priv->fetching_uids);
 	g_cond_clear (&ews_folder->priv->fetch_cond);
 
 	/* Chain up to parent's finalize() method. */
@@ -2454,6 +2608,7 @@ camel_ews_folder_class_init (CamelEwsFolderClass *class)
 	folder_class->synchronize_sync = ews_synchronize_sync;
 	folder_class->expunge_sync = ews_expunge_sync;
 	folder_class->transfer_messages_to_sync = ews_transfer_messages_to_sync;
+	folder_class->prepare_content_refresh = ews_prepare_content_refresh;
 	folder_class->get_filename = ews_get_filename;
 }
 
@@ -2477,7 +2632,7 @@ camel_ews_folder_init (CamelEwsFolder *ews_folder)
 	ews_folder->priv->refreshing = FALSE;
 
 	g_cond_init (&ews_folder->priv->fetch_cond);
-	ews_folder->priv->uid_eflags = g_hash_table_new (g_str_hash, g_str_equal);
+	ews_folder->priv->fetching_uids = g_hash_table_new (g_str_hash, g_str_equal);
 	camel_folder_set_lock_async (folder, TRUE);
 }
 

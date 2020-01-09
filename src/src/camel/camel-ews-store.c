@@ -279,7 +279,7 @@ ews_store_initable_init (GInitable *initable,
 	store = CAMEL_STORE (initable);
 	service = CAMEL_SERVICE (initable);
 
-	store->flags |= CAMEL_STORE_USE_CACHE_DIR;
+	store->flags |= CAMEL_STORE_USE_CACHE_DIR | CAMEL_STORE_SUPPORTS_INITIAL_SETUP;
 	ews_migrate_to_user_cache_dir (service);
 
 	store->flags |= CAMEL_STORE_CAN_DELETE_FOLDERS_AT_ONCE;
@@ -634,11 +634,19 @@ ews_update_has_ooo_set (CamelSession *session,
 	CamelEwsStore *ews_store = user_data;
 	EEwsOofSettings *oof_settings;
 	EEwsOofState oof_state;
+	EEwsConnection *cnc;
 	GError *local_error = NULL;
+
+	cnc = camel_ews_store_ref_connection (ews_store);
+	if (!cnc)
+		return;
 
 	camel_operation_push_message (cancellable, _("Checking \"Out of Office\" settings"));
 
-	oof_settings = e_ews_oof_settings_new_sync (ews_store->priv->connection, cancellable, &local_error);
+	oof_settings = e_ews_oof_settings_new_sync (cnc, cancellable, &local_error);
+
+	g_clear_object (&cnc);
+
 	if (local_error != NULL) {
 		g_propagate_error (error, local_error);
 		camel_operation_pop_message (cancellable);
@@ -659,6 +667,7 @@ ews_update_has_ooo_set (CamelSession *session,
 	}
 
 	camel_operation_pop_message (cancellable);
+	g_clear_object (&oof_settings);
 }
 
 struct ScheduleUpdateData
@@ -687,19 +696,25 @@ camel_ews_folder_list_update_thread (gpointer user_data)
 {
 	struct ScheduleUpdateData *sud = user_data;
 	CamelEwsStore *ews_store = sud->ews_store;
+	EEwsConnection *cnc = NULL;
 	GSList *created = NULL;
 	GSList *updated = NULL;
 	GSList *deleted = NULL;
 	gchar *old_sync_state = NULL;
 	gchar *new_sync_state;
 	gboolean includes_last;
+	GError *local_error = NULL;
 
 	if (g_cancellable_is_cancelled (sud->cancellable))
 		goto exit;
 
+	cnc = camel_ews_store_ref_connection (ews_store);
+	if (!cnc)
+		goto exit;
+
 	old_sync_state = camel_ews_store_summary_get_string_val (ews_store->summary, "sync_state", NULL);
 	if (!e_ews_connection_sync_folder_hierarchy_sync (
-			ews_store->priv->connection,
+			cnc,
 			EWS_PRIORITY_LOW,
 			old_sync_state,
 			&new_sync_state,
@@ -708,7 +723,7 @@ camel_ews_folder_list_update_thread (gpointer user_data)
 			&updated,
 			&deleted,
 			sud->cancellable,
-			NULL))
+			&local_error))
 		goto exit;
 
 	if (g_cancellable_is_cancelled (sud->cancellable)) {
@@ -736,8 +751,22 @@ camel_ews_folder_list_update_thread (gpointer user_data)
 		g_free (new_sync_state);
 	}
 
-exit:
+ exit:
+	if (local_error) {
+		camel_ews_store_maybe_disconnect (ews_store, local_error);
+		g_clear_error (&local_error);
+
+		g_mutex_lock (&ews_store->priv->get_finfo_lock);
+		ews_store->priv->last_refresh_time -= FINFO_REFRESH_INTERVAL;
+		g_mutex_unlock (&ews_store->priv->get_finfo_lock);
+	} else {
+		g_mutex_lock (&ews_store->priv->get_finfo_lock);
+		ews_store->priv->last_refresh_time = time (NULL);
+		g_mutex_unlock (&ews_store->priv->get_finfo_lock);
+	}
+
 	g_free (old_sync_state);
+	g_clear_object (&cnc);
 	free_schedule_update_data (sud);
 	return NULL;
 }
@@ -1034,8 +1063,10 @@ start_notifications_thread (gpointer data)
 {
 	struct HandleNotificationsData *hnd = data;
 	CamelEwsStore *ews_store = hnd->ews_store;
+	EEwsConnection *cnc;
 
-	if (ews_store->priv->connection == NULL)
+	cnc = camel_ews_store_ref_connection (ews_store);
+	if (!cnc)
 		goto exit;
 
 	if (ews_store->priv->listen_notifications) {
@@ -1043,7 +1074,7 @@ start_notifications_thread (gpointer data)
 			goto exit;
 
 		e_ews_connection_enable_notifications_sync (
-			ews_store->priv->connection,
+			cnc,
 			hnd->folders,
 			&ews_store->priv->subscription_key);
 	} else {
@@ -1051,7 +1082,7 @@ start_notifications_thread (gpointer data)
 			goto exit;
 
 		e_ews_connection_disable_notifications_sync (
-			ews_store->priv->connection,
+			cnc,
 			ews_store->priv->subscription_key);
 
 		ews_store->priv->subscription_key = 0;
@@ -1059,6 +1090,8 @@ start_notifications_thread (gpointer data)
 
 exit:
 	handle_notifications_data_free (hnd);
+	g_clear_object (&cnc);
+
 	return NULL;
 }
 
@@ -1072,7 +1105,14 @@ folder_ids_populate (CamelFolderInfo *folder_info,
 		gchar *id;
 
 		id = camel_ews_store_summary_get_folder_id_from_name (hnd->ews_store->summary, folder_info->full_name);
-		hnd->folders = g_slist_prepend (hnd->folders, id);
+		if (id && !g_str_has_prefix (id, "ForeignMailbox::") &&
+		    !g_str_equal (id, EWS_PUBLIC_FOLDER_ROOT_ID) &&
+		    !g_str_equal (id, EWS_FOREIGN_FOLDER_ROOT_ID) &&
+		    !camel_ews_store_summary_get_foreign (hnd->ews_store->summary, id, NULL) &&
+		    !camel_ews_store_summary_get_public (hnd->ews_store->summary, id, NULL))
+			hnd->folders = g_slist_prepend (hnd->folders, id);
+		else
+			g_free (id);
 
 		if (folder_info->child != NULL)
 			folder_ids_populate (folder_info->child, hnd);
@@ -1086,13 +1126,18 @@ camel_ews_store_handle_notifications (CamelEwsStore *ews_store,
 				      CamelEwsSettings *ews_settings)
 {
 	GThread *thread;
+	EEwsConnection *cnc;
 	struct HandleNotificationsData *hnd;
 
-	if (ews_store->priv->connection == NULL)
+	cnc = camel_ews_store_ref_connection (ews_store);
+
+	if (!cnc)
 		return;
 
-	if (!e_ews_connection_satisfies_server_version (ews_store->priv->connection, E_EWS_EXCHANGE_2010_SP1))
+	if (!e_ews_connection_satisfies_server_version (cnc, E_EWS_EXCHANGE_2010_SP1)) {
+		g_clear_object (&cnc);
 		return;
+	}
 
 	hnd = g_new0 (struct HandleNotificationsData, 1);
 	hnd->ews_store = g_object_ref (ews_store);
@@ -1117,6 +1162,8 @@ camel_ews_store_handle_notifications (CamelEwsStore *ews_store,
 
 		camel_folder_info_free (fi);
 	}
+
+	g_clear_object (&cnc);
 
 	thread = g_thread_new (NULL, start_notifications_thread, hnd);
 	g_thread_unref (thread);
@@ -1160,6 +1207,10 @@ ews_connect_sync (CamelService *service,
 	gchar *auth_mech;
 	gboolean success;
 
+	/* Chain up to parent's method. */
+	if (!CAMEL_SERVICE_CLASS (camel_ews_store_parent_class)->connect_sync (service, cancellable, error))
+		return FALSE;
+
 	ews_store = CAMEL_EWS_STORE (service);
 	priv = ews_store->priv;
 
@@ -1193,7 +1244,7 @@ ews_connect_sync (CamelService *service,
 		state = camel_ews_store_get_ooo_alert_state (ews_store);
 		if (state == CAMEL_EWS_STORE_OOO_ALERT_STATE_UNKNOWN)
 			camel_session_submit_job (
-				session,
+				session, _("Checking \"Out of Office\" settings"),
 				ews_update_has_ooo_set,
 				g_object_ref (ews_store),
 				g_object_unref);
@@ -1208,11 +1259,15 @@ ews_connect_sync (CamelService *service,
 			CAMEL_OFFLINE_STORE (ews_store),
 			TRUE, cancellable, NULL);
 
-		g_signal_connect_swapped (
-			priv->connection,
-			"server-notification",
-			G_CALLBACK (camel_ews_store_server_notification_cb),
-			ews_store);
+		connection = camel_ews_store_ref_connection (ews_store);
+		if (connection) {
+			g_signal_connect_swapped (
+				connection,
+				"server-notification",
+				G_CALLBACK (camel_ews_store_server_notification_cb),
+				ews_store);
+			g_clear_object (&connection);
+		}
 	}
 
 	g_signal_connect_swapped (
@@ -1255,16 +1310,10 @@ stop_pending_updates (CamelEwsStore *ews_store)
 	UPDATE_UNLOCK (ews_store);
 }
 
-static gboolean
-ews_disconnect_sync (CamelService *service,
-                     gboolean clean,
-                     GCancellable *cancellable,
-                     GError **error)
+static void
+ews_store_unset_connection_locked (CamelEwsStore *ews_store)
 {
-	CamelEwsStore *ews_store = CAMEL_EWS_STORE (service);
-	CamelServiceClass *service_class;
-
-	g_mutex_lock (&ews_store->priv->connection_lock);
+	g_return_if_fail (CAMEL_IS_EWS_STORE (ews_store));
 
 	/* TODO cancel all operations in the connection */
 	if (ews_store->priv->connection != NULL) {
@@ -1276,8 +1325,8 @@ ews_disconnect_sync (CamelService *service,
 		 *       our own reference to that CamelSettings instance, or
 		 *       better yet avoid connecting signal handlers to it in
 		 *       the first place. */
-		settings = camel_service_ref_settings (service);
-		g_signal_handlers_disconnect_by_data (settings, service);
+		settings = camel_service_ref_settings (CAMEL_SERVICE (ews_store));
+		g_signal_handlers_disconnect_by_data (settings, ews_store);
 		g_signal_handlers_disconnect_by_func (
 			ews_store->priv->connection, camel_ews_store_server_notification_cb, ews_store);
 
@@ -1302,7 +1351,19 @@ ews_disconnect_sync (CamelService *service,
 		g_object_unref (ews_store->priv->connection);
 		ews_store->priv->connection = NULL;
 	}
+}
 
+static gboolean
+ews_disconnect_sync (CamelService *service,
+                     gboolean clean,
+                     GCancellable *cancellable,
+                     GError **error)
+{
+	CamelEwsStore *ews_store = CAMEL_EWS_STORE (service);
+	CamelServiceClass *service_class;
+
+	g_mutex_lock (&ews_store->priv->connection_lock);
+	ews_store_unset_connection_locked (ews_store);
 	g_mutex_unlock (&ews_store->priv->connection_lock);
 
 	service_class = CAMEL_SERVICE_CLASS (camel_ews_store_parent_class);
@@ -1501,7 +1562,7 @@ ews_store_update_foreign_subfolders (CamelSession *session,
 					camel_ews_store_summary_new_folder (
 						ews_store->summary,
 						folder_id->id, parent_fid ? parent_fid->id : euf->folder_id, folder_id->change_key,
-						e_ews_folder_get_name (folder), E_EWS_FOLDER_TYPE_MAILBOX,
+						e_ews_folder_get_escaped_name (folder), E_EWS_FOLDER_TYPE_MAILBOX,
 						CAMEL_FOLDER_SUBSCRIBED, e_ews_folder_get_total_count (folder), TRUE, FALSE);
 
 					fi = camel_ews_utils_build_folder_info (ews_store, folder_id->id);
@@ -1567,129 +1628,134 @@ camel_ews_store_update_foreign_subfolders (CamelEwsStore *ews_store,
 	euf->folder_id = g_strdup (fid);
 
 	camel_session_submit_job (
-		session, ews_store_update_foreign_subfolders,
+		session, _("Updating foreign folders"), ews_store_update_foreign_subfolders,
 		euf, ews_update_foreign_subfolders_data_free);
 
 	g_object_unref (session);
 }
 
-static void
-ews_store_update_source_extension_folder (CamelEwsStore *ews_store,
-					  const gchar *folder_id,
-					  gpointer extension,
-					  const gchar *extension_property)
+static gboolean
+ews_initial_setup_with_connection_sync (CamelStore *store,
+					GHashTable *save_setup,
+					EEwsConnection *connection,
+					GCancellable *cancellable,
+					GError **error)
 {
-	gchar *fullname;
+	CamelEwsStore *ews_store;
+	GSList *folders = NULL, *folder_ids = NULL;
+	gint nn;
+	GError *local_error = NULL;
 
-	g_return_if_fail (CAMEL_IS_EWS_STORE (ews_store));
-	g_return_if_fail (extension != NULL);
-	g_return_if_fail (extension_property != NULL);
+	g_return_val_if_fail (CAMEL_IS_EWS_STORE (store), FALSE);
 
-	if (!folder_id)
-		return;
+	if (g_cancellable_set_error_if_cancelled (cancellable, error))
+		return FALSE;
 
-	fullname = camel_ews_store_summary_get_folder_full_name (ews_store->summary, folder_id, NULL);
-	if (fullname) {
-		gchar *folder_uri;
+	ews_store = CAMEL_EWS_STORE (store);
+	if (connection) {
+		g_object_ref (connection);
+	} else {
+		if (!camel_ews_store_connected (ews_store, cancellable, error))
+			return FALSE;
 
-		folder_uri = e_mail_folder_uri_build (CAMEL_STORE (ews_store), fullname);
-		g_object_set (extension, extension_property, folder_uri, NULL);
-		g_free (folder_uri);
-		g_free (fullname);
+		connection = camel_ews_store_ref_connection (ews_store);
+		g_return_val_if_fail (connection != NULL, FALSE);
 	}
+
+	for (nn = 0; nn < G_N_ELEMENTS (system_folder); nn++) {
+		EwsFolderId *fid = NULL;
+
+		fid = g_new0 (EwsFolderId, 1);
+		fid->id = g_strdup (system_folder[nn].dist_folder_id);
+		fid->is_distinguished_id = TRUE;
+
+		folder_ids = g_slist_append (folder_ids, fid);
+	}
+
+	/* fetch system folders first using getfolder operation */
+	if (!e_ews_connection_get_folder_sync (
+		connection, EWS_PRIORITY_MEDIUM, "IdOnly",
+		NULL, folder_ids, &folders,
+		cancellable, &local_error)) {
+		g_clear_object (&connection);
+		g_propagate_error (error, local_error);
+		return FALSE;
+	}
+
+	if (folders && (g_slist_length (folders) != G_N_ELEMENTS (system_folder)))
+		d (printf ("Error : not all folders are returned by getfolder operation"));
+	else if (!local_error && folders)
+		ews_store_set_flags (ews_store, folders);
+	else if (local_error) {
+		/* report error and make sure we are not leaking anything */
+		g_warn_if_fail (folders == NULL);
+	} else
+		d (printf ("folders for respective distinguished ids don't exist"));
+
+	if (save_setup) {
+		gchar *folder_id;
+
+		folder_id = camel_ews_store_summary_get_folder_id_from_folder_type (ews_store->summary, CAMEL_FOLDER_TYPE_SENT);
+		if (folder_id) {
+			gchar *fullname;
+
+			fullname = camel_ews_store_summary_get_folder_full_name (ews_store->summary, folder_id, NULL);
+			if (fullname && *fullname) {
+				g_hash_table_insert (save_setup,
+					g_strdup (CAMEL_STORE_SETUP_SENT_FOLDER),
+					g_strdup (fullname));
+			}
+
+			g_free (fullname);
+			g_free (folder_id);
+		}
+
+		if (g_slist_length (folders) == G_N_ELEMENTS (system_folder)) {
+			gint ii;
+
+			for (ii = 0; ii < G_N_ELEMENTS (system_folder); ii++) {
+				if (g_str_equal ("drafts", system_folder[ii].dist_folder_id)) {
+					break;
+				}
+			}
+
+			if (ii < G_N_ELEMENTS (system_folder)) {
+				EEwsFolder *drafts = g_slist_nth (folders, ii)->data;
+				if (drafts && !e_ews_folder_is_error (drafts)) {
+					const EwsFolderId *fid = e_ews_folder_get_id (drafts);
+
+					if (fid && fid->id) {
+						gchar *fullname;
+
+						fullname = camel_ews_store_summary_get_folder_full_name (ews_store->summary, fid->id, NULL);
+						if (fullname && *fullname) {
+							g_hash_table_insert (save_setup,
+								g_strdup (CAMEL_STORE_SETUP_DRAFTS_FOLDER),
+								g_strdup (fullname));
+						}
+
+						g_free (fullname);
+					}
+				}
+			}
+		}
+	}
+
+	g_slist_free_full (folders, g_object_unref);
+	g_slist_free_full (folder_ids, (GDestroyNotify) e_ews_folder_id_free);
+	g_clear_object (&connection);
+	g_clear_error (&local_error);
+
+	return TRUE;
 }
 
-static void
-ews_store_maybe_update_sent_and_drafts (CamelEwsStore *ews_store,
-					/* const */ GSList *ews_folders)
+static gboolean
+ews_initial_setup_sync (CamelStore *store,
+			GHashTable *save_setup,
+			GCancellable *cancellable,
+			GError **error)
 {
-	CamelSession *session;
-	ESourceRegistry *registry;
-	ESource *sibling, *source = NULL;
-
-	g_return_if_fail (CAMEL_IS_EWS_STORE (ews_store));
-
-	session = camel_service_ref_session (CAMEL_SERVICE (ews_store));
-	if (session && E_IS_MAIL_SESSION (session))
-		registry = g_object_ref (e_mail_session_get_registry (E_MAIL_SESSION (session)));
-	else
-		registry = e_source_registry_new_sync (NULL, NULL);
-	g_clear_object (&session);
-
-	g_return_if_fail (registry != NULL);
-
-	sibling = e_source_registry_ref_source (registry, camel_service_get_uid (CAMEL_SERVICE (ews_store)));
-	if (sibling) {
-		GList *sources, *siter;
-
-		sources = e_source_registry_list_sources (registry, E_SOURCE_EXTENSION_MAIL_SUBMISSION);
-		for (siter = sources; siter; siter = siter->next) {
-			source = siter->data;
-
-			if (!source || g_strcmp0 (e_source_get_parent (source), e_source_get_parent (sibling)) != 0 ||
-			    !e_source_has_extension (source, E_SOURCE_EXTENSION_MAIL_SUBMISSION) ||
-			    !e_source_has_extension (source, E_SOURCE_EXTENSION_MAIL_COMPOSITION))
-				source = NULL;
-			else
-				break;
-		}
-
-		if (source &&
-		    e_source_has_extension (source, E_SOURCE_EXTENSION_MAIL_SUBMISSION) &&
-		    e_source_has_extension (source, E_SOURCE_EXTENSION_MAIL_COMPOSITION)) {
-			ESourceMailSubmission *subm_extension;
-			ESourceMailComposition *coms_extension;
-			gboolean changed = FALSE;
-
-			subm_extension = e_source_get_extension (source, E_SOURCE_EXTENSION_MAIL_SUBMISSION);
-			coms_extension = e_source_get_extension (source, E_SOURCE_EXTENSION_MAIL_COMPOSITION);
-
-			if (e_source_mail_submission_get_sent_folder (subm_extension) &&
-			    g_ascii_strcasecmp (e_source_mail_submission_get_sent_folder (subm_extension), "folder://local/Sent") == 0) {
-				gchar *folder_id;
-
-				folder_id = camel_ews_store_summary_get_folder_id_from_folder_type (ews_store->summary, CAMEL_FOLDER_TYPE_SENT);
-				if (folder_id) {
-					changed = TRUE;
-					ews_store_update_source_extension_folder (ews_store, folder_id, subm_extension, "sent-folder");
-					g_free (folder_id);
-				}
-			}
-
-			if (e_source_mail_composition_get_drafts_folder (coms_extension) &&
-			    g_ascii_strcasecmp (e_source_mail_composition_get_drafts_folder (coms_extension), "folder://local/Drafts") == 0) {
-				if (g_slist_length (ews_folders) == G_N_ELEMENTS (system_folder)) {
-					gint ii;
-					for (ii = 0; ii < G_N_ELEMENTS (system_folder); ii++) {
-						if (g_str_equal ("drafts", system_folder[ii].dist_folder_id)) {
-							break;
-						}
-					}
-
-					if (ii < G_N_ELEMENTS (system_folder)) {
-						EEwsFolder *drafts = g_slist_nth (ews_folders, ii)->data;
-						if (drafts && !e_ews_folder_is_error (drafts)) {
-							const EwsFolderId *fid = e_ews_folder_get_id (drafts);
-
-							if (fid && fid->id) {
-								changed = TRUE;
-								ews_store_update_source_extension_folder (ews_store, fid->id, coms_extension, "drafts-folder");
-							}
-						}
-					}
-				}
-			}
-
-			if (changed) {
-				e_source_write_sync (source, NULL, NULL);
-			}
-		}
-
-		g_list_free_full (sources, g_object_unref);
-		g_object_unref (sibling);
-	}
-
-	g_object_unref (registry);
+	return ews_initial_setup_with_connection_sync (store, save_setup, NULL, cancellable, error);
 }
 
 static CamelAuthenticationResult
@@ -1706,14 +1772,14 @@ ews_authenticate_sync (CamelService *service,
 	GSList *folders_created = NULL;
 	GSList *folders_updated = NULL;
 	GSList *folders_deleted = NULL;
-	GSList *folder_ids = NULL, *folders = NULL;
+	GSList *folder_ids = NULL;
 	GSList *created_folder_ids = NULL;
 	gboolean includes_last_folder = FALSE;
 	gboolean initial_setup = FALSE;
 	const gchar *password;
 	gchar *hosturl;
 	gchar *old_sync_state = NULL, *new_sync_state = NULL;
-	GError *local_error = NULL, *folder_err = NULL;
+	GError *local_error = NULL;
 
 	ews_store = CAMEL_EWS_STORE (service);
 
@@ -1731,7 +1797,7 @@ ews_authenticate_sync (CamelService *service,
 
 	g_object_unref (settings);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		service, "proxy-resolver",
 		connection, "proxy-resolver",
 		G_BINDING_SYNC_CREATE);
@@ -1744,8 +1810,17 @@ ews_authenticate_sync (CamelService *service,
 
 	/*use old sync_state from summary*/
 	old_sync_state = camel_ews_store_summary_get_string_val (ews_store->summary, "sync_state", NULL);
-	if (!old_sync_state)
+	if (!old_sync_state) {
 		initial_setup = TRUE;
+	} else {
+		gchar *inbox_folder_id;
+
+		inbox_folder_id = camel_ews_store_summary_get_folder_id_from_folder_type (ews_store->summary, CAMEL_FOLDER_TYPE_INBOX);
+		if (!inbox_folder_id || !*inbox_folder_id)
+			initial_setup = TRUE;
+
+		g_free (inbox_folder_id);
+	}
 
 	e_ews_connection_sync_folder_hierarchy_sync (connection, EWS_PRIORITY_MEDIUM, old_sync_state,
 		&new_sync_state, &includes_last_folder, &folders_created, &folders_updated, &folders_deleted,
@@ -1753,6 +1828,11 @@ ews_authenticate_sync (CamelService *service,
 
 	g_free (old_sync_state);
 	old_sync_state = NULL;
+
+	if (g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_UNAVAILABLE)) {
+		local_error->domain = CAMEL_SERVICE_ERROR;
+		local_error->code = CAMEL_SERVICE_ERROR_UNAVAILABLE;
+	}
 
 	if (!initial_setup && g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_INVALIDSYNCSTATEDATA)) {
 		g_clear_error (&local_error);
@@ -1771,8 +1851,7 @@ ews_authenticate_sync (CamelService *service,
 		GSList *foreign_fids, *ff;
 
 		g_mutex_lock (&ews_store->priv->connection_lock);
-		if (ews_store->priv->connection != NULL)
-			g_object_unref (ews_store->priv->connection);
+		ews_store_unset_connection_locked (ews_store);
 		ews_store->priv->connection = g_object_ref (connection);
 		g_mutex_unlock (&ews_store->priv->connection_lock);
 
@@ -1795,10 +1874,7 @@ ews_authenticate_sync (CamelService *service,
 		g_slist_free_full (foreign_fids, g_free);
 	} else {
 		g_mutex_lock (&ews_store->priv->connection_lock);
-		if (ews_store->priv->connection != NULL) {
-			g_object_unref (ews_store->priv->connection);
-			ews_store->priv->connection = NULL;
-		}
+		ews_store_unset_connection_locked (ews_store);
 		g_mutex_unlock (&ews_store->priv->connection_lock);
 
 		g_free (new_sync_state);
@@ -1810,46 +1886,8 @@ ews_authenticate_sync (CamelService *service,
 	}
 
 	/*get folders using distinguished id by GetFolder operation and set system flags to folders, only for first time*/
-	if (!local_error && (initial_setup || !camel_ews_settings_get_folders_initialized (ews_settings))) {
-		gint n = 0;
-
-		while (n < G_N_ELEMENTS (system_folder)) {
-			EwsFolderId *fid = NULL;
-
-			fid = g_new0 (EwsFolderId, 1);
-			fid->id = g_strdup (system_folder[n].dist_folder_id);
-			fid->is_distinguished_id = TRUE;
-			folder_ids = g_slist_append (folder_ids, fid);
-			n++;
-		}
-
-		/* fetch system folders first using getfolder operation*/
-		e_ews_connection_get_folder_sync (
-			connection, EWS_PRIORITY_MEDIUM, "IdOnly",
-			NULL, folder_ids, &folders,
-			cancellable, &folder_err);
-
-		if (folders && (g_slist_length (folders) != G_N_ELEMENTS (system_folder)))
-			d (printf ("Error : not all folders are returned by getfolder operation"));
-		else if (folder_err == NULL && folders != NULL)
-			ews_store_set_flags (ews_store, folders);
-		else if (folder_err) {
-			/*report error and make sure we are not leaking anything*/
-			g_warn_if_fail (folders == NULL);
-		} else
-			d (printf ("folders for respective distinguished ids don't exist"));
-
-		if (!camel_ews_settings_get_folders_initialized (ews_settings)) {
-			ews_store_maybe_update_sent_and_drafts (ews_store, folders);
-			if (!folder_err)
-				camel_ews_settings_set_folders_initialized (ews_settings, TRUE);
-		}
-
-		g_slist_foreach (folders, (GFunc) g_object_unref, NULL);
-		g_slist_foreach (folder_ids, (GFunc) e_ews_folder_id_free, NULL);
-		g_slist_free (folders);
-		g_slist_free (folder_ids);
-		g_clear_error (&folder_err);
+	if (!local_error && initial_setup && connection) {
+		ews_initial_setup_with_connection_sync (CAMEL_STORE (ews_store), NULL, connection, cancellable, NULL);
 	}
 
 	/* postpone notification of new folders to time when also folder flags are known,
@@ -1901,7 +1939,7 @@ ews_store_query_auth_types_sync (CamelService *service,
 	g_free (hosturl);
 	g_object_unref (settings);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		service, "proxy-resolver",
 		connection, "proxy-resolver",
 		G_BINDING_SYNC_CREATE);
@@ -1976,6 +2014,9 @@ ews_get_folder_sync (CamelStore *store,
 
 	g_free (folder_dir);
 
+	if ((flags & CAMEL_STORE_FOLDER_INFO_REFRESH) != 0)
+		camel_folder_prepare_content_refresh (folder);
+
 	return folder;
 }
 
@@ -2006,6 +2047,32 @@ get_public_folder_full_name (EEwsFolder *folder,
 	g_string_prepend (full_name, EWS_PUBLIC_FOLDER_ROOT_DISPLAY_NAME);
 
 	return g_string_free (full_name, FALSE);
+}
+
+static gboolean
+ews_store_has_as_parent_id (CamelEwsStoreSummary *ews_summary,
+			    const gchar *fid,
+			    const gchar *mailroot_fid)
+{
+	gchar *parent = NULL;
+	gboolean found = FALSE;
+
+	g_return_val_if_fail (CAMEL_IS_EWS_STORE_SUMMARY (ews_summary), FALSE);
+	g_return_val_if_fail (fid != NULL, FALSE);
+	g_return_val_if_fail (mailroot_fid != NULL, FALSE);
+
+	while (found = g_strcmp0 (fid, mailroot_fid) == 0, fid && !found) {
+		gchar *tmp = parent;
+
+		parent = camel_ews_store_summary_get_parent_folder_id (ews_summary, fid, NULL);
+		fid = parent;
+
+		g_free (tmp);
+	}
+
+	g_free (parent);
+
+	return found;
 }
 
 static CamelFolderInfo *
@@ -2054,8 +2121,8 @@ folder_info_from_store_summary (CamelEwsStore *store,
 		fi->full_name = g_strdup (EWS_PUBLIC_FOLDER_ROOT_DISPLAY_NAME);
 		fi->display_name = g_strdup (fi->full_name);
 		fi->flags = CAMEL_FOLDER_SYSTEM | CAMEL_FOLDER_NOSELECT;
-		fi->unread = 0;
-		fi->total = 0;
+		fi->unread = -1;
+		fi->total = -1;
 
 		g_ptr_array_add (folder_infos, fi);
 
@@ -2074,8 +2141,8 @@ folder_info_from_store_summary (CamelEwsStore *store,
 			fi->full_name = get_public_folder_full_name (folder, folders_by_id);
 			fi->display_name = g_strdup (e_ews_folder_get_name (folder));
 			fi->flags = 0;
-			fi->unread = 0;
-			fi->total = 0;
+			fi->unread = e_ews_folder_get_unread_count (folder);
+			fi->total = e_ews_folder_get_total_count (folder);
 
 			switch (e_ews_folder_get_folder_type (folder)) {
 			case E_EWS_FOLDER_TYPE_CALENDAR:
@@ -2139,11 +2206,19 @@ folder_info_from_store_summary (CamelEwsStore *store,
 	/* search in regular/subscribed folders */
 	} else {
 		GSList *folders, *fiter;
+		gchar *mailroot_fid = NULL, *inbox_fid;
 
 		ews_summary = store->summary;
 		folders = camel_ews_store_summary_get_folders (ews_summary, top);
 		if (!folders)
 			return NULL;
+
+		inbox_fid = camel_ews_store_summary_get_folder_id_from_folder_type (ews_summary, CAMEL_FOLDER_TYPE_INBOX);
+		if (inbox_fid) {
+			mailroot_fid = camel_ews_store_summary_get_parent_folder_id (ews_summary, inbox_fid, NULL);
+		}
+		g_free (inbox_fid);
+		inbox_fid = NULL;
 
 		folder_infos = g_ptr_array_new ();
 
@@ -2161,6 +2236,10 @@ folder_info_from_store_summary (CamelEwsStore *store,
 				fflags = camel_ews_store_summary_get_folder_flags (ews_summary, fid, NULL);
 				if (!(fflags & CAMEL_FOLDER_SUBSCRIBED))
 					continue;
+			} else if (!camel_ews_store_summary_get_foreign (ews_summary, fid, NULL) &&
+				mailroot_fid && !ews_store_has_as_parent_id (ews_summary, fid, mailroot_fid)) {
+				/* Skip mail folders out of the msgfolderroot hierarchy */
+				continue;
 			}
 
 			fi = camel_ews_utils_build_folder_info (store, fid);
@@ -2168,6 +2247,7 @@ folder_info_from_store_summary (CamelEwsStore *store,
 		}
 
 		g_slist_free_full (folders, g_free);
+		g_free (mailroot_fid);
 	}
 
 	root_fi = camel_folder_info_build (folder_infos, top, '/', TRUE);
@@ -2176,72 +2256,16 @@ folder_info_from_store_summary (CamelEwsStore *store,
 	return root_fi;
 }
 
-static void
-ews_folder_hierarchy_ready_cb (GObject *obj,
-                               GAsyncResult *res,
-                               gpointer user_data)
-{
-	GSList *folders_created = NULL, *folders_updated = NULL;
-	GSList *folders_deleted = NULL;
-	CamelEwsStore *ews_store = (CamelEwsStore *) user_data;
-	CamelEwsStorePrivate *priv = ews_store->priv;
-	EEwsConnection *cnc = (EEwsConnection *) obj;
-	gchar *sync_state = NULL;
-	gboolean includes_last_folder;
-	GError *error = NULL;
-
-	e_ews_connection_sync_folder_hierarchy_finish (
-		cnc, res, &sync_state, &includes_last_folder,
-		&folders_created, &folders_updated,
-		&folders_deleted, &error);
-
-	if (error != NULL) {
-		g_warning ("Unable to fetch the folder hierarchy: %s :%d \n", error->message, error->code);
-
-		camel_ews_store_maybe_disconnect (ews_store, error);
-
-		g_mutex_lock (&priv->get_finfo_lock);
-		ews_store->priv->last_refresh_time -= FINFO_REFRESH_INTERVAL;
-		g_mutex_unlock (&priv->get_finfo_lock);
-		goto exit;
-	}
-	g_mutex_lock (&priv->get_finfo_lock);
-	ews_update_folder_hierarchy (
-		ews_store, sync_state, includes_last_folder,
-		folders_created, folders_deleted, folders_updated, NULL);
-
-	ews_store->priv->last_refresh_time = time (NULL);
-	g_mutex_unlock (&priv->get_finfo_lock);
-
-exit:
-	g_object_unref (ews_store);
-	g_clear_error (&error);
-}
-
 static gboolean
 ews_refresh_finfo (CamelEwsStore *ews_store)
 {
-	EEwsConnection *connection;
-	gchar *sync_state;
-
 	if (!camel_offline_store_get_online (CAMEL_OFFLINE_STORE (ews_store)))
 		return FALSE;
 
-	if (!camel_service_connect_sync ((CamelService *) ews_store, NULL, NULL))
-		return FALSE;
+	if (!ews_store->priv->updates_cancellable)
+		ews_store->priv->updates_cancellable = g_cancellable_new ();
 
-	sync_state = camel_ews_store_summary_get_string_val (ews_store->summary, "sync_state", NULL);
-
-	connection = camel_ews_store_ref_connection (ews_store);
-
-	e_ews_connection_sync_folder_hierarchy (
-		connection, EWS_PRIORITY_MEDIUM,
-		sync_state, NULL, ews_folder_hierarchy_ready_cb,
-		g_object_ref (ews_store));
-
-	g_object_unref (connection);
-
-	g_free (sync_state);
+	run_update_thread (ews_store, TRUE, ews_store->priv->updates_cancellable);
 
 	return TRUE;
 }
@@ -2780,11 +2804,11 @@ ews_rename_folder_sync (CamelStore *store,
 
 	changekey = camel_ews_store_summary_get_change_key (ews_summary, fid, error);
 	if (!changekey) {
-		g_free (fid);
 		g_set_error (
 			error, CAMEL_STORE_ERROR,
 			CAMEL_STORE_ERROR_NO_FOLDER,
 			_("No change key record for folder %s"), fid);
+		g_free (fid);
 		return FALSE;
 	}
 
@@ -2827,7 +2851,6 @@ ews_rename_folder_sync (CamelStore *store,
 				error, CAMEL_STORE_ERROR,
 				CAMEL_STORE_ERROR_INVALID,
 				_("Cannot both rename and move a folder at the same time"));
-			g_free (changekey);
 			goto out;
 		}
 
@@ -2857,15 +2880,16 @@ ews_rename_folder_sync (CamelStore *store,
 			parent_name = g_strndup (new_name, new_slash - new_name - 1);
 			pfid = camel_ews_store_summary_get_folder_id_from_name (
 				ews_summary, parent_name);
-			g_free (parent_name);
 			if (!pfid) {
 				g_set_error (
 					error, CAMEL_STORE_ERROR,
 					CAMEL_STORE_ERROR_NO_FOLDER,
 					_("Cannot find folder ID for parent folder %s"),
 					parent_name);
+				g_free (parent_name);
 				goto out;
 			}
+			g_free (parent_name);
 		}
 
 		res = e_ews_connection_move_folder_sync (
@@ -3124,7 +3148,8 @@ ews_store_find_public_folder (CamelEwsStore *ews_store,
 				break;
 			}
 
-			if (g_strcmp0 (e_ews_folder_get_name (subf), fname) == 0) {
+			if (g_strcmp0 (e_ews_folder_get_name (subf), fname) == 0 ||
+			    g_strcmp0 (e_ews_folder_get_escaped_name (subf), fname) == 0) {
 				parent_id = e_ews_folder_get_parent_id (subf);
 				if (!folder && (!parent_id || g_strcmp0 (parent_id->id, EWS_PUBLIC_FOLDER_ROOT_ID) == 0)) {
 					folder = subf;
@@ -3531,7 +3556,7 @@ camel_ews_store_unset_oof_settings_state (CamelEwsStore *ews_store)
 	session = camel_service_ref_session (service);
 
 	camel_session_submit_job (
-		session,
+		session, _("Unsetting the \"Out of Office\" status"),
 		ews_store_unset_oof_settings_state,
 		g_object_ref (ews_store),
 		g_object_unref);
@@ -3558,26 +3583,9 @@ ews_store_dispose (GObject *object)
 		ews_store->summary = NULL;
 	}
 
-	if (ews_store->priv->connection != NULL) {
-		g_signal_handlers_disconnect_by_func (
-			ews_store->priv->connection, camel_ews_store_server_notification_cb, ews_store);
-
-		if (ews_store->priv->listen_notifications) {
-			stop_pending_updates (ews_store);
-
-			if (ews_store->priv->subscription_key != 0) {
-				e_ews_connection_disable_notifications_sync (
-					ews_store->priv->connection,
-					ews_store->priv->subscription_key);
-
-				ews_store->priv->subscription_key = 0;
-			}
-
-			ews_store->priv->listen_notifications = FALSE;
-		}
-
-		g_clear_object (&ews_store->priv->connection);
-	}
+	g_mutex_lock (&ews_store->priv->connection_lock);
+	ews_store_unset_connection_locked (ews_store);
+	g_mutex_unlock (&ews_store->priv->connection_lock);
 
 	g_slist_free_full (ews_store->priv->update_folder_names, g_free);
 	ews_store->priv->update_folder_names = NULL;
@@ -3671,6 +3679,7 @@ camel_ews_store_class_init (CamelEwsStoreClass *class)
 	store_class->delete_folder_sync = ews_delete_folder_sync;
 	store_class->rename_folder_sync = ews_rename_folder_sync;
 	store_class->get_folder_info_sync = ews_get_folder_info_sync;
+	store_class->initial_setup_sync = ews_initial_setup_sync;
 
 	store_class->get_trash_folder_sync = ews_get_trash_folder_sync;
 	store_class->get_junk_folder_sync = ews_get_junk_folder_sync;

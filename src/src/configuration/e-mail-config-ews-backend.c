@@ -54,60 +54,6 @@ G_DEFINE_DYNAMIC_TYPE (
 	e_mail_config_ews_backend,
 	E_TYPE_MAIL_CONFIG_SERVICE_BACKEND)
 
-static gboolean
-e_ews_binding_transform_text_non_null (GBinding *binding,
-				       const GValue *source_value,
-				       GValue *target_value,
-				       gpointer user_data)
-{
-	const gchar *str;
-
-	g_return_val_if_fail (G_IS_BINDING (binding), FALSE);
-	g_return_val_if_fail (source_value != NULL, FALSE);
-	g_return_val_if_fail (target_value != NULL, FALSE);
-
-	str = g_value_get_string (source_value);
-	if (!str)
-		str = "";
-
-	g_value_set_string (target_value, str);
-
-	return TRUE;
-}
-
-static GBinding *
-e_ews_binding_bind_object_text_property (gpointer source,
-					 const gchar *source_property,
-					 gpointer target,
-					 const gchar *target_property,
-					 GBindingFlags flags)
-{
-	GObjectClass *klass;
-	GParamSpec *property;
-
-	g_return_val_if_fail (G_IS_OBJECT (source), NULL);
-	g_return_val_if_fail (source_property != NULL, NULL);
-	g_return_val_if_fail (G_IS_OBJECT (target), NULL);
-	g_return_val_if_fail (target_property != NULL, NULL);
-
-	klass = G_OBJECT_GET_CLASS (source);
-	property = g_object_class_find_property (klass, source_property);
-	g_return_val_if_fail (property != NULL, NULL);
-	g_return_val_if_fail (property->value_type == G_TYPE_STRING, NULL);
-
-	klass = G_OBJECT_GET_CLASS (target);
-	property = g_object_class_find_property (klass, target_property);
-	g_return_val_if_fail (property != NULL, NULL);
-	g_return_val_if_fail (property->value_type == G_TYPE_STRING, NULL);
-
-	return g_object_bind_property_full (source, source_property,
-					    target, target_property,
-					    flags,
-					    e_ews_binding_transform_text_non_null,
-					    e_ews_binding_transform_text_non_null,
-					    NULL, NULL);
-}
-
 static ESource *
 mail_config_ews_backend_new_collection (EMailConfigServiceBackend *backend)
 {
@@ -269,7 +215,7 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 		}
 	}
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		settings, "use-impersonation",
 		widget, "active",
 		G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
@@ -280,12 +226,12 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 	gtk_widget_show (widget);
 	priv->impersonate_user_entry = widget;  /* do not reference */
 
-	e_ews_binding_bind_object_text_property (
+	e_binding_bind_object_text_property (
 		settings, "impersonate-user",
 		widget, "text",
 		G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		settings, "use-impersonation",
 		widget, "sensitive",
 		G_BINDING_SYNC_CREATE);
@@ -294,7 +240,7 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 	gtk_grid_attach (GTK_GRID (container), widget, 2, 4, 1, 1);
 	gtk_widget_show (widget);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		priv->impersonate_user_entry, "sensitive",
 		widget, "sensitive",
 		G_BINDING_SYNC_CREATE);
@@ -317,19 +263,19 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 	priv->auth_check = widget;  /* do not reference */
 	gtk_widget_show (widget);
 
-	e_ews_binding_bind_object_text_property (
+	e_binding_bind_object_text_property (
 		settings, "user",
 		priv->user_entry, "text",
 		G_BINDING_BIDIRECTIONAL |
 		G_BINDING_SYNC_CREATE);
 
-	e_ews_binding_bind_object_text_property (
+	e_binding_bind_object_text_property (
 		settings, "hosturl",
 		priv->host_entry, "text",
 		G_BINDING_BIDIRECTIONAL |
 		G_BINDING_SYNC_CREATE);
 
-	e_ews_binding_bind_object_text_property (
+	e_binding_bind_object_text_property (
 		settings, "oaburl",
 		priv->oab_entry, "text",
 		G_BINDING_BIDIRECTIONAL |
@@ -338,7 +284,7 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 	/* Don't use G_BINDING_SYNC_CREATE here since the widget
 	 * chooses its initial mechanism more intelligently than
 	 * a simple property binding would. */
-	g_object_bind_property (
+	e_binding_bind_property (
 		settings, "auth-mechanism",
 		priv->auth_check, "active-mechanism",
 		G_BINDING_BIDIRECTIONAL);
@@ -348,7 +294,7 @@ mail_config_ews_backend_insert_widgets (EMailConfigServiceBackend *backend,
 	extension = e_source_get_extension (source, extension_name);
 
 	/* The collection identity is the user name. */
-	g_object_bind_property (
+	e_binding_bind_property (
 		settings, "user",
 		extension, "identity",
 		G_BINDING_BIDIRECTIONAL |
@@ -409,12 +355,15 @@ static gboolean
 mail_config_ews_backend_check_complete (EMailConfigServiceBackend *backend)
 {
 	EMailConfigServicePage *page;
+	EMailConfigEwsBackendPrivate *priv;
 	CamelSettings *settings;
 	CamelEwsSettings *ews_settings;
 	CamelNetworkSettings *network_settings;
 	const gchar *hosturl;
 	const gchar *user;
+	gboolean correct, complete = TRUE;
 
+	priv = E_MAIL_CONFIG_EWS_BACKEND_GET_PRIVATE (backend);
 	page = e_mail_config_service_backend_get_page (backend);
 
 	/* This backend serves double duty.  One instance holds the
@@ -435,13 +384,17 @@ mail_config_ews_backend_check_complete (EMailConfigServiceBackend *backend)
 	network_settings = CAMEL_NETWORK_SETTINGS (settings);
 	user = camel_network_settings_get_user (network_settings);
 
-	if (hosturl == NULL || *hosturl == '\0')
-		return FALSE;
+	correct = hosturl != NULL && *hosturl != '\0';
+	complete = complete && correct;
 
-	if (user == NULL || *user == '\0')
-		return FALSE;
+	e_util_set_entry_issue_hint (priv->host_entry, correct ? NULL : _("Host URL cannot be empty"));
 
-	return TRUE;
+	correct = user != NULL && *user != '\0';
+	complete = complete && correct;
+
+	e_util_set_entry_issue_hint (priv->user_entry, correct ? NULL : _("User name cannot be empty"));
+
+	return complete;
 }
 
 static void

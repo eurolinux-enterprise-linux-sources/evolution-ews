@@ -908,7 +908,7 @@ ewscal_set_reccurence (ESoapMessage *msg,
 				snprintf (buffer, 256, "%d", recur.interval);
 				e_ews_message_write_string_parameter (msg, "Interval", NULL, buffer);
 
-				snprintf (buffer, 256, "%d", recur.by_month_day[0]);
+				snprintf (buffer, 256, "%d", recur.by_month_day[0] == -1 ? 31 : recur.by_month_day[0]);
 				e_ews_message_write_string_parameter (msg, "DayOfMonth", NULL, buffer);
 
 				e_soap_message_end_element (msg); /* "AbsoluteMonthlyRecurrence" */
@@ -930,7 +930,7 @@ ewscal_set_reccurence (ESoapMessage *msg,
 				 * dtstart is the default, give preference to by_month & by_month_day if they are set
 				 */
 				if (recur.by_month_day[0] != ICAL_RECURRENCE_ARRAY_MAX) {
-					snprintf (buffer, 256, "%d", recur.by_month_day[0]);
+					snprintf (buffer, 256, "%d", recur.by_month_day[0] == -1 ? 31 : recur.by_month_day[0]);
 				} else {
 					snprintf (buffer, 256, "%d", dtstart->day);
 				}
@@ -1209,20 +1209,48 @@ convert_categories_calcomp_to_xml (ESoapMessage *msg,
 	if (!categ_list)
 		return;
 
-	e_soap_message_start_element (msg, "Categories", NULL, NULL);
-
-	for (citer = categ_list; citer;  citer = g_slist_next (citer)) {
+	/* Categories cannot be empty, thus first verify they are not */
+	for (citer = categ_list; citer; citer = g_slist_next (citer)) {
 		const gchar *category = citer->data;
 
-		if (!category || !*category)
-			continue;
-
-		e_ews_message_write_string_parameter (msg, "String", NULL, category);
+		if (category && *category)
+			break;
 	}
 
-	e_soap_message_end_element (msg); /* Categories */
+	if (citer) {
+		e_soap_message_start_element (msg, "Categories", NULL, NULL);
+
+		for (citer = categ_list; citer; citer = g_slist_next (citer)) {
+			const gchar *category = citer->data;
+
+			if (!category || !*category)
+				continue;
+
+			e_ews_message_write_string_parameter (msg, "String", NULL, category);
+		}
+
+		e_soap_message_end_element (msg); /* Categories */
+	}
 
 	e_cal_component_free_categories_list (categ_list);
+}
+
+static gboolean
+check_is_all_day_event (const struct icaltimetype dtstart,
+			icaltimezone *zone_start,
+			const struct icaltimetype dtend,
+			icaltimezone *zone_end)
+{
+	gint64 secs_start, secs_end;
+
+	if (icaltime_is_date (dtstart) && icaltime_is_date (dtend))
+		return TRUE;
+
+	secs_start = (gint64) (zone_start ? icaltime_as_timet_with_zone (dtstart, zone_start) : icaltime_as_timet (dtstart));
+	secs_end = (gint64) (zone_end ? icaltime_as_timet_with_zone (dtend, zone_end) : icaltime_as_timet (dtend));
+
+	/* takes whole day(s) and starts on midnight in the zone_start */
+	return ((secs_end - secs_start) % (24 * 60 * 60)) == 0 && (secs_start % 24 * 60 * 60) == 0;
 }
 
 static void
@@ -1298,7 +1326,7 @@ convert_vevent_calcomp_to_xml (ESoapMessage *msg,
 	/* We have to do the time zone(s) later, or the server rejects the request */
 
 	/* All day event ? */
-	if (icaltime_is_date (dtstart))
+	if (check_is_all_day_event (dtstart, tzid_start, dtend, tzid_end))
 		e_ews_message_write_string_parameter (msg, "IsAllDayEvent", NULL, "true");
 
 	/*freebusy*/
@@ -1488,20 +1516,34 @@ convert_component_categories_to_updatexml (ECalComponent *comp,
 	g_return_if_fail (base_elem_name != NULL);
 
 	e_cal_component_get_categories_list (comp, &categ_list);
-	e_ews_message_start_set_item_field (msg, "Categories", "item", base_elem_name);
-	e_soap_message_start_element (msg, "Categories", NULL, NULL);
 
-	for (citer = categ_list; citer;  citer = g_slist_next (citer)) {
+	/* Categories cannot be empty, thus first verify they are not */
+
+	for (citer = categ_list; citer; citer = g_slist_next (citer)) {
 		const gchar *category = citer->data;
 
-		if (!category || !*category)
-			continue;
-
-		e_ews_message_write_string_parameter (msg, "String", NULL, category);
+		if (category && *category)
+			break;
 	}
 
-	e_soap_message_end_element (msg); /* Categories */
-	e_ews_message_end_set_item_field (msg);
+	if (citer) {
+		e_ews_message_start_set_item_field (msg, "Categories", "item", base_elem_name);
+		e_soap_message_start_element (msg, "Categories", NULL, NULL);
+
+		for (citer = categ_list; citer; citer = g_slist_next (citer)) {
+			const gchar *category = citer->data;
+
+			if (!category || !*category)
+				continue;
+
+			e_ews_message_write_string_parameter (msg, "String", NULL, category);
+		}
+
+		e_soap_message_end_element (msg); /* Categories */
+		e_ews_message_end_set_item_field (msg);
+	} else {
+		e_ews_message_add_delete_item_field (msg, "Categories", "item");
+	}
 
 	e_cal_component_free_categories_list (categ_list);
 }
@@ -1723,7 +1765,7 @@ convert_vevent_component_to_updatexml (ESoapMessage *msg,
 
 	/*Check for All Day Event*/
 	if (dt_changed) {
-		if (icaltime_is_date (dtstart))
+		if (check_is_all_day_event (dtstart, tzid_start, dtend, tzid_end))
 			convert_vevent_property_to_updatexml (msg, "IsAllDayEvent", "true", "calendar", NULL, NULL);
 		else
 			convert_vevent_property_to_updatexml (msg, "IsAllDayEvent", "false", "calendar", NULL, NULL);
@@ -1770,8 +1812,8 @@ convert_vevent_component_to_updatexml (ESoapMessage *msg,
 		e_ews_message_end_set_item_field (msg);
 	}
 
-	if (dt_changed) {
-		if (satisfies && (msdn_location_start != NULL || msdn_location_end != NULL)) {
+	if (dt_changed && satisfies) {
+		if (msdn_location_start != NULL || msdn_location_end != NULL) {
 			GSList *msdn_locations = NULL;
 			GSList *tzds = NULL;
 
@@ -1813,13 +1855,13 @@ convert_vevent_component_to_updatexml (ESoapMessage *msg,
 
 			g_slist_free (msdn_locations);
 			g_slist_free_full (tzds, (GDestroyNotify) e_ews_calendar_time_zone_definition_free);
-		} else {
-			e_ews_message_replace_server_version (msg, E_EWS_EXCHANGE_2007_SP1);
-
-			e_ews_message_start_set_item_field (msg, "MeetingTimeZone", "calendar", "CalendarItem");
-			ewscal_set_meeting_timezone (msg, tzid_start ? tzid_start : convert_data->default_zone);
-			e_ews_message_end_set_item_field (msg);
 		}
+	} else if (dt_changed) {
+		e_ews_message_replace_server_version (msg, E_EWS_EXCHANGE_2007_SP1);
+
+		e_ews_message_start_set_item_field (msg, "MeetingTimeZone", "calendar", "CalendarItem");
+		ewscal_set_meeting_timezone (msg, tzid_start ? tzid_start : convert_data->default_zone);
+		e_ews_message_end_set_item_field (msg);
 	}
 
 	e_ews_message_end_item_change (msg);

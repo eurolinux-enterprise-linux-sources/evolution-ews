@@ -36,7 +36,6 @@ struct _CamelEwsSettingsPrivate {
 	gboolean filter_junk_inbox;
 	gboolean oab_offline;
 	gboolean use_impersonation;
-	gboolean folders_initialized;
 	gchar *email;
 	gchar *gal_uid;
 	gchar *hosturl;
@@ -44,6 +43,8 @@ struct _CamelEwsSettingsPrivate {
 	gchar *oal_selected;
 	guint timeout;
 	gchar *impersonate_user;
+	gboolean override_user_agent;
+	gchar *user_agent;
 };
 
 enum {
@@ -54,7 +55,6 @@ enum {
 	PROP_EMAIL,
 	PROP_FILTER_JUNK,
 	PROP_FILTER_JUNK_INBOX,
-	PROP_FOLDERS_INITIALIZED,
 	PROP_GAL_UID,
 	PROP_HOST,
 	PROP_HOSTURL,
@@ -66,7 +66,9 @@ enum {
 	PROP_TIMEOUT,
 	PROP_USER,
 	PROP_USE_IMPERSONATION,
-	PROP_IMPERSONATE_USER
+	PROP_IMPERSONATE_USER,
+	PROP_OVERRIDE_USER_AGENT,
+	PROP_USER_AGENT
 };
 
 G_DEFINE_TYPE_WITH_CODE (
@@ -148,12 +150,6 @@ ews_settings_set_property (GObject *object,
 				g_value_get_boolean (value));
 			return;
 
-		case PROP_FOLDERS_INITIALIZED:
-			camel_ews_settings_set_folders_initialized (
-				CAMEL_EWS_SETTINGS (object),
-				g_value_get_boolean (value));
-			return;
-
 		case PROP_GAL_UID:
 			camel_ews_settings_set_gal_uid (
 				CAMEL_EWS_SETTINGS (object),
@@ -225,6 +221,18 @@ ews_settings_set_property (GObject *object,
 				CAMEL_EWS_SETTINGS (object),
 				g_value_get_string (value));
 			return;
+
+		case PROP_OVERRIDE_USER_AGENT:
+			camel_ews_settings_set_override_user_agent (
+				CAMEL_EWS_SETTINGS (object),
+				g_value_get_boolean (value));
+			return;
+
+		case PROP_USER_AGENT:
+			camel_ews_settings_set_user_agent (
+				CAMEL_EWS_SETTINGS (object),
+				g_value_get_string (value));
+			return;
 	}
 
 	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -276,13 +284,6 @@ ews_settings_get_property (GObject *object,
 			g_value_set_boolean (
 				value,
 				camel_ews_settings_get_filter_junk_inbox (
-				CAMEL_EWS_SETTINGS (object)));
-			return;
-
-		case PROP_FOLDERS_INITIALIZED:
-			g_value_set_boolean (
-				value,
-				camel_ews_settings_get_folders_initialized (
 				CAMEL_EWS_SETTINGS (object)));
 			return;
 
@@ -369,6 +370,20 @@ ews_settings_get_property (GObject *object,
 				camel_ews_settings_dup_impersonate_user (
 				CAMEL_EWS_SETTINGS (object)));
 			return;
+
+		case PROP_OVERRIDE_USER_AGENT:
+			g_value_set_boolean (
+				value,
+				camel_ews_settings_get_override_user_agent (
+				CAMEL_EWS_SETTINGS (object)));
+			return;
+
+		case PROP_USER_AGENT:
+			g_value_take_string (
+				value,
+				camel_ews_settings_dup_user_agent (
+				CAMEL_EWS_SETTINGS (object)));
+			return;
 	}
 
 	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -389,6 +404,7 @@ ews_settings_finalize (GObject *object)
 	g_free (priv->oaburl);
 	g_free (priv->oal_selected);
 	g_free (priv->impersonate_user);
+	g_free (priv->user_agent);
 
 	/* Chain up to parent's finalize() method. */
 	G_OBJECT_CLASS (camel_ews_settings_parent_class)->finalize (object);
@@ -467,18 +483,6 @@ camel_ews_settings_class_init (CamelEwsSettingsClass *class)
 			"filter-junk-inbox",
 			"Filter Junk Inbox",
 			"Whether to filter junk from Inbox only",
-			FALSE,
-			G_PARAM_READWRITE |
-			G_PARAM_CONSTRUCT |
-			G_PARAM_STATIC_STRINGS));
-
-	g_object_class_install_property (
-		object_class,
-		PROP_FOLDERS_INITIALIZED,
-		g_param_spec_boolean (
-			"folders-initialized",
-			"Folders Initialized",
-			"Whether Sent Items and Drafts folders are initialized",
 			FALSE,
 			G_PARAM_READWRITE |
 			G_PARAM_CONSTRUCT |
@@ -603,6 +607,30 @@ camel_ews_settings_class_init (CamelEwsSettingsClass *class)
 			G_PARAM_READWRITE |
 			G_PARAM_CONSTRUCT |
 			G_PARAM_STATIC_STRINGS));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_OVERRIDE_USER_AGENT,
+		g_param_spec_boolean (
+			"override-user-agent",
+			"Override User Agent",
+			"Whether to override User-Agent header",
+			FALSE,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_STATIC_STRINGS));
+
+	g_object_class_install_property (
+		object_class,
+		PROP_USER_AGENT,
+		g_param_spec_string (
+			"user-agent",
+			"User Agent",
+			"User-Agent header value to use, if override-user-agent is set to TRUE",
+			"Microsoft Office/14.0 (Windows NT ,5.1; Microsoft Outlook 14.0.4734; Pro)",
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -611,7 +639,7 @@ camel_ews_settings_init (CamelEwsSettings *settings)
 	settings->priv = CAMEL_EWS_SETTINGS_GET_PRIVATE (settings);
 	g_mutex_init (&settings->priv->property_lock);
 
-	g_object_bind_property_full (settings, "hosturl",
+	e_binding_bind_property_full (settings, "hosturl",
 				     settings, "host",
 				     G_BINDING_DEFAULT,
 				     ews_settings_transform_host_url_to_host_cb,
@@ -629,7 +657,7 @@ camel_ews_settings_init (CamelEwsSettings *settings)
  *
  * Returns: authentication method to use for this account
  *
- * Since: 3.14
+ * Since: 3.16
  **/
 EwsAuthType
 camel_ews_settings_get_auth_mechanism (CamelEwsSettings *settings)
@@ -737,50 +765,6 @@ camel_ews_settings_set_listen_notifications (CamelEwsSettings *settings,
 	settings->priv->listen_notifications = listen_notifications;
 
 	g_object_notify (G_OBJECT (settings), "listen-notifications");
-}
-
-/**
- * camel_ews_settings_get_folders_initialized:
- * @settings: a #CamelEwsSettings
- *
- * Returns whether folders had been initialized.
- * This is used to know whether it's required to setup Drafts
- * and Sent Items folders as folders for that purpose in Evolution.
- *
- * Returns: whether folders had been initialized
- *
- * Since: 3.6
- **/
-gboolean
-camel_ews_settings_get_folders_initialized (CamelEwsSettings *settings)
-{
-	g_return_val_if_fail (CAMEL_IS_EWS_SETTINGS (settings), FALSE);
-
-	return settings->priv->folders_initialized;
-}
-
-/**
- * camel_ews_settings_set_folders_initialized:
- * @settings: a #CamelEwsSettings
- * @folders_initialized: whether folders had been initialized
- *
- * Sets whether to folders had been initialized. This is for Drafts
- * and Sent Items folders only.
- *
- * Since: 3.6
- **/
-void
-camel_ews_settings_set_folders_initialized (CamelEwsSettings *settings,
-					    gboolean folders_initialized)
-{
-	g_return_if_fail (CAMEL_IS_EWS_SETTINGS (settings));
-
-	if ((settings->priv->folders_initialized ? 1 : 0) == (folders_initialized ? 1 : 0))
-		return;
-
-	settings->priv->folders_initialized = folders_initialized;
-
-	g_object_notify (G_OBJECT (settings), "folders-initialized");
 }
 
 const gchar *
@@ -1215,4 +1199,73 @@ camel_ews_settings_set_impersonate_user (CamelEwsSettings *settings,
 	g_mutex_unlock (&settings->priv->property_lock);
 
 	g_object_notify (G_OBJECT (settings), "impersonate-user");
+}
+
+gboolean
+camel_ews_settings_get_override_user_agent (CamelEwsSettings *settings)
+{
+	g_return_val_if_fail (CAMEL_IS_EWS_SETTINGS (settings), FALSE);
+
+	return settings->priv->override_user_agent;
+}
+
+void
+camel_ews_settings_set_override_user_agent (CamelEwsSettings *settings,
+					    gboolean override_user_agent)
+{
+	g_return_if_fail (CAMEL_IS_EWS_SETTINGS (settings));
+
+	if ((settings->priv->override_user_agent ? 1 : 0) == (override_user_agent ? 1 : 0))
+		return;
+
+	settings->priv->override_user_agent = override_user_agent;
+
+	g_object_notify (G_OBJECT (settings), "override-user-agent");
+}
+
+const gchar *
+camel_ews_settings_get_user_agent (CamelEwsSettings *settings)
+{
+	g_return_val_if_fail (CAMEL_IS_EWS_SETTINGS (settings), NULL);
+
+	return settings->priv->user_agent;
+}
+
+gchar *
+camel_ews_settings_dup_user_agent (CamelEwsSettings *settings)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (CAMEL_IS_EWS_SETTINGS (settings), NULL);
+
+	g_mutex_lock (&settings->priv->property_lock);
+
+	protected = camel_ews_settings_get_user_agent (settings);
+	duplicate = g_strdup (protected);
+
+	g_mutex_unlock (&settings->priv->property_lock);
+
+	return duplicate;
+}
+
+void
+camel_ews_settings_set_user_agent (CamelEwsSettings *settings,
+				   const gchar *user_agent)
+{
+	g_return_if_fail (CAMEL_IS_EWS_SETTINGS (settings));
+
+	g_mutex_lock (&settings->priv->property_lock);
+
+	if (g_strcmp0 (settings->priv->user_agent, user_agent) == 0) {
+		g_mutex_unlock (&settings->priv->property_lock);
+		return;
+	}
+
+	g_free (settings->priv->user_agent);
+	settings->priv->user_agent = e_util_strdup_strip (user_agent);
+
+	g_mutex_unlock (&settings->priv->property_lock);
+
+	g_object_notify (G_OBJECT (settings), "user-agent");
 }

@@ -123,14 +123,16 @@ mail_config_ews_gal_oal_selected_to_active_id (GBinding *binding,
 	target_object = g_binding_get_target (binding);
 	combo_box = GTK_COMBO_BOX (target_object);
 
-	/* The combo box might already have the OAL ID, in which case
-	 * we simply make it the active combo box row.  Otherwise we
-	 * have to add a new row and make it the active row. */
-	if (!gtk_combo_box_set_active_id (combo_box, active_id)) {
-		gtk_combo_box_text_append (
-			GTK_COMBO_BOX_TEXT (combo_box),
-			active_id, active_text);
-		gtk_combo_box_set_active_id (combo_box, active_id);
+	if (g_strcmp0 (active_id, gtk_combo_box_get_active_id (combo_box)) != 0) {
+		/* The combo box might already have the OAL ID, in which case
+		 * we simply make it the active combo box row.  Otherwise we
+		 * have to add a new row and make it the active row. */
+		if (!gtk_combo_box_set_active_id (combo_box, active_id)) {
+			gtk_combo_box_text_append (
+				GTK_COMBO_BOX_TEXT (combo_box),
+				active_id, active_text);
+			gtk_combo_box_set_active_id (combo_box, active_id);
+		}
 	}
 
 	g_value_set_string (target_value, active_id);
@@ -288,7 +290,7 @@ mail_config_ews_gal_constructed (GObject *object)
 	gtk_box_pack_start (GTK_BOX (page), widget, FALSE, FALSE, 0);
 	gtk_widget_show (widget);
 
-	g_object_bind_property_full (
+	e_binding_bind_property_full (
 		settings, "oaburl",
 		widget, "sensitive",
 		G_BINDING_SYNC_CREATE,
@@ -304,7 +306,7 @@ mail_config_ews_gal_constructed (GObject *object)
 	extension->priv->toggle_button = widget;  /* do not reference */
 	gtk_widget_show (widget);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		settings, "oab-offline",
 		widget, "active",
 		G_BINDING_BIDIRECTIONAL |
@@ -317,7 +319,7 @@ mail_config_ews_gal_constructed (GObject *object)
 	gtk_grid_attach (GTK_GRID (container), widget, 0, 1, 1, 1);
 	gtk_widget_show (widget);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		settings, "oab-offline",
 		widget, "sensitive",
 		G_BINDING_SYNC_CREATE);
@@ -339,7 +341,7 @@ mail_config_ews_gal_constructed (GObject *object)
 	extension->priv->combo_box = widget;  /* do not reference */
 	gtk_widget_show (widget);
 
-	g_object_bind_property_full (
+	e_binding_bind_property_full (
 		settings, "oal-selected",
 		widget, "active-id",
 		G_BINDING_BIDIRECTIONAL |

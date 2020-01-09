@@ -801,7 +801,7 @@ e_soap_message_write_int (ESoapMessage *msg,
 
 	g_return_if_fail (E_IS_SOAP_MESSAGE (msg));
 
-	string = g_strdup_printf ("%ld", i);
+	string = g_strdup_printf ("%" G_GINT64_FORMAT, (gint64) i);
 	e_soap_message_write_string (msg, string);
 	g_free (string);
 }
@@ -1091,7 +1091,9 @@ e_soap_message_persist (ESoapMessage *msg)
 	soup_message_set_request (
 		SOUP_MESSAGE (msg),
 		"text/xml; charset=utf-8",
-		SOUP_MEMORY_TAKE, (gchar *) body, len);
+		SOUP_MEMORY_COPY, (gchar *) body, len);
+
+	xmlFree (body);
 }
 
 /**

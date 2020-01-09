@@ -38,6 +38,7 @@ G_DEFINE_TYPE (EEwsItem, e_ews_item, G_TYPE_OBJECT)
 
 struct _EEwsContactFields {
 	gchar *fileas;
+	gchar *display_name;
 	EwsCompleteName *complete_name;
 
 	GHashTable *email_addresses;
@@ -61,6 +62,8 @@ struct _EEwsContactFields {
 	gchar *spouse_name;
 	gchar *culture;
 	gchar *surname;
+	gchar *givenname;
+	gchar *middlename;
 	gchar *notes;
 };
 
@@ -134,6 +137,7 @@ struct _EEwsItemPrivate {
 
 	GSList *modified_occurrences;
 	GSList *attachments_ids;
+	gchar *my_response_type;
 	GSList *attendees;
 
 	EwsId *calendar_item_accept_id;
@@ -239,6 +243,9 @@ e_ews_item_dispose (GObject *object)
 	g_slist_free_full (priv->attachments_ids, g_free);
 	priv->attachments_ids = NULL;
 
+	g_free (priv->my_response_type);
+	priv->my_response_type = NULL;
+
 	g_slist_free_full (priv->attendees, (GDestroyNotify) ews_item_free_attendee);
 	priv->attendees = NULL;
 
@@ -327,6 +334,7 @@ ews_free_contact_fields (struct _EEwsContactFields *con_fields)
 		if (con_fields->im_addresses)
 			g_hash_table_destroy (con_fields->im_addresses);
 
+		g_free (con_fields->display_name);
 		g_free (con_fields->fileas);
 		g_free (con_fields->company_name);
 		g_free (con_fields->department);
@@ -339,6 +347,8 @@ ews_free_contact_fields (struct _EEwsContactFields *con_fields)
 		g_free (con_fields->spouse_name);
 		g_free (con_fields->culture);
 		g_free (con_fields->surname);
+		g_free (con_fields->givenname);
+		g_free (con_fields->middlename);
 		g_free (con_fields->notes);
 		g_free (con_fields);
 	}
@@ -492,6 +502,7 @@ parse_extended_property (EEwsItemPrivate *priv,
 			if (!set_hash) {
 				set_hash = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
 				g_hash_table_insert (priv->mapi_extended_sets, setid, set_hash);
+				setid = NULL;
 			}
 
 			g_hash_table_insert (set_hash, GUINT_TO_POINTER (tag), g_strdup (value));
@@ -500,6 +511,7 @@ parse_extended_property (EEwsItemPrivate *priv,
 		g_hash_table_insert (priv->mapi_extended_tags, GUINT_TO_POINTER (tag), g_strdup (value));
 	}
 
+	g_free (setid);
 	g_free (value);
 	g_free (name);
 }
@@ -747,6 +759,8 @@ parse_contact_field (EEwsItem *item,
 
 	if (!g_ascii_strcasecmp (name, "Culture")) {
 		priv->contact_fields->culture = e_soap_parameter_get_string_value (subparam);
+	} else if (!g_ascii_strcasecmp (name, "DisplayName")) {
+		priv->contact_fields->display_name = e_soap_parameter_get_string_value (subparam);
 	} else if (!g_ascii_strcasecmp (name, "FileAs")) {
 		priv->contact_fields->fileas = e_soap_parameter_get_string_value (subparam);
 	} else if (!g_ascii_strcasecmp (name, "CompleteName")) {
@@ -787,6 +801,10 @@ parse_contact_field (EEwsItem *item,
 		priv->contact_fields->spouse_name = e_soap_parameter_get_string_value (subparam);
 	} else if (!g_ascii_strcasecmp (name, "Surname")) {
 		priv->contact_fields->surname = e_soap_parameter_get_string_value (subparam);
+	} else if (!g_ascii_strcasecmp (name, "GivenName")) {
+		priv->contact_fields->givenname = e_soap_parameter_get_string_value (subparam);
+	} else if (!g_ascii_strcasecmp (name, "MiddleName")) {
+		priv->contact_fields->middlename = e_soap_parameter_get_string_value (subparam);
 	} else if (!g_ascii_strcasecmp (name, "WeddingAnniversary")) {
 		value = e_soap_parameter_get_string_value (subparam);
 		priv->contact_fields->wedding_anniversary = ews_item_parse_date (value);
@@ -805,7 +823,7 @@ static gchar *
 strip_html_tags (const gchar *html_text)
 {
 	gssize haystack_len = strlen (html_text);
-	gchar *plain_text = g_malloc (haystack_len);
+	gchar *plain_text = g_malloc (haystack_len + 1);
 	gchar *start = g_strstr_len (html_text, haystack_len, "<body"),
 		*end = g_strstr_len (html_text, haystack_len, "</body"),
 		*i, *j;
@@ -1106,6 +1124,9 @@ e_ews_item_set_from_soap_parameter (EEwsItem *item,
 			parse_extended_property (priv, subparam);
 		} else if (!g_ascii_strcasecmp (name, "ModifiedOccurrences")) {
 			process_modified_occurrences (priv, subparam);
+		} else if (!g_ascii_strcasecmp (name, "MyResponseType")) {
+			g_free (priv->my_response_type);
+			priv->my_response_type = e_soap_parameter_get_string_value (subparam);
 		} else if (!g_ascii_strcasecmp (name, "RequiredAttendees")) {
 			process_attendees (priv, subparam, "Required");
 		} else if (!g_ascii_strcasecmp (name, "OptionalAttendees")) {
@@ -1700,9 +1721,7 @@ e_ews_dump_file_attachment_from_soap_parameter (ESoapParameter *param,
 		param_name = e_soap_parameter_get_name (subparam);
 
 		if (g_ascii_strcasecmp (param_name, "Name") == 0) {
-			value = e_soap_parameter_get_string_value (subparam);
-			name = g_uri_escape_string (value, "", TRUE);
-			g_free (value);
+			name = e_soap_parameter_get_string_value (subparam);
 		} else if (g_ascii_strcasecmp (param_name, "Content") == 0) {
 			value = e_soap_parameter_get_string_value (subparam);
 			content = g_base64_decode (value, &data_len);
@@ -1718,6 +1737,8 @@ e_ews_dump_file_attachment_from_soap_parameter (ESoapParameter *param,
 	}
 
 	if (cache && content && g_file_test ((const gchar *) content, G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
+		gchar *uri;
+
 		info = e_ews_attachment_info_new (E_EWS_ATTACHMENT_INFO_TYPE_URI);
 
 		tmpfilename = (gchar *) content;
@@ -1740,8 +1761,10 @@ e_ews_dump_file_attachment_from_soap_parameter (ESoapParameter *param,
 		g_free (content);
 
 		/* Return URI to saved file */
-		e_ews_attachment_info_set_uri (info, g_filename_to_uri (filename, NULL, NULL));
+		uri = g_filename_to_uri (filename, NULL, NULL);
+		e_ews_attachment_info_set_uri (info, uri);
 		g_free (filename);
+		g_free (uri);
 	} else {
 		info = e_ews_attachment_info_new (E_EWS_ATTACHMENT_INFO_TYPE_INLINED);
 		e_ews_attachment_info_set_inlined_data (info, content, data_len);
@@ -1803,6 +1826,14 @@ e_ews_item_dump_mime_content (EEwsItem *item,
 	return info;
 }
 
+const gchar *
+e_ews_item_get_my_response_type (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
+
+	return item->priv->my_response_type;
+}
+
 const GSList *
 e_ews_item_get_attendees (EEwsItem *item)
 {
@@ -1834,7 +1865,40 @@ e_ews_item_get_complete_name (EEwsItem *item)
 	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
 	g_return_val_if_fail (item->priv->contact_fields != NULL, NULL);
 
+	if (!item->priv->contact_fields->complete_name && (
+	    item->priv->contact_fields->surname ||
+	    item->priv->contact_fields->middlename ||
+	    item->priv->contact_fields->givenname)) {
+		EwsCompleteName *cn;
+
+		cn = g_new0 (EwsCompleteName, 1);
+
+		cn->first_name = g_strdup (item->priv->contact_fields->givenname);
+		cn->middle_name = g_strdup (item->priv->contact_fields->middlename);
+		cn->last_name = g_strdup (item->priv->contact_fields->surname);
+
+		item->priv->contact_fields->complete_name = cn;
+	}
+
 	return (const EwsCompleteName *) item->priv->contact_fields->complete_name;
+}
+
+const gchar *
+e_ews_item_get_display_name (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
+	g_return_val_if_fail (item->priv->contact_fields != NULL, NULL);
+
+	return item->priv->contact_fields->display_name;
+}
+
+GHashTable *
+e_ews_item_get_email_addresses (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
+	g_return_val_if_fail (item->priv->contact_fields != NULL, NULL);
+
+	return item->priv->contact_fields->email_addresses;
 }
 
 /**
@@ -2014,6 +2078,24 @@ e_ews_item_get_surname (EEwsItem *item)
 }
 
 const gchar *
+e_ews_item_get_givenname (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
+	g_return_val_if_fail (item->priv->contact_fields != NULL, NULL);
+
+	return item->priv->contact_fields->givenname;
+}
+
+const gchar *
+e_ews_item_get_middlename (EEwsItem *item)
+{
+	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
+	g_return_val_if_fail (item->priv->contact_fields != NULL, NULL);
+
+	return item->priv->contact_fields->middlename;
+}
+
+const gchar *
 e_ews_item_get_notes (EEwsItem *item)
 {
 	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
@@ -2189,42 +2271,6 @@ e_ews_item_get_contact_photo_id (EEwsItem *item)
 	g_return_val_if_fail (E_IS_EWS_ITEM (item), NULL);
 
 	return item->priv->contact_photo_id;
-}
-
-EwsResolveContact *
-e_ews_item_resolve_contact_from_soap_param (ESoapParameter *param)
-{
-	ESoapParameter *subparam;
-	EwsResolveContact *rc;
-
-	if (!param)
-		return NULL;
-
-	rc = g_new0 (EwsResolveContact, 1);
-	rc->email_addresses = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
-
-	subparam = e_soap_parameter_get_first_child_by_name (param, "DisplayName");
-	if (subparam)
-		rc->display_name = e_soap_parameter_get_string_value (subparam);
-
-	subparam = e_soap_parameter_get_first_child_by_name (param, "EmailAddresses");
-	if (subparam)
-		parse_entries (rc->email_addresses, subparam, (EwsGetValFunc) e_soap_parameter_get_string_value);
-
-	return rc;
-}
-
-void
-e_ews_free_resolve_contact (gpointer rc)
-{
-	EwsResolveContact *resc = rc;
-
-	if (!resc)
-		return;
-
-	g_free (resc->display_name);
-	g_hash_table_unref (resc->email_addresses);
-	g_free (resc);
 }
 
 /* free returned pointer with e_ews_permission_free() */

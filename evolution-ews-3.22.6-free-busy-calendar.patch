@@ -1,0 +1,1648 @@
+diff -up evolution-ews-3.22.6/src/calendar/e-cal-backend-ews.c.free-busy-calendar evolution-ews-3.22.6/src/calendar/e-cal-backend-ews.c
+--- evolution-ews-3.22.6/src/calendar/e-cal-backend-ews.c.free-busy-calendar	2017-02-06 14:06:19.000000000 +0100
++++ evolution-ews-3.22.6/src/calendar/e-cal-backend-ews.c	2017-05-24 15:38:44.189519188 +0200
+@@ -43,6 +43,7 @@
+ #include <calendar/gui/itip-utils.h>
+ 
+ #include "server/e-source-ews-folder.h"
++#include "server/e-ews-calendar-utils.h"
+ #include "server/e-ews-connection-utils.h"
+ 
+ #include "utils/ews-camel-common.h"
+@@ -87,6 +88,7 @@ struct _ECalBackendEwsPrivate {
+ 
+ 	guint subscription_key;
+ 	gboolean listen_notifications;
++	gboolean is_freebusy_calendar;
+ };
+ 
+ #define PRIV_LOCK(p)   (g_rec_mutex_lock (&(p)->rec_mutex))
+@@ -735,7 +737,7 @@ cbews_listen_notifications_cb (ECalBacke
+ 		return;
+ 	}
+ 
+-	cbews->priv->listen_notifications = camel_ews_settings_get_listen_notifications (ews_settings);
++	cbews->priv->listen_notifications = !cbews->priv->is_freebusy_calendar && camel_ews_settings_get_listen_notifications (ews_settings);
+ 	PRIV_UNLOCK (cbews->priv);
+ 
+ 	thread = g_thread_new (NULL, handle_notifications_thread, g_object_ref (cbews));
+@@ -819,6 +821,7 @@ e_cal_backend_ews_open (ECalBackend *bac
+ 		extension_name = E_SOURCE_EXTENSION_EWS_FOLDER;
+ 		extension = e_source_get_extension (source, extension_name);
+ 		priv->folder_id = e_source_ews_folder_dup_id (extension);
++		priv->is_freebusy_calendar = g_strcmp0 (priv->folder_id, "freebusy-calendar") == 0;
+ 
+ 		priv->storage_path = g_build_filename (cache_dir, priv->folder_id, NULL);
+ 
+@@ -848,11 +851,11 @@ e_cal_backend_ews_open (ECalBackend *bac
+ 		ret = cal_backend_ews_ensure_connected (cbews, cancellable, &error);
+ 
+ 	if (ret) {
+-		e_cal_backend_set_writable (backend, TRUE);
++		e_cal_backend_set_writable (backend, !priv->is_freebusy_calendar);
+ 
+ 		PRIV_LOCK (priv);
+ 		if (priv->cnc != NULL) {
+-			priv->listen_notifications = camel_ews_settings_get_listen_notifications (ews_settings);
++			priv->listen_notifications = !priv->is_freebusy_calendar && camel_ews_settings_get_listen_notifications (ews_settings);
+ 
+ 			if (priv->listen_notifications)
+ 				cbews_listen_notifications_cb (cbews, NULL, ews_settings);
+@@ -3857,6 +3860,34 @@ cbews_forget_all_components (ECalBackend
+ 	g_slist_free_full (ids, (GDestroyNotify) e_cal_component_free_id);
+ }
+ 
++static gboolean
++ews_freebusy_ecomp_changed (ECalComponent *ecomp,
++			    icalcomponent *vevent)
++{
++	icalcomponent *icomp;
++	gboolean changed = FALSE;
++
++	g_return_val_if_fail (vevent != NULL, FALSE);
++
++	if (!ecomp)
++		return TRUE;
++
++	icomp = e_cal_component_get_icalcomponent (ecomp);
++	if (!icomp)
++		return TRUE;
++
++	if (!changed)
++		changed = g_strcmp0 (icalcomponent_get_summary (icomp), icalcomponent_get_summary (vevent)) != 0;
++	if (!changed)
++		changed = g_strcmp0 (icalcomponent_get_location (icomp), icalcomponent_get_location (vevent)) != 0;
++	if (!changed)
++		changed = icaltime_compare (icalcomponent_get_dtstart (icomp), icalcomponent_get_dtstart (vevent)) != 0;
++	if (!changed)
++		changed = icaltime_compare (icalcomponent_get_dtend (icomp), icalcomponent_get_dtend (vevent)) != 0;
++
++	return changed;
++}
++
+ static gpointer
+ ews_start_sync_thread (gpointer data)
+ {
+@@ -3877,95 +3908,288 @@ ews_start_sync_thread (gpointer data)
+ 
+ 	cancellable = cal_backend_ews_ref_cancellable (cbews);
+ 
+-	old_sync_state = g_strdup (e_cal_backend_store_get_key_value (priv->store, SYNC_KEY));
+-	do {
+-		EEwsAdditionalProps *add_props;
+-		GCancellable *cancellable;
++	if (priv->is_freebusy_calendar) {
++		ESourceEwsFolder *ews_folder;
++		EEWSFreeBusyData fbdata;
++		GSList *free_busy = NULL, *link;
++		gboolean success;
++		time_t today;
++
++		ews_folder = e_source_get_extension (e_backend_get_source (E_BACKEND (cbews)), E_SOURCE_EXTENSION_EWS_FOLDER);
++
++		today = time_day_begin (time (NULL));
++
++		fbdata.period_start = time_add_week (today, -e_source_ews_folder_get_freebusy_weeks_before (ews_folder));
++		fbdata.period_end = time_day_end (time_add_week (today, e_source_ews_folder_get_freebusy_weeks_after (ews_folder)));
++		fbdata.user_mails = g_slist_prepend (NULL, e_source_ews_folder_dup_foreign_mail (ews_folder));
++
++		success = e_ews_connection_get_free_busy_sync (priv->cnc, G_PRIORITY_DEFAULT,
++			e_ews_cal_utils_prepare_free_busy_request, &fbdata,
++			&free_busy, cancellable, &error);
++
++		if (success) {
++			icaltimezone *utc_zone = icaltimezone_get_utc_timezone ();
++			GSList *ids;
++			GHashTable *known;
++			GHashTableIter iter;
++			gpointer key;
++
++			known = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
++
++			ids = e_cal_backend_store_get_component_ids (priv->store);
++			for (link = ids; link; link = g_slist_next (link)) {
++				ECalComponentId *id = link->data;
+ 
+-		includes_last_item = TRUE;
++				if (id && id->uid && *id->uid)
++					g_hash_table_insert (known, g_strdup (id->uid), NULL);
++			}
++			g_slist_free_full (ids, (GDestroyNotify) e_cal_component_free_id);
+ 
+-		add_props = e_ews_additional_props_new ();
+-		add_props->field_uri = g_strdup ("item:ItemClass");
++			for (link = free_busy; link; link = g_slist_next (link)) {
++				icalcomponent *fbcomp = link->data;
++				icalproperty *fbprop;
++				icalparameter *param;
++				struct icalperiodtype fb;
++				icalparameter_fbtype fbtype;
++
++				if (!fbcomp || icalcomponent_isa (fbcomp) != ICAL_VFREEBUSY_COMPONENT)
++					continue;
++
++				for (fbprop = icalcomponent_get_first_property (fbcomp, ICAL_FREEBUSY_PROPERTY);
++				     fbprop;
++				     fbprop = icalcomponent_get_next_property (fbcomp, ICAL_FREEBUSY_PROPERTY)) {
++					icalcomponent *vevent;
++					const gchar *id, *summary, *location;
++
++					param = icalproperty_get_first_parameter (fbprop, ICAL_FBTYPE_PARAMETER);
++					if (!param)
++						continue;
++
++					fbtype = icalparameter_get_fbtype (param);
++
++					if (fbtype != ICAL_FBTYPE_FREE &&
++					    fbtype != ICAL_FBTYPE_BUSY &&
++					    fbtype != ICAL_FBTYPE_BUSYUNAVAILABLE &&
++					    fbtype != ICAL_FBTYPE_BUSYTENTATIVE)
++						continue;
++
++					fb = icalproperty_get_freebusy (fbprop);
++					id = icalproperty_get_parameter_as_string (fbprop, "X-EWS-ID");
++					summary = icalproperty_get_parameter_as_string (fbprop, "X-SUMMARY");
++					location = icalproperty_get_parameter_as_string (fbprop, "X-LOCATION");
+ 
+-		cancellable = cal_backend_ews_ref_cancellable (cbews);
++					vevent = icalcomponent_new_vevent ();
+ 
+-		ret = e_ews_connection_sync_folder_items_sync (
+-			priv->cnc,
+-			EWS_PRIORITY_MEDIUM,
+-			old_sync_state,
+-			priv->folder_id,
+-			"IdOnly",
+-			add_props,
+-			EWS_MAX_FETCH_COUNT,
+-			&new_sync_state,
+-			&includes_last_item,
+-			&items_created,
+-			&items_updated,
+-			&items_deleted,
+-			cancellable,
+-			&error);
++					if (id && *id) {
++						icalcomponent_set_uid (vevent, id);
++					} else {
++						gchar *uid;
+ 
+-		e_ews_additional_props_free (add_props);
+-		g_clear_object (&cancellable);
+-		g_free (old_sync_state);
+-		old_sync_state = NULL;
++						uid = g_strdup_printf ("%s-%s-%d",
++							icaltime_as_ical_string (fb.start),
++							icaltime_as_ical_string (fb.end),
++							(gint) fbtype);
++
++						icalcomponent_set_uid (vevent, uid);
++
++						g_free (uid);
++					}
+ 
+-		if (!ret) {
+-			if (g_error_matches (error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_INVALIDSYNCSTATEDATA)) {
+-				g_clear_error (&error);
+-				e_cal_backend_store_put_key_value (priv->store, SYNC_KEY, NULL);
+-				cbews_forget_all_components (cbews);
+-
+-				if (!e_ews_connection_sync_folder_items_sync (
+-							priv->cnc,
+-							EWS_PRIORITY_MEDIUM,
+-							NULL,
+-							priv->folder_id,
+-							"IdOnly",
+-							NULL,
+-							EWS_MAX_FETCH_COUNT,
+-							&new_sync_state,
+-							&includes_last_item,
+-							&items_created,
+-							&items_updated,
+-							&items_deleted,
+-							cancellable,
+-							&error)) {
+-					if (!g_error_matches (
+-							error,
+-							EWS_CONNECTION_ERROR,
+-							EWS_CONNECTION_ERROR_AUTHENTICATION_FAILED)) {
+-						e_cal_backend_set_writable (E_CAL_BACKEND (cbews), TRUE);
+-						break;
++					fb.start.zone = utc_zone;
++					fb.start.is_utc = 1;
++					fb.end.zone = utc_zone;
++					fb.end.is_utc = 1;
++
++					icalcomponent_set_dtstart (vevent, fb.start);
++					icalcomponent_set_dtend (vevent, fb.end);
++
++					icalcomponent_add_property (vevent, icalproperty_new_created (icaltime_current_time_with_zone (utc_zone)));
++
++					if (fbtype == ICAL_FBTYPE_FREE) {
++						icalcomponent_set_summary (vevent, C_("FreeBusyType", "Free"));
++						icalcomponent_add_property (vevent, icalproperty_new_transp (ICAL_TRANSP_TRANSPARENT));
++					} else if (fbtype == ICAL_FBTYPE_BUSY) {
++						icalcomponent_set_summary (vevent, C_("FreeBusyType", "Busy"));
++					} else if (fbtype == ICAL_FBTYPE_BUSYUNAVAILABLE) {
++						icalcomponent_set_summary (vevent, C_("FreeBusyType", "Out of Office"));
++					} else if (fbtype == ICAL_FBTYPE_BUSYTENTATIVE) {
++						icalcomponent_set_summary (vevent, C_("FreeBusyType", "Tentative"));
++					}
++
++					if (summary && *summary)
++						icalcomponent_set_summary (vevent, summary);
++
++					if (location && *location)
++						icalcomponent_set_location (vevent, location);
++
++					PRIV_LOCK (priv);
++					if (g_hash_table_remove (known, icalcomponent_get_uid (vevent))) {
++						ECalComponent *ecomp = g_hash_table_lookup (priv->item_id_hash, icalcomponent_get_uid (vevent));
++
++						g_object_ref (ecomp);
++
++						PRIV_UNLOCK (priv);
++
++						if (ews_freebusy_ecomp_changed (ecomp, vevent)) {
++							ECalComponent *new_ecomp;
++							gchar *uid = g_strdup (icalcomponent_get_uid (vevent));
++
++							new_ecomp = e_cal_component_new_from_icalcomponent (vevent);
++							if (new_ecomp) {
++								PRIV_LOCK (priv);
++								g_hash_table_insert (priv->item_id_hash, uid, g_object_ref (new_ecomp));
++								PRIV_UNLOCK (priv);
++
++								put_component_to_store (cbews, new_ecomp);
++								e_cal_backend_notify_component_modified (E_CAL_BACKEND (cbews), ecomp, new_ecomp);
++
++								g_object_unref (new_ecomp);
++							} else {
++								g_free (uid);
++							}
++						} else {
++							icalcomponent_free (vevent);
++						}
++
++						g_clear_object (&ecomp);
++					} else {
++						ECalComponent *ecomp;
++						gchar *uid = g_strdup (icalcomponent_get_uid (vevent));
++
++						ecomp = e_cal_component_new_from_icalcomponent (vevent);
++						if (ecomp)
++							g_hash_table_insert (priv->item_id_hash, uid, g_object_ref (ecomp));
++						else
++							g_free (uid);
++
++						PRIV_UNLOCK (priv);
++
++						if (ecomp) {
++							put_component_to_store (cbews, ecomp);
++							e_cal_backend_notify_component_created (E_CAL_BACKEND (cbews), ecomp);
++						}
++
++						g_clear_object (&ecomp);
+ 					}
+ 				}
+-			} else {
+-				break;
+ 			}
++
++			g_hash_table_iter_init (&iter, known);
++			while (g_hash_table_iter_next (&iter, &key, NULL)) {
++				ECalComponentId id = { 0 };
++
++				id.uid = key;
++				id.rid = NULL;
++
++				if (e_cal_backend_store_remove_component (priv->store, id.uid, id.rid)) {
++					e_cal_backend_notify_component_removed (E_CAL_BACKEND (cbews), &id, NULL, NULL);
++
++					PRIV_LOCK (priv);
++					g_hash_table_remove (priv->item_id_hash, id.uid);
++					PRIV_UNLOCK (priv);
++				}
++			}
++
++			g_hash_table_destroy (known);
++		} else if (g_error_matches (error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_NOFREEBUSYACCESS)) {
++			cbews_forget_all_components (cbews);
++			e_cal_backend_notify_error (E_CAL_BACKEND (cbews), error->message);
++			g_clear_error (&error);
+ 		}
+ 
+-		ret = cal_backend_ews_process_folder_items (
+-				cbews,
+-				new_sync_state,
+-				items_created,
+-				items_updated,
+-				items_deleted);
++		g_slist_free_full (free_busy, (GDestroyNotify) icalcomponent_free);
++		g_slist_free_full (fbdata.user_mails, g_free);
++	} else {
++		old_sync_state = g_strdup (e_cal_backend_store_get_key_value (priv->store, SYNC_KEY));
++		do {
++			EEwsAdditionalProps *add_props;
++			GCancellable *cancellable;
++
++			includes_last_item = TRUE;
+ 
+-		if (!ret)
+-			break;
++			add_props = e_ews_additional_props_new ();
++			add_props->field_uri = g_strdup ("item:ItemClass");
+ 
+-		g_slist_free_full (items_created, g_object_unref);
+-		g_slist_free_full (items_updated, g_object_unref);
+-		g_slist_free_full (items_deleted, g_free);
+-		items_created = NULL;
+-		items_updated = NULL;
+-		items_deleted = NULL;
+-
+-		e_cal_backend_store_put_key_value (priv->store, SYNC_KEY, new_sync_state);
+-
+-		old_sync_state = new_sync_state;
+-		new_sync_state = NULL;
+-	} while (!includes_last_item);
++			cancellable = cal_backend_ews_ref_cancellable (cbews);
++
++			ret = e_ews_connection_sync_folder_items_sync (
++				priv->cnc,
++				EWS_PRIORITY_MEDIUM,
++				old_sync_state,
++				priv->folder_id,
++				"IdOnly",
++				add_props,
++				EWS_MAX_FETCH_COUNT,
++				&new_sync_state,
++				&includes_last_item,
++				&items_created,
++				&items_updated,
++				&items_deleted,
++				cancellable,
++				&error);
++
++			e_ews_additional_props_free (add_props);
++			g_clear_object (&cancellable);
++			g_free (old_sync_state);
++			old_sync_state = NULL;
++
++			if (!ret) {
++				if (g_error_matches (error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_INVALIDSYNCSTATEDATA)) {
++					g_clear_error (&error);
++					e_cal_backend_store_put_key_value (priv->store, SYNC_KEY, NULL);
++					cbews_forget_all_components (cbews);
++
++					if (!e_ews_connection_sync_folder_items_sync (
++								priv->cnc,
++								EWS_PRIORITY_MEDIUM,
++								NULL,
++								priv->folder_id,
++								"IdOnly",
++								NULL,
++								EWS_MAX_FETCH_COUNT,
++								&new_sync_state,
++								&includes_last_item,
++								&items_created,
++								&items_updated,
++								&items_deleted,
++								cancellable,
++								&error)) {
++						if (!g_error_matches (
++								error,
++								EWS_CONNECTION_ERROR,
++								EWS_CONNECTION_ERROR_AUTHENTICATION_FAILED)) {
++							e_cal_backend_set_writable (E_CAL_BACKEND (cbews), TRUE);
++							break;
++						}
++					}
++				} else {
++					break;
++				}
++			}
++
++			ret = cal_backend_ews_process_folder_items (
++					cbews,
++					new_sync_state,
++					items_created,
++					items_updated,
++					items_deleted);
++
++			if (!ret)
++				break;
++
++			g_slist_free_full (items_created, g_object_unref);
++			g_slist_free_full (items_updated, g_object_unref);
++			g_slist_free_full (items_deleted, g_free);
++			items_created = NULL;
++			items_updated = NULL;
++			items_deleted = NULL;
++
++			e_cal_backend_store_put_key_value (priv->store, SYNC_KEY, new_sync_state);
++
++			old_sync_state = new_sync_state;
++			new_sync_state = NULL;
++		} while (!includes_last_item);
++	}
+ 
+ 	ews_refreshing_dec (cbews);
+ 
+@@ -4163,7 +4387,7 @@ e_cal_backend_ews_get_free_busy (ECalBac
+ 	ECalBackendEwsPrivate *priv = cbews->priv;
+ 	GError *error = NULL;
+ 	EwsCalendarAsyncData *free_busy_data;
+-	EwsCalendarConvertData convert_data = { 0 };
++	EEWSFreeBusyData fbdata = { 0 };
+ 	GSList *users_copy = NULL;
+ 
+ 	/* make sure we're not offline */
+@@ -4193,15 +4417,15 @@ e_cal_backend_ews_get_free_busy (ECalBac
+ 	free_busy_data->context = context;
+ 	free_busy_data->users = users_copy;
+ 
+-	convert_data.users = users_copy;
+-	convert_data.start = start;
+-	convert_data.end = end;
++	fbdata.period_start = start;
++	fbdata.period_end = end;
++	fbdata.user_mails = users_copy;
+ 
+ 	e_ews_connection_get_free_busy (
+ 		priv->cnc,
+ 		EWS_PRIORITY_MEDIUM,
+-		e_cal_backend_ews_prepare_free_busy_request,
+-		&convert_data,
++		e_ews_cal_utils_prepare_free_busy_request,
++		&fbdata,
+ 		cancellable,
+ 		ews_cal_get_free_busy_cb,
+ 		free_busy_data);
+diff -up evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.c.free-busy-calendar evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.c
+--- evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.c.free-busy-calendar	2016-12-16 12:36:06.000000000 +0100
++++ evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.c	2017-05-24 15:38:44.189519188 +0200
+@@ -42,6 +42,7 @@
+ #include <libecal/libecal.h>
+ #include <libsoup/soup-misc.h>
+ 
++#include "server/e-ews-calendar-utils.h"
+ #include "server/e-ews-connection.h"
+ #include "server/e-ews-message.h"
+ #include "server/e-ews-item-change.h"
+@@ -338,49 +339,6 @@ ews_set_alarm (ESoapMessage *msg,
+ 
+ }
+ 
+-void
+-ewscal_set_time (ESoapMessage *msg,
+-                 const gchar *name,
+-                 icaltimetype *t,
+-                 gboolean with_timezone)
+-{
+-	gchar *str;
+-	gchar *tz_ident = NULL;
+-
+-	if (with_timezone) {
+-		if (t->is_utc || !t->zone || t->zone == icaltimezone_get_utc_timezone ()) {
+-			tz_ident = g_strdup ("Z");
+-		} else {
+-			gint offset, is_daylight, hrs, mins;
+-
+-			offset = icaltimezone_get_utc_offset (
+-				icaltimezone_get_utc_timezone (), t, &is_daylight);
+-
+-			offset = offset * (-1);
+-			hrs = offset / 60;
+-			mins = offset % 60;
+-
+-			if (hrs < 0)
+-				hrs *= -1;
+-			if (mins < 0)
+-				mins *= -1;
+-
+-			tz_ident = g_strdup_printf ("%s%02d:%02d", offset > 0 ? "+" : "-", hrs, mins);
+-		}
+-	}
+-
+-	str = g_strdup_printf (
+-		"%04d-%02d-%02dT%02d:%02d:%02d%s",
+-		t->year, t->month, t->day,
+-		t->hour, t->minute, t->second,
+-		tz_ident ? tz_ident : "");
+-
+-	e_ews_message_write_string_parameter (msg, name, NULL, str);
+-
+-	g_free (tz_ident);
+-	g_free (str);
+-}
+-
+ static void
+ ewscal_set_date (ESoapMessage *msg,
+                  const gchar *name,
+@@ -713,136 +671,6 @@ ewscal_set_meeting_timezone (ESoapMessag
+ 	e_soap_message_end_element (msg); /* "MeetingTimeZone" */
+ }
+ 
+-static void
+-ewscal_add_availability_rrule (ESoapMessage *msg,
+-                               icalproperty *prop)
+-{
+-	struct icalrecurrencetype recur = icalproperty_get_rrule (prop);
+-	gchar buffer[16];
+-	gint dayorder;
+-
+-	dayorder = icalrecurrencetype_day_position (recur.by_day[0]);
+-	dayorder = dayorder % 5;
+-	if (dayorder < 0)
+-		dayorder += 5;
+-	dayorder += 1;
+-
+-	/* expected value is 1..5, inclusive */
+-	snprintf (buffer, 16, "%d", dayorder);
+-	e_ews_message_write_string_parameter (msg, "DayOrder", NULL, buffer);
+-
+-	snprintf (buffer, 16, "%d", recur.by_month[0]);
+-	e_ews_message_write_string_parameter (msg, "Month", NULL, buffer);
+-
+-	e_ews_message_write_string_parameter (msg, "DayOfWeek", NULL, number_to_weekday (icalrecurrencetype_day_day_of_week (recur.by_day[0])));
+-}
+-
+-static void
+-ewscal_add_availability_default_timechange (ESoapMessage *msg)
+-{
+-
+-	e_soap_message_start_element (msg, "StandardTime", NULL, NULL);
+-	e_ews_message_write_string_parameter (msg, "Bias", NULL, "0");
+-	e_ews_message_write_string_parameter (msg, "Time", NULL, "00:00:00");
+-	e_ews_message_write_string_parameter (msg, "DayOrder", NULL, "0");
+-	e_ews_message_write_string_parameter (msg, "Month", NULL, "0");
+-	e_ews_message_write_string_parameter (msg, "DayOfWeek", NULL, "Sunday");
+-	e_soap_message_end_element (msg);
+-
+-	e_soap_message_start_element (msg, "DaylightTime", NULL, NULL);
+-	e_ews_message_write_string_parameter (msg, "Bias", NULL, "0");
+-	e_ews_message_write_string_parameter (msg, "Time", NULL, "00:00:00");
+-	e_ews_message_write_string_parameter (msg, "DayOrder", NULL, "0");
+-	e_ews_message_write_string_parameter (msg, "Month", NULL, "0");
+-	e_ews_message_write_string_parameter (msg, "DayOfWeek", NULL, "Sunday");
+-	e_soap_message_end_element (msg);
+-}
+-
+-static void
+-ewscal_add_availability_timechange (ESoapMessage *msg,
+-                                    icalcomponent *comp,
+-                                    gint baseoffs)
+-{
+-	gchar buffer[16];
+-	icalproperty *prop;
+-	struct icaltimetype dtstart;
+-	gint utcoffs;
+-
+-	/* Calculate zone Offset from BaseOffset */
+-	prop = icalcomponent_get_first_property (comp, ICAL_TZOFFSETTO_PROPERTY);
+-	if (prop) {
+-		utcoffs = -icalproperty_get_tzoffsetto (prop) / 60;
+-		utcoffs -= baseoffs;
+-		snprintf (buffer, 16, "%d", utcoffs);
+-		e_ews_message_write_string_parameter (msg, "Bias", NULL, buffer);
+-	}
+-
+-	prop = icalcomponent_get_first_property (comp, ICAL_DTSTART_PROPERTY);
+-	if (prop) {
+-		dtstart = icalproperty_get_dtstart (prop);
+-		snprintf (buffer, 16, "%02d:%02d:%02d", dtstart.hour, dtstart.minute, dtstart.second);
+-		e_ews_message_write_string_parameter (msg, "Time", NULL, buffer);
+-	}
+-
+-	prop = icalcomponent_get_first_property (comp, ICAL_RRULE_PROPERTY);
+-	if (prop)
+-		ewscal_add_availability_rrule (msg, prop);
+-}
+-
+-void
+-ewscal_set_availability_timezone (ESoapMessage *msg,
+-                                  icaltimezone *icaltz)
+-{
+-	icalcomponent *comp;
+-	icalproperty *prop;
+-	icalcomponent *xstd, *xdaylight;
+-	gint std_utcoffs;
+-	gchar *offset;
+-
+-	if (!icaltz)
+-		return;
+-
+-	comp = icaltimezone_get_component (icaltz);
+-
+-	xstd = icalcomponent_get_first_component (comp, ICAL_XSTANDARD_COMPONENT);
+-	xdaylight = icalcomponent_get_first_component (comp, ICAL_XDAYLIGHT_COMPONENT);
+-
+-	/*TimeZone is the root element of GetUserAvailabilityRequest*/
+-	e_soap_message_start_element (msg, "TimeZone", NULL, NULL);
+-
+-	/* Fetch the timezone offsets for the standard (or only) zone.
+-	 * Negate it, because Exchange does it backwards */
+-	if (xstd) {
+-		prop = icalcomponent_get_first_property (xstd, ICAL_TZOFFSETTO_PROPERTY);
+-		std_utcoffs = -icalproperty_get_tzoffsetto (prop) / 60;
+-	} else
+-		std_utcoffs = 0;
+-
+-	/* This is the overall BaseOffset tag, which the Standard and Daylight
+-	 * zones are offset from. It's redundant, but Exchange always sets it
+-	 * to the offset of the Standard zone, and the Offset in the Standard
+-	 * zone to zero. So try to avoid problems by doing the same. */
+-	offset = g_strdup_printf ("%d", std_utcoffs);
+-	e_ews_message_write_string_parameter (msg, "Bias", NULL, offset);
+-	g_free (offset);
+-
+-	if (xdaylight) {
+-		/* Standard */
+-		e_soap_message_start_element (msg, "StandardTime", NULL, NULL);
+-		ewscal_add_availability_timechange (msg, xstd, std_utcoffs);
+-		e_soap_message_end_element (msg); /* "StandardTime" */
+-
+-		/* DayLight */
+-		e_soap_message_start_element (msg, "DaylightTime", NULL, NULL);
+-		ewscal_add_availability_timechange (msg, xdaylight, std_utcoffs);
+-		e_soap_message_end_element (msg); /* "DaylightTime" */
+-	} else
+-		/* Set default values*/
+-		ewscal_add_availability_default_timechange (msg);
+-
+-	e_soap_message_end_element (msg); /* "TimeZone" */
+-}
+-
+ void
+ ewscal_set_reccurence (ESoapMessage *msg,
+                        icalproperty *rrule,
+@@ -1321,8 +1149,8 @@ convert_vevent_calcomp_to_xml (ESoapMess
+ 			ical_location_end);
+ 	}
+ 
+-	ewscal_set_time (msg, "Start", &dtstart, FALSE);
+-	ewscal_set_time (msg, "End", &dtend, FALSE);
++	e_ews_cal_utils_set_time (msg, "Start", &dtstart, FALSE);
++	e_ews_cal_utils_set_time (msg, "End", &dtend, FALSE);
+ 	/* We have to do the time zone(s) later, or the server rejects the request */
+ 
+ 	/* All day event ? */
+@@ -1424,7 +1252,7 @@ convert_vtodo_calcomp_to_xml (ESoapMessa
+ 	prop = icalcomponent_get_first_property (icalcomp, ICAL_DUE_PROPERTY);
+ 	if (prop) {
+ 		dt = icalproperty_get_due (prop);
+-		ewscal_set_time (msg, "DueDate", &dt, TRUE);
++		e_ews_cal_utils_set_time (msg, "DueDate", &dt, TRUE);
+ 	}
+ 
+ 	prop = icalcomponent_get_first_property (icalcomp, ICAL_PERCENTCOMPLETE_PROPERTY);
+@@ -1437,7 +1265,7 @@ convert_vtodo_calcomp_to_xml (ESoapMessa
+ 	prop = icalcomponent_get_first_property (icalcomp, ICAL_DTSTART_PROPERTY);
+ 	if (prop) {
+ 		dt = icalproperty_get_dtstart (prop);
+-		ewscal_set_time (msg, "StartDate", &dt, TRUE);
++		e_ews_cal_utils_set_time (msg, "StartDate", &dt, TRUE);
+ 	}
+ 
+ 	prop = icalcomponent_get_first_property (icalcomp, ICAL_STATUS_PROPERTY);
+@@ -1751,13 +1579,13 @@ convert_vevent_component_to_updatexml (E
+ 
+ 	if (dt_start_changed) {
+ 		e_ews_message_start_set_item_field (msg, "Start", "calendar","CalendarItem");
+-		ewscal_set_time (msg, "Start", &dtstart, FALSE);
++		e_ews_cal_utils_set_time (msg, "Start", &dtstart, FALSE);
+ 		e_ews_message_end_set_item_field (msg);
+ 	}
+ 
+ 	if (dt_end_changed) {
+ 		e_ews_message_start_set_item_field (msg, "End", "calendar", "CalendarItem");
+-		ewscal_set_time (msg, "End", &dtend, FALSE);
++		e_ews_cal_utils_set_time (msg, "End", &dtend, FALSE);
+ 		e_ews_message_end_set_item_field (msg);
+ 	}
+ 
+@@ -1915,7 +1743,7 @@ convert_vtodo_component_to_updatexml (ES
+ 	if (prop) {
+ 		dt = icalproperty_get_due (prop);
+ 		e_ews_message_start_set_item_field (msg, "DueDate", "task", "Task");
+-		ewscal_set_time (msg, "DueDate", &dt, TRUE);
++		e_ews_cal_utils_set_time (msg, "DueDate", &dt, TRUE);
+ 		e_ews_message_end_set_item_field (msg);
+ 	} else {
+ 		e_ews_message_add_delete_item_field (msg, "DueDate", "task");
+@@ -1934,7 +1762,7 @@ convert_vtodo_component_to_updatexml (ES
+ 	if (prop) {
+ 		dt = icalproperty_get_dtstart (prop);
+ 		e_ews_message_start_set_item_field (msg, "StartDate", "task", "Task");
+-		ewscal_set_time (msg, "StartDate", &dt, TRUE);
++		e_ews_cal_utils_set_time (msg, "StartDate", &dt, TRUE);
+ 		e_ews_message_end_set_item_field (msg);
+ 	} else {
+ 		e_ews_message_add_delete_item_field (msg, "StartDate", "task");
+@@ -2100,49 +1928,6 @@ e_cal_backend_ews_clear_reminder_is_set
+ }
+ 
+ void
+-e_cal_backend_ews_prepare_free_busy_request (ESoapMessage *msg,
+-					     gpointer user_data)
+-{
+-	EwsCalendarConvertData *convert_data = user_data;
+-	GSList *addr;
+-	icaltimetype t_start, t_end;
+-	icaltimezone *utc_zone = icaltimezone_get_utc_timezone ();
+-
+-	ewscal_set_availability_timezone (msg, utc_zone);
+-
+-	e_soap_message_start_element (msg, "MailboxDataArray", "messages", NULL);
+-
+-	for (addr = convert_data->users; addr; addr = addr->next) {
+-		e_soap_message_start_element (msg, "MailboxData", NULL, NULL);
+-
+-		e_soap_message_start_element (msg, "Email", NULL, NULL);
+-		e_ews_message_write_string_parameter (msg, "Address", NULL, addr->data);
+-		e_soap_message_end_element (msg); /* "Email" */
+-
+-		e_ews_message_write_string_parameter (msg, "AttendeeType", NULL, "Required");
+-		e_ews_message_write_string_parameter (msg, "ExcludeConflicts", NULL, "false");
+-
+-		e_soap_message_end_element (msg); /* "MailboxData" */
+-	}
+-
+-	e_soap_message_end_element (msg); /* "MailboxDataArray" */
+-
+-	e_soap_message_start_element (msg, "FreeBusyViewOptions", NULL, NULL);
+-
+-	e_soap_message_start_element (msg, "TimeWindow", NULL, NULL);
+-	t_start = icaltime_from_timet_with_zone (convert_data->start, 0, utc_zone);
+-	t_end = icaltime_from_timet_with_zone (convert_data->end, 0, utc_zone);
+-	ewscal_set_time (msg, "StartTime", &t_start, FALSE);
+-	ewscal_set_time (msg, "EndTime", &t_end, FALSE);
+-	e_soap_message_end_element (msg); /* "TimeWindow" */
+-
+-	e_ews_message_write_string_parameter (msg, "MergedFreeBusyIntervalInMinutes", NULL, "60");
+-	e_ews_message_write_string_parameter (msg, "RequestedView", NULL, "DetailedMerged");
+-
+-	e_soap_message_end_element (msg); /* "FreeBusyViewOptions" */
+-}
+-
+-void
+ e_cal_backend_ews_prepare_set_free_busy_status (ESoapMessage *msg,
+ 						gpointer user_data)
+ {
+diff -up evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.h.free-busy-calendar evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.h
+--- evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.h.free-busy-calendar	2014-05-28 13:24:49.000000000 +0200
++++ evolution-ews-3.22.6/src/calendar/e-cal-backend-ews-utils.h	2017-05-24 15:38:44.189519188 +0200
+@@ -57,10 +57,8 @@ typedef struct {
+ const gchar *e_ews_collect_organizer (icalcomponent *comp);
+ void e_ews_collect_attendees (icalcomponent *comp, GSList **required, GSList **optional, GSList **resource);
+ 
+-void ewscal_set_time (ESoapMessage *msg, const gchar *name, icaltimetype *t, gboolean with_timezone);
+ void ewscal_set_timezone (ESoapMessage *msg, const gchar *name, EEwsCalendarTimeZoneDefinition *tzd);
+ void ewscal_set_meeting_timezone (ESoapMessage *msg, icaltimezone *icaltz);
+-void ewscal_set_availability_timezone (ESoapMessage *msg, icaltimezone *icaltz);
+ void ewscal_set_reccurence (ESoapMessage *msg, icalproperty *rrule, icaltimetype *dtstart);
+ void ewscal_set_reccurence_exceptions (ESoapMessage *msg, icalcomponent *comp);
+ void ewscal_get_attach_differences (const GSList *original, const GSList *modified, GSList **removed, GSList **added);
+@@ -77,7 +75,6 @@ void e_cal_backend_ews_unref_windows_zon
+ void e_cal_backend_ews_convert_calcomp_to_xml (ESoapMessage *msg, gpointer user_data);
+ void e_cal_backend_ews_convert_component_to_updatexml (ESoapMessage *msg, gpointer user_data);
+ void e_cal_backend_ews_clear_reminder_is_set (ESoapMessage *msg, gpointer user_data);
+-void e_cal_backend_ews_prepare_free_busy_request (ESoapMessage *msg, gpointer user_data);
+ void e_cal_backend_ews_prepare_set_free_busy_status (ESoapMessage *msg,gpointer user_data);
+ void e_cal_backend_ews_prepare_accept_item_request (ESoapMessage *msg, gpointer user_data);
+ 
+diff -up evolution-ews-3.22.6/src/configuration/e-ews-subscribe-foreign-folder.c.free-busy-calendar evolution-ews-3.22.6/src/configuration/e-ews-subscribe-foreign-folder.c
+--- evolution-ews-3.22.6/src/configuration/e-ews-subscribe-foreign-folder.c.free-busy-calendar	2014-11-19 19:06:36.000000000 +0100
++++ evolution-ews-3.22.6/src/configuration/e-ews-subscribe-foreign-folder.c	2017-05-24 15:38:44.190519183 +0200
+@@ -34,6 +34,8 @@
+ #include "camel/camel-ews-store-summary.h"
+ #include "camel/camel-ews-utils.h"
+ 
++#include "server/e-ews-calendar-utils.h"
++
+ #include "e-ews-config-utils.h"
+ #include "e-ews-search-user.h"
+ #include "e-ews-subscribe-foreign-folder.h"
+@@ -344,24 +346,53 @@ check_foreign_folder_thread (GObject *wi
+ 		return;
+ 	}
+ 
+-	fid.id = (gchar *) (cffd->use_foldername ? cffd->use_foldername : cffd->orig_foldername);
+-	fid.change_key = NULL;
+-	fid.is_distinguished_id = cffd->use_foldername != NULL;
+-
+-	if (!e_ews_connection_get_folder_info_sync (conn, G_PRIORITY_DEFAULT,
+-		cffd->email, &fid, &folder, cancellable, &local_error)) {
+-		if (g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_ITEMNOTFOUND) ||
+-		    g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND)) {
+-			g_clear_error (&local_error);
+-			local_error = g_error_new (
+-				EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND,
+-				_("Folder '%s' not found. Either it does not exist or you do not have permission to access it."),
+-				cffd->orig_foldername);
++	if (g_strcmp0 (cffd->use_foldername, "freebusy-calendar") == 0) {
++		EEWSFreeBusyData fbdata;
++		GSList *free_busy = NULL;
++		gboolean success;
++
++		fbdata.period_start = time (NULL);
++		fbdata.period_end = fbdata.period_start + (60 * 60);
++		fbdata.user_mails = g_slist_prepend (NULL, cffd->email);
++
++		success = e_ews_connection_get_free_busy_sync (conn, G_PRIORITY_DEFAULT,
++			e_ews_cal_utils_prepare_free_busy_request, &fbdata,
++			&free_busy, cancellable, perror);
++
++		g_slist_free_full (free_busy, (GDestroyNotify) icalcomponent_free);
++		g_slist_free (fbdata.user_mails);
++
++		if (!success) {
++			g_object_unref (conn);
++			return;
+ 		}
+ 
+-		g_propagate_error (perror, local_error);
+-		g_object_unref (conn);
+-		return;
++		folder = g_object_new (E_TYPE_EWS_FOLDER, NULL);
++		e_ews_folder_set_id (folder, e_ews_folder_id_new (cffd->use_foldername, NULL, FALSE));
++		/* Translators: This is used as a calendar name; it constructs "User Name - Availability" string shown in UI */
++		e_ews_folder_set_name (folder, _("Availability"));
++		e_ews_folder_set_folder_type (folder, E_EWS_FOLDER_TYPE_CALENDAR);
++		e_ews_folder_set_foreign_mail (folder, cffd->email);
++	} else {
++		fid.id = (gchar *) (cffd->use_foldername ? cffd->use_foldername : cffd->orig_foldername);
++		fid.change_key = NULL;
++		fid.is_distinguished_id = cffd->use_foldername != NULL;
++
++		if (!e_ews_connection_get_folder_info_sync (conn, G_PRIORITY_DEFAULT,
++			cffd->email, &fid, &folder, cancellable, &local_error)) {
++			if (g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_ITEMNOTFOUND) ||
++			    g_error_matches (local_error, EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND)) {
++				g_clear_error (&local_error);
++				local_error = g_error_new (
++					EWS_CONNECTION_ERROR, EWS_CONNECTION_ERROR_FOLDERNOTFOUND,
++					_("Folder '%s' not found. Either it does not exist or you do not have permission to access it."),
++					cffd->orig_foldername);
++			}
++
++			g_propagate_error (perror, local_error);
++			g_object_unref (conn);
++			return;
++		}
+ 	}
+ 
+ 	if (g_cancellable_set_error_if_cancelled (cancellable, perror)) {
+@@ -518,6 +549,8 @@ subscribe_foreign_response_cb (GObject *
+ 		use_foldername = g_strdup ("contacts");
+ 	} else if (g_strcmp0 (orig_foldername, _("Calendar")) == 0) {
+ 		use_foldername = g_strdup ("calendar");
++	} else if (g_strcmp0 (orig_foldername, _("Free/Busy as Calendar")) == 0) {
++		use_foldername = g_strdup ("freebusy-calendar");
+ 	} else if (g_strcmp0 (orig_foldername, _("Memos")) == 0) {
+ 		use_foldername = g_strdup ("notes");
+ 	} else if (g_strcmp0 (orig_foldername, _("Tasks")) == 0) {
+@@ -723,6 +756,7 @@ e_ews_subscribe_foreign_folder (GtkWindo
+ 	gtk_combo_box_text_append_text (combo_text, _("Inbox"));
+ 	gtk_combo_box_text_append_text (combo_text, _("Contacts"));
+ 	gtk_combo_box_text_append_text (combo_text, _("Calendar"));
++	gtk_combo_box_text_append_text (combo_text, _("Free/Busy as Calendar"));
+ 	gtk_combo_box_text_append_text (combo_text, _("Memos"));
+ 	gtk_combo_box_text_append_text (combo_text, _("Tasks"));
+ 	gtk_combo_box_set_active (GTK_COMBO_BOX (combo_text), 0);
+diff -up evolution-ews-3.22.6/src/server/e-ews-calendar-utils.c.free-busy-calendar evolution-ews-3.22.6/src/server/e-ews-calendar-utils.c
+--- evolution-ews-3.22.6/src/server/e-ews-calendar-utils.c.free-busy-calendar	2017-05-24 15:38:44.190519183 +0200
++++ evolution-ews-3.22.6/src/server/e-ews-calendar-utils.c	2017-05-24 15:38:44.190519183 +0200
+@@ -0,0 +1,260 @@
++/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*- */
++/*
++ * Copyright (C) 1999-2008 Novell, Inc. (www.novell.com)
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of version 2 of the GNU Lesser General Public
++ * License as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
++ * USA
++ */
++
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
++#include "e-ews-message.h"
++
++#include "e-ews-calendar-utils.h"
++
++static const gchar *
++number_to_weekday (gint num)
++{
++	static const gchar *days[] = {
++		"Sunday", "Monday", "Tuesday", "Wednesday",
++		"Thursday", "Friday", "Saturday",
++		"Day", "Weekday", "WeekendDay"
++	};
++
++	return days[num - 1];
++}
++
++static void
++ewscal_add_availability_rrule (ESoapMessage *msg,
++                               icalproperty *prop)
++{
++	struct icalrecurrencetype recur = icalproperty_get_rrule (prop);
++	gchar buffer[16];
++	gint dayorder;
++
++	dayorder = icalrecurrencetype_day_position (recur.by_day[0]);
++	dayorder = dayorder % 5;
++	if (dayorder < 0)
++		dayorder += 5;
++	dayorder += 1;
++
++	/* expected value is 1..5, inclusive */
++	snprintf (buffer, 16, "%d", dayorder);
++	e_ews_message_write_string_parameter (msg, "DayOrder", NULL, buffer);
++
++	snprintf (buffer, 16, "%d", recur.by_month[0]);
++	e_ews_message_write_string_parameter (msg, "Month", NULL, buffer);
++
++	e_ews_message_write_string_parameter (msg, "DayOfWeek", NULL, number_to_weekday (icalrecurrencetype_day_day_of_week (recur.by_day[0])));
++}
++
++static void
++ewscal_add_availability_default_timechange (ESoapMessage *msg)
++{
++
++	e_soap_message_start_element (msg, "StandardTime", NULL, NULL);
++	e_ews_message_write_string_parameter (msg, "Bias", NULL, "0");
++	e_ews_message_write_string_parameter (msg, "Time", NULL, "00:00:00");
++	e_ews_message_write_string_parameter (msg, "DayOrder", NULL, "0");
++	e_ews_message_write_string_parameter (msg, "Month", NULL, "0");
++	e_ews_message_write_string_parameter (msg, "DayOfWeek", NULL, "Sunday");
++	e_soap_message_end_element (msg);
++
++	e_soap_message_start_element (msg, "DaylightTime", NULL, NULL);
++	e_ews_message_write_string_parameter (msg, "Bias", NULL, "0");
++	e_ews_message_write_string_parameter (msg, "Time", NULL, "00:00:00");
++	e_ews_message_write_string_parameter (msg, "DayOrder", NULL, "0");
++	e_ews_message_write_string_parameter (msg, "Month", NULL, "0");
++	e_ews_message_write_string_parameter (msg, "DayOfWeek", NULL, "Sunday");
++	e_soap_message_end_element (msg);
++}
++
++static void
++ewscal_add_availability_timechange (ESoapMessage *msg,
++                                    icalcomponent *comp,
++                                    gint baseoffs)
++{
++	gchar buffer[16];
++	icalproperty *prop;
++	struct icaltimetype dtstart;
++	gint utcoffs;
++
++	/* Calculate zone Offset from BaseOffset */
++	prop = icalcomponent_get_first_property (comp, ICAL_TZOFFSETTO_PROPERTY);
++	if (prop) {
++		utcoffs = -icalproperty_get_tzoffsetto (prop) / 60;
++		utcoffs -= baseoffs;
++		snprintf (buffer, 16, "%d", utcoffs);
++		e_ews_message_write_string_parameter (msg, "Bias", NULL, buffer);
++	}
++
++	prop = icalcomponent_get_first_property (comp, ICAL_DTSTART_PROPERTY);
++	if (prop) {
++		dtstart = icalproperty_get_dtstart (prop);
++		snprintf (buffer, 16, "%02d:%02d:%02d", dtstart.hour, dtstart.minute, dtstart.second);
++		e_ews_message_write_string_parameter (msg, "Time", NULL, buffer);
++	}
++
++	prop = icalcomponent_get_first_property (comp, ICAL_RRULE_PROPERTY);
++	if (prop)
++		ewscal_add_availability_rrule (msg, prop);
++}
++
++static void
++ewscal_set_availability_timezone (ESoapMessage *msg,
++                                  icaltimezone *icaltz)
++{
++	icalcomponent *comp;
++	icalproperty *prop;
++	icalcomponent *xstd, *xdaylight;
++	gint std_utcoffs;
++	gchar *offset;
++
++	if (!icaltz)
++		return;
++
++	comp = icaltimezone_get_component (icaltz);
++
++	xstd = icalcomponent_get_first_component (comp, ICAL_XSTANDARD_COMPONENT);
++	xdaylight = icalcomponent_get_first_component (comp, ICAL_XDAYLIGHT_COMPONENT);
++
++	/*TimeZone is the root element of GetUserAvailabilityRequest*/
++	e_soap_message_start_element (msg, "TimeZone", NULL, NULL);
++
++	/* Fetch the timezone offsets for the standard (or only) zone.
++	 * Negate it, because Exchange does it backwards */
++	if (xstd) {
++		prop = icalcomponent_get_first_property (xstd, ICAL_TZOFFSETTO_PROPERTY);
++		std_utcoffs = -icalproperty_get_tzoffsetto (prop) / 60;
++	} else
++		std_utcoffs = 0;
++
++	/* This is the overall BaseOffset tag, which the Standard and Daylight
++	 * zones are offset from. It's redundant, but Exchange always sets it
++	 * to the offset of the Standard zone, and the Offset in the Standard
++	 * zone to zero. So try to avoid problems by doing the same. */
++	offset = g_strdup_printf ("%d", std_utcoffs);
++	e_ews_message_write_string_parameter (msg, "Bias", NULL, offset);
++	g_free (offset);
++
++	if (xdaylight) {
++		/* Standard */
++		e_soap_message_start_element (msg, "StandardTime", NULL, NULL);
++		ewscal_add_availability_timechange (msg, xstd, std_utcoffs);
++		e_soap_message_end_element (msg); /* "StandardTime" */
++
++		/* DayLight */
++		e_soap_message_start_element (msg, "DaylightTime", NULL, NULL);
++		ewscal_add_availability_timechange (msg, xdaylight, std_utcoffs);
++		e_soap_message_end_element (msg); /* "DaylightTime" */
++	} else
++		/* Set default values*/
++		ewscal_add_availability_default_timechange (msg);
++
++	e_soap_message_end_element (msg); /* "TimeZone" */
++}
++
++void
++e_ews_cal_utils_prepare_free_busy_request (ESoapMessage *msg,
++					   gpointer user_data)
++{
++	const EEWSFreeBusyData *fbdata = user_data;
++	icaltimetype t_start, t_end;
++	icaltimezone *utc_zone = icaltimezone_get_utc_timezone ();
++	GSList *link;
++
++	g_return_if_fail (fbdata != NULL);
++
++	ewscal_set_availability_timezone (msg, utc_zone);
++
++	e_soap_message_start_element (msg, "MailboxDataArray", "messages", NULL);
++
++	for (link = (GSList *) fbdata->user_mails; link; link = g_slist_next (link)) {
++		const gchar *mail = link->data;
++
++		e_soap_message_start_element (msg, "MailboxData", NULL, NULL);
++
++		e_soap_message_start_element (msg, "Email", NULL, NULL);
++		e_ews_message_write_string_parameter (msg, "Address", NULL, mail);
++		e_soap_message_end_element (msg); /* "Email" */
++
++		e_ews_message_write_string_parameter (msg, "AttendeeType", NULL, "Required");
++		e_ews_message_write_string_parameter (msg, "ExcludeConflicts", NULL, "false");
++
++		e_soap_message_end_element (msg); /* "MailboxData" */
++	}
++
++	e_soap_message_end_element (msg); /* "MailboxDataArray" */
++
++	e_soap_message_start_element (msg, "FreeBusyViewOptions", NULL, NULL);
++
++	e_soap_message_start_element (msg, "TimeWindow", NULL, NULL);
++	t_start = icaltime_from_timet_with_zone (fbdata->period_start, 0, utc_zone);
++	t_end = icaltime_from_timet_with_zone (fbdata->period_end, 0, utc_zone);
++	e_ews_cal_utils_set_time (msg, "StartTime", &t_start, FALSE);
++	e_ews_cal_utils_set_time (msg, "EndTime", &t_end, FALSE);
++	e_soap_message_end_element (msg); /* "TimeWindow" */
++
++	e_ews_message_write_string_parameter (msg, "MergedFreeBusyIntervalInMinutes", NULL, "60");
++	e_ews_message_write_string_parameter (msg, "RequestedView", NULL, "DetailedMerged");
++
++	e_soap_message_end_element (msg); /* "FreeBusyViewOptions" */
++}
++
++void
++e_ews_cal_utils_set_time (ESoapMessage *msg,
++			  const gchar *name,
++			  icaltimetype *tt,
++			  gboolean with_timezone)
++{
++	gchar *str;
++	gchar *tz_ident = NULL;
++
++	g_return_if_fail (tt != NULL);
++
++	if (with_timezone) {
++		if (tt->is_utc || !tt->zone || tt->zone == icaltimezone_get_utc_timezone ()) {
++			tz_ident = g_strdup ("Z");
++		} else {
++			gint offset, is_daylight, hrs, mins;
++
++			offset = icaltimezone_get_utc_offset (
++				icaltimezone_get_utc_timezone (), tt, &is_daylight);
++
++			offset = offset * (-1);
++			hrs = offset / 60;
++			mins = offset % 60;
++
++			if (hrs < 0)
++				hrs *= -1;
++			if (mins < 0)
++				mins *= -1;
++
++			tz_ident = g_strdup_printf ("%s%02d:%02d", offset > 0 ? "+" : "-", hrs, mins);
++		}
++	}
++
++	str = g_strdup_printf (
++		"%04d-%02d-%02dT%02d:%02d:%02d%s",
++		tt->year, tt->month, tt->day,
++		tt->hour, tt->minute, tt->second,
++		tz_ident ? tz_ident : "");
++
++	e_ews_message_write_string_parameter (msg, name, NULL, str);
++
++	g_free (tz_ident);
++	g_free (str);
++}
+diff -up evolution-ews-3.22.6/src/server/e-ews-calendar-utils.h.free-busy-calendar evolution-ews-3.22.6/src/server/e-ews-calendar-utils.h
+--- evolution-ews-3.22.6/src/server/e-ews-calendar-utils.h.free-busy-calendar	2017-05-24 15:38:44.190519183 +0200
++++ evolution-ews-3.22.6/src/server/e-ews-calendar-utils.h	2017-05-24 15:38:44.190519183 +0200
+@@ -0,0 +1,46 @@
++/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*- */
++/*
++ * Copyright (C) 1999-2008 Novell, Inc. (www.novell.com)
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of version 2 of the GNU Lesser General Public
++ * License as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
++ * USA
++ */
++
++#ifndef E_EWS_CALENDAR_UTILS_H
++#define E_EWS_CALENDAR_UTILS_H
++
++#include <time.h>
++#include <libical/ical.h>
++
++#include "server/e-soap-message.h"
++
++G_BEGIN_DECLS
++
++typedef struct _EEWSFreeBusyData {
++	time_t period_start;
++	time_t period_end;
++	GSList *user_mails; /* gchar * */
++} EEWSFreeBusyData;
++
++void		e_ews_cal_utils_prepare_free_busy_request
++						(ESoapMessage *msg,
++						 gpointer user_data); /* EEWSFreeBusyData * */
++void		e_ews_cal_utils_set_time	(ESoapMessage *msg,
++						 const gchar *name,
++						 icaltimetype *tt,
++						 gboolean with_timezone);
++
++G_END_DECLS
++
++#endif /* E_EWS_CALENDAR_UTILS_H */
+diff -up evolution-ews-3.22.6/src/server/e-ews-connection.c.free-busy-calendar evolution-ews-3.22.6/src/server/e-ews-connection.c
+--- evolution-ews-3.22.6/src/server/e-ews-connection.c.free-busy-calendar	2017-05-24 15:38:44.183519217 +0200
++++ evolution-ews-3.22.6/src/server/e-ews-connection.c	2017-05-24 15:38:44.191519178 +0200
+@@ -7316,13 +7316,15 @@ ews_handle_free_busy_view (ESoapParamete
+ 	ESoapParameter *viewparam, *eventarray, *event_param, *subparam;
+ 	GTimeVal t_val;
+ 	const gchar *name;
+-	gchar *value, *new_val = NULL, *summary = NULL, *location = NULL;
++	gchar *value, *new_val = NULL, *summary = NULL, *location = NULL, *id = NULL;
+ 
+ 	viewparam = e_soap_parameter_get_first_child_by_name (param, "FreeBusyView");
+ 	if (!viewparam) return;
+ 	vfb = icalcomponent_new_vfreebusy ();
+ 	eventarray = e_soap_parameter_get_first_child_by_name (viewparam, "CalendarEventArray");
+-	for (event_param = e_soap_parameter_get_first_child (eventarray); event_param != NULL; event_param = e_soap_parameter_get_next_child (event_param), icalprop = NULL) {
++	for (event_param = eventarray ? e_soap_parameter_get_first_child (eventarray) : NULL;
++	     event_param != NULL;
++	     event_param = e_soap_parameter_get_next_child (event_param), icalprop = NULL) {
+ 		for (subparam = e_soap_parameter_get_first_child (event_param); subparam != NULL; subparam = e_soap_parameter_get_next_child (subparam)) {
+ 			name = e_soap_parameter_get_name (subparam);
+ 
+@@ -7379,6 +7381,10 @@ ews_handle_free_busy_view (ESoapParamete
+ 			} else if (!g_ascii_strcasecmp (name, "CalendarEventDetails")) {
+ 				ESoapParameter *dparam;
+ 
++				dparam = e_soap_parameter_get_first_child_by_name (subparam, "ID");
++				if (dparam)
++					id = e_soap_parameter_get_string_value (dparam);
++
+ 				dparam = e_soap_parameter_get_first_child_by_name (subparam, "Subject");
+ 				if (dparam)
+ 					summary = e_soap_parameter_get_string_value (dparam);
+@@ -7389,6 +7395,8 @@ ews_handle_free_busy_view (ESoapParamete
+ 			}
+ 		}
+ 		if (icalprop != NULL) {
++			if (id)
++				icalproperty_set_parameter_from_string (icalprop, "X-EWS-ID", id);
+ 			if (summary)
+ 				icalproperty_set_parameter_from_string (icalprop, "X-SUMMARY", summary);
+ 			if (location)
+@@ -7396,10 +7404,9 @@ ews_handle_free_busy_view (ESoapParamete
+ 			icalcomponent_add_property (vfb, icalprop);
+ 		}
+ 
+-		g_free (summary);
+-		g_free (location);
+-		summary = NULL;
+-		location = NULL;
++		g_clear_pointer (&summary, g_free);
++		g_clear_pointer (&location, g_free);
++		g_clear_pointer (&id, g_free);
+ 	}
+ 
+ 	async_data->items = g_slist_append (async_data->items, vfb);
+diff -up evolution-ews-3.22.6/src/server/e-ews-folder.c.free-busy-calendar evolution-ews-3.22.6/src/server/e-ews-folder.c
+--- evolution-ews-3.22.6/src/server/e-ews-folder.c.free-busy-calendar	2015-05-22 13:47:17.000000000 +0200
++++ evolution-ews-3.22.6/src/server/e-ews-folder.c	2017-05-24 15:38:44.192519174 +0200
+@@ -47,6 +47,7 @@ struct _EEwsFolderPrivate {
+ 	guint32 child_count;
+ 	guint64 size;
+ 	gboolean foreign;
++	gchar *foreign_mail;
+ };
+ 
+ static void
+@@ -70,14 +71,9 @@ e_ews_folder_finalize (GObject *object)
+ 	priv = folder->priv;
+ 
+ 	g_clear_error (&priv->error);
+-
+-	if (priv->name) {
+-		g_free (priv->name);
+-		priv->name = NULL;
+-	}
+-
+-	g_free (priv->escaped_name);
+-	priv->escaped_name = NULL;
++	g_clear_pointer (&priv->name, g_free);
++	g_clear_pointer (&priv->escaped_name, g_free);
++	g_clear_pointer (&priv->foreign_mail, g_free);
+ 
+ 	if (priv->fid) {
+ 		g_free (priv->fid->id);
+@@ -409,6 +405,16 @@ e_ews_folder_get_id (const EEwsFolder *f
+ 	return (const EwsFolderId *) folder->priv->fid;
+ }
+ 
++void
++e_ews_folder_set_id (EEwsFolder *folder,
++		     EwsFolderId *fid)
++{
++	g_return_if_fail (E_IS_EWS_FOLDER (folder));
++
++	e_ews_folder_id_free (folder->priv->fid);
++	folder->priv->fid = fid;
++}
++
+ const EwsFolderId *
+ e_ews_folder_get_parent_id (const EEwsFolder *folder)
+ {
+@@ -503,6 +509,24 @@ e_ews_folder_set_foreign (EEwsFolder *fo
+ 	folder->priv->foreign = is_foreign;
+ }
+ 
++const gchar *
++e_ews_folder_get_foreign_mail (const EEwsFolder *folder)
++{
++	g_return_val_if_fail (E_IS_EWS_FOLDER (folder), NULL);
++
++	return folder->priv->foreign_mail;
++}
++
++void
++e_ews_folder_set_foreign_mail (EEwsFolder *folder,
++			       const gchar *foreign_mail)
++{
++	g_return_if_fail (E_IS_EWS_FOLDER (folder));
++
++	g_free (folder->priv->foreign_mail);
++	folder->priv->foreign_mail = g_strdup (foreign_mail);
++}
++
+ /* escapes backslashes with \5C and forward slashes with \2F */
+ gchar *
+ e_ews_folder_utils_escape_name (const gchar *folder_name)
+@@ -678,6 +702,7 @@ e_ews_folder_utils_populate_esource (ESo
+ 			e_source_ews_folder_set_change_key (folder_ext, NULL);
+ 			e_source_ews_folder_set_foreign (folder_ext, e_ews_folder_get_foreign (folder));
+ 			e_source_ews_folder_set_foreign_subfolders (folder_ext, (flags & E_EWS_ESOURCE_FLAG_INCLUDE_SUBFOLDERS) != 0);
++			e_source_ews_folder_set_foreign_mail (folder_ext, e_ews_folder_get_foreign_mail (folder));
+ 			e_source_ews_folder_set_public (folder_ext, (flags & E_EWS_ESOURCE_FLAG_PUBLIC_FOLDER) != 0);
+ 
+ 			offline_ext = e_source_get_extension (source, E_SOURCE_EXTENSION_OFFLINE);
+diff -up evolution-ews-3.22.6/src/server/e-ews-folder.h.free-busy-calendar evolution-ews-3.22.6/src/server/e-ews-folder.h
+--- evolution-ews-3.22.6/src/server/e-ews-folder.h.free-busy-calendar	2014-11-19 19:06:36.000000000 +0100
++++ evolution-ews-3.22.6/src/server/e-ews-folder.h	2017-05-24 15:38:44.192519174 +0200
+@@ -69,6 +69,7 @@ const EwsFolderId *
+ 		e_ews_folder_get_parent_id (const EEwsFolder *folder);
+ const EwsFolderId *
+ 		e_ews_folder_get_id (const EEwsFolder *folder);
++void		e_ews_folder_set_id (EEwsFolder *folder, EwsFolderId *fid);
+ guint32		e_ews_folder_get_total_count (const EEwsFolder *folder);
+ guint32		e_ews_folder_get_unread_count (const EEwsFolder *folder);
+ guint32		e_ews_folder_get_child_count (const EEwsFolder *folder);
+@@ -79,6 +80,8 @@ EEwsFolderType	e_ews_folder_get_folder_t
+ void		e_ews_folder_set_folder_type (EEwsFolder *folder, EEwsFolderType folder_type);
+ gboolean	e_ews_folder_get_foreign (const EEwsFolder *folder);
+ void		e_ews_folder_set_foreign (EEwsFolder *folder, gboolean is_foreign);
++const gchar *	e_ews_folder_get_foreign_mail (const EEwsFolder *folder);
++void		e_ews_folder_set_foreign_mail (EEwsFolder *folder, const gchar *foreign_mail);
+ 
+ EwsFolderId *	e_ews_folder_id_new (const gchar *id,
+ 				     const gchar *change_key,
+diff -up evolution-ews-3.22.6/src/server/e-source-ews-folder.c.free-busy-calendar evolution-ews-3.22.6/src/server/e-source-ews-folder.c
+--- evolution-ews-3.22.6/src/server/e-source-ews-folder.c.free-busy-calendar	2015-09-21 11:59:31.000000000 +0200
++++ evolution-ews-3.22.6/src/server/e-source-ews-folder.c	2017-05-24 15:38:44.192519174 +0200
+@@ -31,7 +31,10 @@ struct _ESourceEwsFolderPrivate {
+ 	gchar *id;
+ 	gboolean foreign;
+ 	gboolean foreign_subfolders;
++	gchar *foreign_mail;
+ 	gboolean is_public;
++	guint freebusy_weeks_before;
++	guint freebusy_weeks_after;
+ };
+ 
+ enum {
+@@ -40,6 +43,9 @@ enum {
+ 	PROP_ID,
+ 	PROP_FOREIGN,
+ 	PROP_FOREIGN_SUBFOLDERS,
++	PROP_FOREIGN_MAIL,
++	PROP_FREEBUSY_WEEKS_BEFORE,
++	PROP_FREEBUSY_WEEKS_AFTER,
+ 	PROP_PUBLIC
+ };
+ 
+@@ -79,6 +85,24 @@ source_ews_folder_set_property (GObject
+ 				g_value_get_boolean (value));
+ 			return;
+ 
++		case PROP_FOREIGN_MAIL:
++			e_source_ews_folder_set_foreign_mail (
++				E_SOURCE_EWS_FOLDER (object),
++				g_value_get_string (value));
++			return;
++
++		case PROP_FREEBUSY_WEEKS_BEFORE:
++			e_source_ews_folder_set_freebusy_weeks_before (
++				E_SOURCE_EWS_FOLDER (object),
++				g_value_get_uint (value));
++			return;
++
++		case PROP_FREEBUSY_WEEKS_AFTER:
++			e_source_ews_folder_set_freebusy_weeks_after (
++				E_SOURCE_EWS_FOLDER (object),
++				g_value_get_uint (value));
++			return;
++
+ 		case PROP_PUBLIC:
+ 			e_source_ews_folder_set_public (
+ 				E_SOURCE_EWS_FOLDER (object),
+@@ -124,6 +148,27 @@ source_ews_folder_get_property (GObject
+ 				E_SOURCE_EWS_FOLDER (object)));
+ 			return;
+ 
++		case PROP_FOREIGN_MAIL:
++			g_value_take_string (
++				value,
++				e_source_ews_folder_dup_foreign_mail (
++				E_SOURCE_EWS_FOLDER (object)));
++			return;
++
++		case PROP_FREEBUSY_WEEKS_BEFORE:
++			g_value_set_uint (
++				value,
++				e_source_ews_folder_get_freebusy_weeks_before (
++				E_SOURCE_EWS_FOLDER (object)));
++			return;
++
++		case PROP_FREEBUSY_WEEKS_AFTER:
++			g_value_set_uint (
++				value,
++				e_source_ews_folder_get_freebusy_weeks_after (
++				E_SOURCE_EWS_FOLDER (object)));
++			return;
++
+ 		case PROP_PUBLIC:
+ 			g_value_set_boolean (
+ 				value,
+@@ -144,6 +189,7 @@ source_ews_folder_finalize (GObject *obj
+ 
+ 	g_free (priv->change_key);
+ 	g_free (priv->id);
++	g_free (priv->foreign_mail);
+ 
+ 	/* Chain up to parent's finalize() method. */
+ 	G_OBJECT_CLASS (e_source_ews_folder_parent_class)->finalize (object);
+@@ -220,6 +266,45 @@ e_source_ews_folder_class_init (ESourceE
+ 
+ 	g_object_class_install_property (
+ 		object_class,
++		PROP_FOREIGN_MAIL,
++		g_param_spec_string (
++			"foreign-mail",
++			"ForeignMail",
++			"Other user's mail address",
++			NULL,
++			G_PARAM_READWRITE |
++			G_PARAM_CONSTRUCT |
++			G_PARAM_STATIC_STRINGS |
++			E_SOURCE_PARAM_SETTING));
++
++	g_object_class_install_property (
++		object_class,
++		PROP_FREEBUSY_WEEKS_BEFORE,
++		g_param_spec_uint (
++			"freebusy-weeks-before",
++			"FreeBusyWeeksBefore",
++			"How many weeks to read Free/Busy before today",
++			0, 5, 1,
++			G_PARAM_READWRITE |
++			G_PARAM_CONSTRUCT |
++			G_PARAM_STATIC_STRINGS |
++			E_SOURCE_PARAM_SETTING));
++
++	g_object_class_install_property (
++		object_class,
++		PROP_FREEBUSY_WEEKS_AFTER,
++		g_param_spec_uint (
++			"freebusy-weeks-after",
++			"FreeBusyWeeksAfter",
++			"How many weeks to read Free/Busy after today",
++			1, 54, 5,
++			G_PARAM_READWRITE |
++			G_PARAM_CONSTRUCT |
++			G_PARAM_STATIC_STRINGS |
++			E_SOURCE_PARAM_SETTING));
++
++	g_object_class_install_property (
++		object_class,
+ 		PROP_PUBLIC,
+ 		g_param_spec_boolean (
+ 			"public",
+@@ -402,6 +487,97 @@ e_source_ews_folder_set_foreign_subfolde
+ 	g_object_notify (G_OBJECT (extension), "foreign-subfolders");
+ }
+ 
++const gchar *
++e_source_ews_folder_get_foreign_mail (ESourceEwsFolder *extension)
++{
++	g_return_val_if_fail (E_IS_SOURCE_EWS_FOLDER (extension), NULL);
++
++	return extension->priv->foreign_mail;
++}
++
++gchar *
++e_source_ews_folder_dup_foreign_mail (ESourceEwsFolder *extension)
++{
++	const gchar *protected;
++	gchar *duplicate;
++
++	g_return_val_if_fail (E_IS_SOURCE_EWS_FOLDER (extension), NULL);
++
++	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
++
++	protected = e_source_ews_folder_get_foreign_mail (extension);
++	duplicate = g_strdup (protected);
++
++	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
++
++	return duplicate;
++}
++
++void
++e_source_ews_folder_set_foreign_mail (ESourceEwsFolder *extension,
++				      const gchar *foreign_mail)
++{
++	g_return_if_fail (E_IS_SOURCE_EWS_FOLDER (extension));
++
++	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
++
++	if (g_strcmp0 (extension->priv->foreign_mail, foreign_mail) == 0) {
++		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
++		return;
++	}
++
++	g_free (extension->priv->foreign_mail);
++	extension->priv->foreign_mail = g_strdup (foreign_mail);
++
++	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
++
++	g_object_notify (G_OBJECT (extension), "foreign-mail");
++}
++
++guint
++e_source_ews_folder_get_freebusy_weeks_before (ESourceEwsFolder *extension)
++{
++	g_return_val_if_fail (E_IS_SOURCE_EWS_FOLDER (extension), 0);
++
++	return extension->priv->freebusy_weeks_before;
++}
++
++void
++e_source_ews_folder_set_freebusy_weeks_before (ESourceEwsFolder *extension,
++					       guint freebusy_weeks_before)
++{
++	g_return_if_fail (E_IS_SOURCE_EWS_FOLDER (extension));
++
++	if (extension->priv->freebusy_weeks_before == freebusy_weeks_before)
++		return;
++
++	extension->priv->freebusy_weeks_before = freebusy_weeks_before;
++
++	g_object_notify (G_OBJECT (extension), "freebusy-weeks-before");
++}
++
++guint
++e_source_ews_folder_get_freebusy_weeks_after (ESourceEwsFolder *extension)
++{
++	g_return_val_if_fail (E_IS_SOURCE_EWS_FOLDER (extension), 0);
++
++	return extension->priv->freebusy_weeks_after;
++}
++
++void
++e_source_ews_folder_set_freebusy_weeks_after (ESourceEwsFolder *extension,
++					      guint freebusy_weeks_after)
++{
++	g_return_if_fail (E_IS_SOURCE_EWS_FOLDER (extension));
++
++	if (extension->priv->freebusy_weeks_after == freebusy_weeks_after)
++		return;
++
++	extension->priv->freebusy_weeks_after = freebusy_weeks_after;
++
++	g_object_notify (G_OBJECT (extension), "freebusy-weeks-after");
++}
++
+ gboolean
+ e_source_ews_folder_get_public (ESourceEwsFolder *extension)
+ {
+diff -up evolution-ews-3.22.6/src/server/e-source-ews-folder.h.free-busy-calendar evolution-ews-3.22.6/src/server/e-source-ews-folder.h
+--- evolution-ews-3.22.6/src/server/e-source-ews-folder.h.free-busy-calendar	2014-03-24 10:28:36.000000000 +0100
++++ evolution-ews-3.22.6/src/server/e-source-ews-folder.h	2017-05-24 15:38:44.192519174 +0200
+@@ -84,6 +84,23 @@ gboolean	e_source_ews_folder_get_foreign
+ void		e_source_ews_folder_set_foreign_subfolders
+ 						(ESourceEwsFolder *extension,
+ 						 gboolean foreign_subfolders);
++const gchar *	e_source_ews_folder_get_foreign_mail
++						(ESourceEwsFolder *extension);
++gchar *		e_source_ews_folder_dup_foreign_mail
++						(ESourceEwsFolder *extension);
++void		e_source_ews_folder_set_foreign_mail
++						(ESourceEwsFolder *extension,
++						 const gchar *foreign_mail);
++guint		e_source_ews_folder_get_freebusy_weeks_before
++						(ESourceEwsFolder *extension);
++void		e_source_ews_folder_set_freebusy_weeks_before
++						(ESourceEwsFolder *extension,
++						 guint freebusy_weeks_before);
++guint		e_source_ews_folder_get_freebusy_weeks_after
++						(ESourceEwsFolder *extension);
++void		e_source_ews_folder_set_freebusy_weeks_after
++						(ESourceEwsFolder *extension,
++						 guint freebusy_weeks_after);
+ gboolean	e_source_ews_folder_get_public	(ESourceEwsFolder *extension);
+ void		e_source_ews_folder_set_public	(ESourceEwsFolder *extension,
+ 						 gboolean is_public);
+diff -up evolution-ews-3.22.6/src/server/Makefile.am.free-busy-calendar evolution-ews-3.22.6/src/server/Makefile.am
+--- evolution-ews-3.22.6/src/server/Makefile.am.free-busy-calendar	2016-09-26 23:54:19.000000000 +0200
++++ evolution-ews-3.22.6/src/server/Makefile.am	2017-05-24 15:38:44.190519183 +0200
+@@ -41,6 +41,8 @@ libeews_1_2_la_SOURCES = \
+ 	camel-ews-settings.c \
+ 	ews-errors.h \
+ 	ews-errors.c \
++	e-ews-calendar-utils.c \
++	e-ews-calendar-utils.h \
+ 	e-ews-connection.c \
+ 	e-ews-connection.h \
+ 	e-ews-connection-utils.c \

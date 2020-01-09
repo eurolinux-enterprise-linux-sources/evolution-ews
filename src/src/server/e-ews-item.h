@@ -84,11 +84,6 @@ typedef struct {
 } EwsMailbox;
 
 typedef struct {
-	gchar *display_name;
-	GHashTable *email_addresses;
-} EwsResolveContact;
-
-typedef struct {
 	EwsMailbox *mailbox;
 	gchar *attendeetype;
 	gchar *responsetype;
@@ -217,9 +212,6 @@ EwsMailbox *
 		e_ews_item_mailbox_from_soap_param
 						(ESoapParameter *param);
 void		e_ews_mailbox_free		(EwsMailbox *mailbox);
-EwsResolveContact *
-		e_ews_item_resolve_contact_from_soap_param (ESoapParameter *param);
-void		e_ews_free_resolve_contact	(/*EwsResolveContact * */ gpointer rc);
 
 const GSList *	e_ews_item_get_modified_occurrences
 						(EEwsItem *item);
@@ -267,6 +259,7 @@ e_ews_item_ical_dump (EEwsItem *item);
 EEwsAttachmentInfo *
 e_ews_item_dump_mime_content (EEwsItem *item, const gchar *cache);
 
+const gchar *	e_ews_item_get_my_response_type	(EEwsItem *item);
 const GSList *	e_ews_item_get_attendees	(EEwsItem *item);
 
 const EwsId *	e_ews_item_get_calendar_item_accept_id
@@ -307,6 +300,8 @@ void		e_ews_attachment_info_set_uri	(EEwsAttachmentInfo *info,
 const gchar *	e_ews_item_get_fileas		(EEwsItem *item);
 const EwsCompleteName *
 		e_ews_item_get_complete_name	(EEwsItem *item);
+const gchar *	e_ews_item_get_display_name	(EEwsItem *item);
+GHashTable *	e_ews_item_get_email_addresses	(EEwsItem *item);
 const gchar *	e_ews_item_get_email_address	(EEwsItem *item, const gchar *type);
 const EwsAddress *
 		e_ews_item_get_physical_address	(EEwsItem *item, const gchar *type);
@@ -328,6 +323,8 @@ const gchar *	e_ews_item_get_profession	(EEwsItem *item);
 const gchar *	e_ews_item_get_spouse_name	(EEwsItem *item);
 const gchar *	e_ews_item_get_culture		(EEwsItem *item);
 const gchar *	e_ews_item_get_surname		(EEwsItem *item);
+const gchar *	e_ews_item_get_givenname	(EEwsItem *item);
+const gchar *	e_ews_item_get_middlename	(EEwsItem *item);
 const gchar *	e_ews_item_get_notes		(EEwsItem *item);
 
 /*Task fields*/

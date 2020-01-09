@@ -13,6 +13,7 @@ endif
 libebookbackendews_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-DG_LOG_DOMAIN=\"libebookbackend\" \
+	-DBACKENDDIR="\"$(ebook_backenddir)\"" \
 	-DEXCHANGE_EWS_LOCALEDIR=\"$(localedir)\" \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/src \
@@ -26,6 +27,7 @@ libebookbackendews_la_CPPFLAGS = \
 	$(EVOLUTION_ADDRESSBOOK_CFLAGS) \
 	$(SQLITE3_CFLAGS) \
 	$(SOUP_CFLAGS) \
+	$(CODE_COVERAGE_CFLAGS) \
 	$(NULL)
 
 libebookbackendews_la_SOURCES = \
@@ -55,9 +57,11 @@ libebookbackendews_la_LIBADD = \
 	$(NULL)
 
 libebookbackendews_la_LDFLAGS = \
-	-module -avoid-version $(NO_UNDEFINED)
+	-module -avoid-version $(NO_UNDEFINED) $(CODE_COVERAGE_LDFLAGS)
 
+if HAVE_MSPACK
 noinst_PROGRAMS = gal-lzx-decompress-test oab-decode-test
+endif
 
 oab_decode_test_CPPFLAGS = \
 	$(AM_CPPFLAGS) \

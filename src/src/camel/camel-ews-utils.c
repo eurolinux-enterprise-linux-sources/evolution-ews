@@ -190,7 +190,7 @@ sync_updated_folders (CamelEwsStore *store,
 		}
 
 		pfid = e_ews_folder_get_parent_id (ews_folder);
-		display_name = g_strdup (e_ews_folder_get_name (ews_folder));
+		display_name = g_strdup (e_ews_folder_get_escaped_name (ews_folder));
 
 		/* If the folder is moved or renamed (which are separate
 		 * operations in Exchange, unfortunately, then the name
@@ -265,7 +265,7 @@ add_folder_to_summary (CamelEwsStore *store,
 
 	fid = e_ews_folder_get_id (folder);
 	pfid = e_ews_folder_get_parent_id (folder);
-	dname = e_ews_folder_get_name (folder);
+	dname = e_ews_folder_get_escaped_name (folder);
 	total = e_ews_folder_get_total_count (folder);
 	unread = e_ews_folder_get_unread_count (folder);
 	ftype = e_ews_folder_get_folder_type (folder);
@@ -344,17 +344,15 @@ ews_utils_sync_folders (CamelEwsStore *ews_store,
 
 void
 camel_ews_utils_sync_deleted_items (CamelEwsFolder *ews_folder,
-                                    GSList *items_deleted)
+                                    GSList *items_deleted,
+				    CamelFolderChangeInfo *change_info)
 {
 	CamelStore *store;
 	CamelFolder *folder;
 	const gchar *full_name;
-	CamelFolderChangeInfo *ci;
 	CamelEwsStore *ews_store;
 	GSList *l;
 	GList *items_deleted_list = NULL;
-
-	ci = camel_folder_change_info_new ();
 
 	folder = CAMEL_FOLDER (ews_folder);
 	full_name = camel_folder_get_full_name (folder);
@@ -369,7 +367,7 @@ camel_ews_utils_sync_deleted_items (CamelEwsFolder *ews_folder,
 			items_deleted_list, (gpointer) id);
 
 		camel_folder_summary_remove_uid (folder->summary, id);
-		camel_folder_change_info_remove_uid (ci, id);
+		camel_folder_change_info_remove_uid (change_info, id);
 	}
 
 	items_deleted_list = g_list_reverse (items_deleted_list);
@@ -377,13 +375,6 @@ camel_ews_utils_sync_deleted_items (CamelEwsFolder *ews_folder,
 		CAMEL_STORE (ews_store)->cdb_w,
 		full_name, items_deleted_list, NULL);
 	g_list_free (items_deleted_list);
-
-	if (camel_folder_change_info_changed (ci)) {
-		camel_folder_summary_touch (folder->summary);
-		camel_folder_summary_save_to_db (folder->summary, NULL);
-		camel_folder_changed (folder, ci);
-	}
-	camel_folder_change_info_free (ci);
 
 	g_slist_foreach (items_deleted, (GFunc) g_free, NULL);
 	g_slist_free (items_deleted);
@@ -431,15 +422,18 @@ ews_utils_is_system_user_flag (const gchar *name)
 		g_str_equal (name, "$has-cal");
 }
 
-void
-ews_utils_replace_server_user_flags (ESoapMessage *msg,
-                                     CamelEwsMessageInfo *mi)
+/* free with g_slist_free_full (flags, g_free);
+   the lists' members are values for the String xml element. */
+GSList *
+ews_utils_gather_server_user_flags (ESoapMessage *msg,
+				    CamelEwsMessageInfo *mi)
 {
+	GSList *user_flags = NULL;
 	const CamelFlag *flag;
 
 	/* transfer camel flags to become the categories as an XML
 	 * array of strings */
-	for (flag = camel_message_info_user_flags (&mi->info); flag;
+	for (flag = camel_message_info_get_user_flags (&mi->info); flag;
 	     flag = flag->next) {
 		const gchar *n = ews_utils_rename_label (flag->name, 0);
 		if (*n == '\0')
@@ -450,8 +444,10 @@ ews_utils_replace_server_user_flags (ESoapMessage *msg,
 		if (ews_utils_is_system_user_flag (n))
 			continue;
 
-		e_ews_message_write_string_parameter (msg, "String", NULL, n);
+		user_flags = g_slist_prepend (user_flags, g_strdup (n));
 	}
+
+	return g_slist_reverse (user_flags);
 }
 
 static void
@@ -463,7 +459,7 @@ ews_utils_merge_server_user_flags (EEwsItem *item,
 	const CamelFlag *flag;
 
 	/* transfer camel flags to a list */
-	for (flag = camel_message_info_user_flags (&mi->info); flag;
+	for (flag = camel_message_info_get_user_flags (&mi->info); flag;
 	     flag = flag->next) {
 		if (!ews_utils_is_system_user_flag (flag->name))
 			list = g_slist_prepend (list, (gchar *) flag->name);
@@ -606,7 +602,7 @@ ews_set_threading_data (CamelEwsMessageInfo *mi,
 	const gchar *references, *inreplyto;
 	gint count = 0;
 	const gchar *message_id;
-	struct _camel_header_references *refs, *irt, *scan;
+	GSList *refs, *irt, *scan;
 	guint8 *digest;
 	gchar *msgid;
 
@@ -628,15 +624,14 @@ ews_set_threading_data (CamelEwsMessageInfo *mi,
 
 	/* Prepend In-Reply-To: contents to References: for summary info */
 	inreplyto = e_ews_item_get_in_replyto (item);
-	irt = camel_header_references_inreplyto_decode (inreplyto);
+	irt = camel_header_references_decode (inreplyto);
 	if (irt) {
-		irt->next = refs;
-		refs = irt;
+		refs = g_slist_concat (irt, refs);
 	}
 	if (!refs)
 		return;
 
-	count = camel_header_references_list_size (&refs);
+	count = g_slist_length (refs);
 	g_free (mi->info.references);
 	mi->info.references = NULL;
 	mi->info.references = g_malloc (
@@ -646,18 +641,18 @@ ews_set_threading_data (CamelEwsMessageInfo *mi,
 	count = 0;
 
 	while (scan) {
-		digest = get_md5_digest ((const guchar *) scan->id);
+		digest = get_md5_digest ((const guchar *) scan->data);
 		memcpy (
 			mi->info.references->references[count].id.hash,
 			digest, sizeof (mi->info.message_id.id.hash));
 		g_free (digest);
 
 		count++;
-		scan = scan->next;
+		scan = g_slist_next (scan);
 	}
 
 	mi->info.references->size = count;
-	camel_header_references_list_clear (&refs);
+	g_slist_free_full (refs, g_free);
 }
 
 static gboolean
@@ -695,7 +690,7 @@ camel_ews_utils_update_follow_up_flags (EEwsItem *item,
 
 	if (flag_status == 1) {
 		/* complete */
-		if (!camel_message_info_user_tag (info, "follow-up"))
+		if (!camel_message_info_get_user_tag (info, "follow-up"))
 			changed = camel_message_info_set_user_tag (info, "follow-up", followup_name ? followup_name : "follow-up") || changed;
 		if (completed_tt != (time_t) 0) {
 			gchar *text = camel_header_format_date (completed_tt, 0);
@@ -743,13 +738,12 @@ camel_ews_utils_update_read_receipt_flags (EEwsItem *item,
 
 void
 camel_ews_utils_sync_updated_items (CamelEwsFolder *ews_folder,
-                                    GSList *items_updated)
+                                    GSList *items_updated,
+				    CamelFolderChangeInfo *change_info)
 {
 	CamelFolder *folder;
-	CamelFolderChangeInfo *ci;
 	GSList *l;
 
-	ci = camel_folder_change_info_new ();
 	folder = CAMEL_FOLDER (ews_folder);
 
 	for (l = items_updated; l != NULL; l = g_slist_next (l)) {
@@ -786,7 +780,7 @@ camel_ews_utils_sync_updated_items (CamelEwsFolder *ews_folder,
 			changed = camel_ews_utils_update_read_receipt_flags (item, (CamelMessageInfo *) mi, server_flags, FALSE) || changed;
 
 			if (changed)
-				camel_folder_change_info_change_uid (ci, mi->info.uid);
+				camel_folder_change_info_change_uid (change_info, mi->info.uid);
 
 			g_free (mi->change_key);
 			mi->change_key = g_strdup (id->change_key);
@@ -804,12 +798,6 @@ camel_ews_utils_sync_updated_items (CamelEwsFolder *ews_folder,
 		g_object_unref (item);
 	}
 
-	if (camel_folder_change_info_changed (ci)) {
-		camel_folder_summary_touch (folder->summary);
-		camel_folder_summary_save_to_db (folder->summary, NULL);
-		camel_folder_changed (CAMEL_FOLDER (ews_folder), ci);
-	}
-	camel_folder_change_info_free (ci);
 	g_slist_free (items_updated);
 }
 
@@ -817,16 +805,15 @@ void
 camel_ews_utils_sync_created_items (CamelEwsFolder *ews_folder,
                                     EEwsConnection *cnc,
                                     GSList *items_created,
+				    CamelFolderChangeInfo *change_info,
                                     GCancellable *cancellable)
 {
 	CamelFolder *folder;
-	CamelFolderChangeInfo *ci;
 	GSList *l;
 
 	if (!items_created)
 		return;
 
-	ci = camel_folder_change_info_new ();
 	folder = CAMEL_FOLDER (ews_folder);
 
 	for (l = items_created; l != NULL; l = g_slist_next (l)) {
@@ -955,18 +942,12 @@ camel_ews_utils_sync_created_items (CamelEwsFolder *ews_folder,
 		*/
 		mi->info.flags &= ~CAMEL_MESSAGE_FOLDER_FLAGGED;
 
-		camel_folder_change_info_add_uid (ci, id->id);
-		camel_folder_change_info_recent_uid (ci, id->id);
+		camel_folder_change_info_add_uid (change_info, id->id);
+		camel_folder_change_info_recent_uid (change_info, id->id);
 
 		g_object_unref (item);
 	}
 
-	if (camel_folder_change_info_changed (ci)) {
-		camel_folder_summary_touch (folder->summary);
-		camel_folder_summary_save_to_db (folder->summary, NULL);
-		camel_folder_changed (CAMEL_FOLDER (ews_folder), ci);
-	}
-	camel_folder_change_info_free (ci);
 	g_slist_free (items_created);
 }
 
@@ -1006,9 +987,9 @@ ews_utils_update_followup_flags (ESoapMessage *msg,
 	g_return_if_fail (msg != NULL);
 	g_return_if_fail (mi != NULL);
 
-	followup = camel_message_info_user_tag (mi, "follow-up");
-	completed = camel_message_info_user_tag (mi, "completed-on");
-	dueby = camel_message_info_user_tag (mi, "due-by");
+	followup = camel_message_info_get_user_tag (mi, "follow-up");
+	completed = camel_message_info_get_user_tag (mi, "completed-on");
+	dueby = camel_message_info_get_user_tag (mi, "due-by");
 
 	if (followup && !*followup)
 		followup = NULL;
@@ -1019,12 +1000,12 @@ ews_utils_update_followup_flags (ESoapMessage *msg,
 	if (dueby && *dueby)
 		dueby_tt = camel_header_decode_date (dueby, NULL);
 
-	/* PidTagFlagStatus */
-	e_ews_message_add_set_item_field_extended_tag_int (msg, NULL, "Message", 0x1090,
-		followup ? (completed_tt != (time_t) 0 ? 0x01 /* followupComplete */: 0x02 /* followupFlagged */) : 0x0);
-
 	if (followup) {
 		time_t now_tt = time (NULL);
+
+		/* PidTagFlagStatus */
+		e_ews_message_add_set_item_field_extended_tag_int (msg, NULL, "Message", 0x1090,
+			completed_tt != (time_t) 0 ? 0x01 /* followupComplete */: 0x02 /* followupFlagged */);
 
 		/* PidLidFlagRequest */
 		e_ews_message_add_set_item_field_extended_distinguished_tag_string (msg, NULL, "Message", "Common", 0x8530, followup);

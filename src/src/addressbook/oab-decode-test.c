@@ -65,7 +65,7 @@ main (gint argc,
 		return -1;
 	}
 
-	summary = e_book_sqlite_new (argv[2], NULL, &err);
+	summary = e_book_sqlite_new (argv[2], NULL, NULL, &err);
 	if (err) {
 		printf("err: %s\n", err->message);
 		exit(1);

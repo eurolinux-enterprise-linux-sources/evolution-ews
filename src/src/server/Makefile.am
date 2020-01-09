@@ -27,11 +27,13 @@ libeews_1_2_la_CPPFLAGS = \
 	-I$(top_srcdir)/src \
 	-I$(top_builddir) \
 	-I$(top_builddir)/src \
+	$(CAMEL_CFLAGS) \
 	$(SOUP_CFLAGS) \
 	$(LIBECAL_CFLAGS) \
 	$(LIBICAL_CFLAGS) \
 	$(LIBEDATASERVER_CFLAGS) \
 	$(DEBUG_CFLAGS) \
+	$(CODE_COVERAGE_CFLAGS) \
 	$(NULL)
 
 libeews_1_2_la_SOURCES = \
@@ -64,6 +66,7 @@ libeews_1_2_la_SOURCES = \
 	$(NULL)
 
 libeews_1_2_la_LIBADD = \
+	$(CAMEL_LIBS) \
 	$(SOUP_LIBS) \
 	$(LIBECAL_LIBS) \
 	$(LIBICAL_LIBS) \
@@ -71,7 +74,7 @@ libeews_1_2_la_LIBADD = \
 	$(SOCKET_LIBS) \
 	$(NULL)
 
-libeews_1_2_la_LDFLAGS = $(NO_UNDEFINED)
+libeews_1_2_la_LDFLAGS = $(NO_UNDEFINED) $(CODE_COVERAGE_LDFLAGS)
 
 libeewsincludedir = $(privincludedir)/ews
 

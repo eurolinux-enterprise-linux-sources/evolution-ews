@@ -528,9 +528,13 @@ update_permission_dialog_by_level_combo (GObject *dialog)
 	    (!widgets->read_fb_time_radio && ii >= G_N_ELEMENTS (predefined_levels) - 3))
 		return;
 
-	rights = folder_permissions_dialog_to_rights (dialog);
-	rights = predefined_levels[ii].rights | (rights & (E_EWS_PERMISSION_BIT_FREE_BUSY_DETAILED |
-		E_EWS_PERMISSION_BIT_FREE_BUSY_SIMPLE));
+	if (!predefined_levels[ii].rights) {
+		rights = predefined_levels[ii].rights;
+	} else {
+		rights = folder_permissions_dialog_to_rights (dialog);
+		rights = predefined_levels[ii].rights | (rights & (E_EWS_PERMISSION_BIT_FREE_BUSY_DETAILED |
+			E_EWS_PERMISSION_BIT_FREE_BUSY_SIMPLE));
+	}
 
 	widgets->updating++;
 	update_folder_permissions_by_rights (dialog, rights);
@@ -580,7 +584,7 @@ add_button_clicked_cb (GObject *dialog)
 					COL_E_EWS_PERMISSION_USER_TYPE, &ut,
 					-1);
 
-				if (ut == E_EWS_PERMISSION_USER_TYPE_REGULAR && perm && g_strcmp0 (perm->primary_smtp, primary_smtp)) {
+				if (ut == E_EWS_PERMISSION_USER_TYPE_REGULAR && perm && g_strcmp0 (perm->primary_smtp, primary_smtp) == 0) {
 					gtk_tree_selection_select_iter (selection, &iter);
 					found = TRUE;
 					break;
@@ -689,9 +693,9 @@ read_folder_permissions_thread (GObject *dialog,
 	g_return_if_fail (widgets->folder_id != NULL);
 
 	widgets->conn = e_ews_config_utils_open_connection_for (
-		widgets->registry,
 		widgets->source,
 		widgets->ews_settings,
+		NULL, NULL, NULL,
 		cancellable,
 		perror);
 

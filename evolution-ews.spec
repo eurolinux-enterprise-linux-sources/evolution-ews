@@ -1,38 +1,38 @@
-%global evo_base_version 3.12
-%global libmspack_version 0.4
+%global evo_base_version 3.22
+%global libmspack_version 0.5-0.5
+%global with_libmspack 1
 
 Name: evolution-ews
-Version: 3.12.11
-Release: 9%{?dist}
+Version: 3.22.6
+Release: 6%{?dist}
 Group: Applications/Productivity
 Summary: Evolution extension for Exchange Web Services
 License: LGPLv2
 URL: https://wiki.gnome.org/Apps/Evolution
-Source: http://download.gnome.org/sources/%{name}/3.12/%{name}-%{version}.tar.xz
+Source: http://download.gnome.org/sources/%{name}/3.22/%{name}-%{version}.tar.xz
 
-# RH bug #1221520
-Patch01: evolution-ews-3.12.11-translations.patch
+# RH bug #1433268
+Patch01: evolution-ews-3.22.6-message-date-in-utc.patch
 
-# RH bug #1221876
-Patch02: evolution-ews-3.12.11-book-lock-fix.patch
+# RH bug #1434758
+Patch02: evolution-ews-3.22.6-truncate-before-resave-mail.patch
 
-# Coverity Scan issues
-Patch03: evolution-ews-3.12.11-coverity-scan.patch
+# RH bug #1435552
+Patch03: evolution-ews-3.22.6-subsources-enabled-state.patch
 
-# RH bug #1221520
-Patch04: evolution-ews-3.12.11-translations2.patch
-
-# RH bug #1322908
-Patch05: evolution-ews-3.12.11-read-user-partstat.patch
+# RH bug #1450022
+Patch04: evolution-ews-3.22.6-free-busy-calendar.patch
 
 Requires: evolution >= %{version}
 Requires: evolution-data-server >= %{version}
-
-%ifarch x86_64
+%if %{with_libmspack}
 Requires: libmspack >= %{libmspack_version}
 %endif
 
+BuildRequires: gettext
+BuildRequires: gnome-common
 BuildRequires: intltool
+BuildRequires: libtool
 BuildRequires: pkgconfig(camel-1.2) >= %{version}
 BuildRequires: pkgconfig(evolution-data-server-1.2) >= %{version}
 BuildRequires: pkgconfig(evolution-mail-3.0) >= %{version}
@@ -45,8 +45,8 @@ BuildRequires: pkgconfig(libecal-1.2) >= %{version}
 BuildRequires: pkgconfig(libedata-book-1.2) >= %{version}
 BuildRequires: pkgconfig(libedata-cal-1.2) >= %{version}
 BuildRequires: pkgconfig(libemail-engine) >= %{version}
-BuildRequires: pkgconfig(libical) >= 1.0
-%ifarch x86_64
+BuildRequires: pkgconfig(libical)
+%if %{with_libmspack}
 BuildRequires: pkgconfig(libmspack) >= %{libmspack_version}
 %endif
 BuildRequires: pkgconfig(libsoup-2.4)
@@ -57,21 +57,23 @@ versions 2007 and later, through its Exchange Web Services (EWS) interface.
 
 %prep
 %setup -q
-%patch01 -p1 -b .translations
-%patch02 -p1 -b .book-lock-fix
-%patch03 -p1 -b .coverity-scan
-
-# we got broken rendering for zh_TW.po
-# this is creating issues for diff command
-rm -f po/zh_TW.po
-
-%patch04 -p1 -b .translations2
-%patch05 -p1 -b .read-user-partstat
+%patch01 -p1 -b .message-date-in-utc
+%patch02 -p1 -b .truncate-before-resave-mail
+%patch03 -p1 -b .subsources-enabled-state
+%patch04 -p1 -b .free-busy-calendar
 
 %build
 
 export CFLAGS="$RPM_OPT_FLAGS -Wno-deprecated-declarations"
-%ifarch x86_64
+
+aclocal -I m4
+autoheader
+automake --add-missing
+libtoolize
+intltoolize --force
+autoconf
+
+%if %{with_libmspack}
 %configure
 %else
 %configure --with-internal-lzx
@@ -87,7 +89,7 @@ rm -r $RPM_BUILD_ROOT%{_includedir}/evolution-data-server/
 rm $RPM_BUILD_ROOT%{_libdir}/evolution-data-server/*.la
 rm $RPM_BUILD_ROOT%{_libdir}/evolution-data-server/*.so
 rm $RPM_BUILD_ROOT%{_libdir}/evolution-data-server/*/*.la
-rm $RPM_BUILD_ROOT%{_libdir}/evolution/%{evo_base_version}/modules/*.la
+rm $RPM_BUILD_ROOT%{_libdir}/evolution/modules/*.la
 
 %find_lang %{name}
 
@@ -96,7 +98,6 @@ rm $RPM_BUILD_ROOT%{_libdir}/evolution/%{evo_base_version}/modules/*.la
 %postun -p /sbin/ldconfig
 
 %files -f %{name}.lang
-%defattr(-,root,root,-)
 %doc COPYING NEWS README
 %{_libdir}/evolution-data-server/libeews-1.2.so.*
 %{_libdir}/evolution-data-server/libewsutils.so.*
@@ -105,12 +106,33 @@ rm $RPM_BUILD_ROOT%{_libdir}/evolution/%{evo_base_version}/modules/*.la
 %{_libdir}/evolution-data-server/addressbook-backends/libebookbackendews.so
 %{_libdir}/evolution-data-server/calendar-backends/libecalbackendews.so
 %{_libdir}/evolution-data-server/registry-modules/module-ews-backend.so
-%{_libdir}/evolution/%{evo_base_version}/modules/module-ews-configuration.so
+%{_libdir}/evolution/modules/module-ews-configuration.so
 %{_datadir}/appdata/evolution-ews.metainfo.xml
-%{_datadir}/evolution/%{evo_base_version}/errors/module-ews-configuration.error
+%{_datadir}/evolution/errors/module-ews-configuration.error
 %{_datadir}/evolution-data-server/ews/windowsZones.xml
 
 %changelog
+* Wed May 24 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-6
+- Add patch for RH bug #1450022 (Allow adding Free/Busy as a foreign Calendar)
+
+* Fri Mar 24 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-5
+- Add patch for RH bug #1435552 (Sources always enabled, even when their part is disabled)
+
+* Wed Mar 22 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-4
+- Add patch for RH bug #1434758 (Truncate cache stream before resaving received message)
+
+* Mon Mar 20 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-3
+- Build with libmspack on all arches
+
+* Fri Mar 17 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-2
+- Add patch for RH bug #1433268 (Mail message Date header received in UTC)
+
+* Mon Mar 13 2017 Milan Crha <mcrha@redhat.com> - 3.22.6-1
+- Rebase to 3.22.6 upstream release
+
+* Thu Feb 16 2017 Milan Crha <mcrha@redhat.com> - 3.22.5-1
+- Rebase to 3.22.5
+
 * Tue Jun 21 2016 Milan Crha <mcrha@redhat.com> - 3.12.11-9
 - Update patch for RH bug #1221520 (Update translations, for it and ko)
 

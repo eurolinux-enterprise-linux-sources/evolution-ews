@@ -24,6 +24,7 @@
 
 #include <glib/gi18n-lib.h>
 
+#include "server/e-ews-connection-utils.h"
 #include "server/e-source-ews-folder.h"
 
 #define E_EWS_BACKEND_GET_PRIVATE(obj) \
@@ -43,6 +44,7 @@ struct _EEwsBackendPrivate {
 	gchar *sync_state;
 	GMutex sync_state_lock;
 
+	ENamedParameters *credentials;
 	EEwsConnection *connection;
 	GMutex connection_lock;
 
@@ -186,6 +188,7 @@ ews_backend_new_child (EEwsBackend *backend,
 
 	display_name = e_ews_folder_get_name (folder);
 	e_source_set_display_name (source, display_name);
+	e_source_set_enabled (source, TRUE);
 
 	switch (e_ews_folder_get_folder_type (folder)) {
 		case E_EWS_FOLDER_TYPE_CALENDAR:
@@ -337,12 +340,7 @@ static void
 ews_backend_sync_deleted_folders (EEwsBackend *backend,
                                   GSList *list)
 {
-	ECollectionBackend *collection_backend;
-	ESourceRegistryServer *server;
 	GSList *link;
-
-	collection_backend = E_COLLECTION_BACKEND (backend);
-	server = e_collection_backend_ref_server (collection_backend);
 
 	for (link = list; link != NULL; link = g_slist_next (link)) {
 		const gchar *folder_id = link->data;
@@ -357,12 +355,10 @@ ews_backend_sync_deleted_folders (EEwsBackend *backend,
 
 		/* This will trigger a "child-removed" signal and
 		 * our handler will remove the hash table entry. */
-		e_source_registry_server_remove_source (server, source);
+		e_source_remove_sync (source, NULL, NULL);
 
 		g_object_unref (source);
 	}
-
-	g_object_unref (server);
 }
 
 static void
@@ -511,6 +507,7 @@ add_remote_sources (EEwsBackend *backend)
 				E_SERVER_SIDE_SOURCE (source), TRUE);
 			e_server_side_source_set_remote_deletable (
 				E_SERVER_SIDE_SOURCE (source), TRUE);
+			e_source_set_enabled (source, TRUE);
 			e_source_registry_server_add_source (registry, source);
 		} else {
 			GError *error = NULL;
@@ -579,6 +576,8 @@ ews_backend_finalize (GObject *object)
 
 	g_mutex_clear (&priv->connection_lock);
 
+	e_named_parameters_free (priv->credentials);
+
 	/* Chain up to parent's finalize() method. */
 	G_OBJECT_CLASS (e_ews_backend_parent_class)->finalize (object);
 }
@@ -604,10 +603,6 @@ ews_backend_constructed (GObject *object)
 	 *     of weird races with clients trying to create folders. */
 	e_server_side_source_set_remote_creatable (
 		E_SERVER_SIDE_SOURCE (source), TRUE);
-
-	g_signal_connect (
-		source, "changed",
-		G_CALLBACK (ews_backend_source_changed_cb), object);
 
 	/* Setup the Authentication extension so
 	 * Camel can determine host reachability. */
@@ -673,10 +668,15 @@ ews_backend_populate (ECollectionBackend *backend)
 
 	ews_backend->priv->need_update_folders = TRUE;
 
-	if (!ews_backend->priv->notify_online_id)
+	if (!ews_backend->priv->notify_online_id) {
 		ews_backend->priv->notify_online_id = g_signal_connect (
 			backend, "notify::online",
 			G_CALLBACK (ews_backend_populate), NULL);
+
+		g_signal_connect (
+			source, "changed",
+			G_CALLBACK (ews_backend_source_changed_cb), ews_backend);
+	}
 
 	/* do not do anything, if account is disabled */
 	if (!e_source_get_enabled (source))
@@ -684,10 +684,21 @@ ews_backend_populate (ECollectionBackend *backend)
 
 	ews_backend_add_gal_source (ews_backend);
 
-	if (e_backend_get_online (E_BACKEND (backend)))
-		e_ews_backend_sync_folders (ews_backend, NULL, ews_backend_folders_synced_cb, NULL);
-	else
+	if (e_backend_get_online (E_BACKEND (backend))) {
+		CamelEwsSettings *ews_settings;
+
+		ews_settings = ews_backend_get_settings (ews_backend);
+
+		if (e_ews_connection_utils_get_without_password (ews_settings)) {
+			e_backend_schedule_authenticate (E_BACKEND (backend), NULL);
+		} else {
+			e_backend_credentials_required_sync (E_BACKEND (backend),
+				E_SOURCE_CREDENTIALS_REASON_REQUIRED, NULL, 0, NULL,
+				NULL, NULL);
+		}
+	} else {
 		ews_backend_claim_old_resources (backend);
+	}
 }
 
 static gchar *
@@ -736,7 +747,7 @@ ews_backend_child_added (ECollectionBackend *backend,
 		auth_child_extension = e_source_get_extension (
 			child_source, extension_name);
 
-		g_object_bind_property (
+		e_binding_bind_property (
 			collection_extension, "identity",
 			auth_child_extension, "user",
 			G_BINDING_SYNC_CREATE);
@@ -815,8 +826,7 @@ ews_backend_create_resource_sync (ECollectionBackend *backend,
 	}
 
 	if (!success) {
-		connection = e_ews_backend_ref_connection_sync (
-			E_EWS_BACKEND (backend), cancellable, error);
+		connection = e_ews_backend_ref_connection_sync (E_EWS_BACKEND (backend), NULL, cancellable, error);
 		if (connection == NULL)
 			return FALSE;
 
@@ -923,8 +933,7 @@ ews_backend_delete_resource_sync (ECollectionBackend *backend,
 	const gchar *extension_name;
 	gboolean success = FALSE;
 
-	connection = e_ews_backend_ref_connection_sync (
-		E_EWS_BACKEND (backend), cancellable, error);
+	connection = e_ews_backend_ref_connection_sync (E_EWS_BACKEND (backend), NULL, cancellable, error);
 	if (connection == NULL)
 		return FALSE;
 
@@ -1004,6 +1013,48 @@ ews_backend_get_destination_address (EBackend *backend,
 	return result;
 }
 
+static ESourceAuthenticationResult
+ews_backend_authenticate_sync (EBackend *backend,
+			       const ENamedParameters *credentials,
+			       gchar **out_certificate_pem,
+			       GTlsCertificateFlags *out_certificate_errors,
+			       GCancellable *cancellable,
+			       GError **error)
+{
+	EEwsBackend *ews_backend;
+	EEwsConnection *connection;
+	CamelEwsSettings *ews_settings;
+	ESourceAuthenticationResult result = E_SOURCE_AUTHENTICATION_ERROR;
+
+	g_return_val_if_fail (E_IS_EWS_BACKEND (backend), E_SOURCE_AUTHENTICATION_ERROR);
+
+	ews_backend = E_EWS_BACKEND (backend);
+	ews_settings = ews_backend_get_settings (ews_backend);
+	g_return_val_if_fail (ews_settings != NULL, E_SOURCE_AUTHENTICATION_ERROR);
+
+	g_mutex_lock (&ews_backend->priv->connection_lock);
+	g_clear_object (&ews_backend->priv->connection);
+	e_named_parameters_free (ews_backend->priv->credentials);
+	ews_backend->priv->credentials = e_named_parameters_new_clone (credentials);
+	g_mutex_unlock (&ews_backend->priv->connection_lock);
+
+	connection = e_ews_backend_ref_connection_sync (ews_backend, &result, cancellable, error);
+	g_clear_object (&connection);
+
+	if (result == E_SOURCE_AUTHENTICATION_ACCEPTED) {
+		e_collection_backend_authenticate_children (E_COLLECTION_BACKEND (backend), credentials);
+
+		e_ews_backend_sync_folders (ews_backend, NULL, ews_backend_folders_synced_cb, NULL);
+	} else if (e_ews_connection_utils_get_without_password (ews_settings) &&
+		   result == E_SOURCE_AUTHENTICATION_REJECTED &&
+		   !e_named_parameters_exists (credentials, E_SOURCE_CREDENTIAL_PASSWORD)) {
+		e_ews_connection_utils_force_off_ntlm_auth_check ();
+		result = E_SOURCE_AUTHENTICATION_REQUIRED;
+	}
+
+	return result;
+}
+
 static void
 e_ews_backend_class_init (EEwsBackendClass *class)
 {
@@ -1028,6 +1079,7 @@ e_ews_backend_class_init (EEwsBackendClass *class)
 
 	backend_class = E_BACKEND_CLASS (class);
 	backend_class->get_destination_address = ews_backend_get_destination_address;
+	backend_class->authenticate_sync = ews_backend_authenticate_sync;
 
 	/* This generates an ESourceCamel subtype for CamelEwsSettings. */
 	e_source_camel_generate_subtype ("ews", CAMEL_TYPE_EWS_SETTINGS);
@@ -1067,8 +1119,7 @@ ews_backend_ref_connection_thread (GSimpleAsyncResult *simple,
 	EEwsConnection *connection;
 	GError *error = NULL;
 
-	connection = e_ews_backend_ref_connection_sync (
-		E_EWS_BACKEND (object), cancellable, &error);
+	connection = e_ews_backend_ref_connection_sync (E_EWS_BACKEND (object), NULL, cancellable, &error);
 
 	/* Sanity check. */
 	g_return_if_fail (
@@ -1085,10 +1136,12 @@ ews_backend_ref_connection_thread (GSimpleAsyncResult *simple,
 
 EEwsConnection *
 e_ews_backend_ref_connection_sync (EEwsBackend *backend,
+				   ESourceAuthenticationResult *result,
                                    GCancellable *cancellable,
                                    GError **error)
 {
 	EEwsConnection *connection = NULL;
+	ESourceAuthenticationResult local_result;
 	CamelEwsSettings *settings;
 	gchar *hosturl;
 	gboolean success;
@@ -1102,23 +1155,24 @@ e_ews_backend_ref_connection_sync (EEwsBackend *backend,
 
 	/* If we already have an authenticated
 	 * connection object, just return that. */
-	if (connection != NULL)
+	if (connection != NULL || !backend->priv->credentials)
 		return connection;
 
 	settings = ews_backend_get_settings (backend);
 	hosturl = camel_ews_settings_dup_hosturl (settings);
-	connection = e_ews_connection_new (hosturl, settings);
+	connection = e_ews_connection_new_full (hosturl, settings, FALSE);
 	g_free (hosturl);
 
-	g_object_bind_property (
+	e_binding_bind_property (
 		backend, "proxy-resolver",
 		connection, "proxy-resolver",
 		G_BINDING_SYNC_CREATE);
 
-	success = e_backend_authenticate_sync (
-		E_BACKEND (backend),
-		E_SOURCE_AUTHENTICATOR (connection),
-		cancellable, error);
+	local_result = e_ews_connection_try_credentials_sync (connection, backend->priv->credentials, cancellable, error);
+	if (result)
+		*result = local_result;
+
+	success = local_result == E_SOURCE_AUTHENTICATION_ACCEPTED;
 
 	if (success) {
 		g_mutex_lock (&backend->priv->connection_lock);
@@ -1255,8 +1309,7 @@ e_ews_backend_sync_folders_sync (EEwsBackend *backend,
 		return TRUE;
 	}
 
-	connection = e_ews_backend_ref_connection_sync (
-		backend, cancellable, error);
+	connection = e_ews_backend_ref_connection_sync (backend, NULL, cancellable, error);
 
 	if (connection == NULL) {
 		backend->priv->need_update_folders = TRUE;

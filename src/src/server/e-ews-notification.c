@@ -113,20 +113,11 @@ ews_notification_authenticate (SoupSession *session,
 EEwsNotification *
 e_ews_notification_new (EEwsConnection *connection)
 {
-	EEwsNotification *notification;
-	CamelEwsSettings *ews_settings;
-
 	g_return_val_if_fail (E_IS_EWS_CONNECTION (connection), NULL);
 
-	notification = g_object_new (
+	return g_object_new (
 		E_TYPE_EWS_NOTIFICATION,
 		"connection", connection, NULL);
-
-	ews_settings = e_ews_connection_ref_settings (connection);
-
-	g_object_unref (ews_settings);
-
-	return notification;
 }
 
 static void
@@ -148,7 +139,7 @@ static EEwsConnection *
 e_ews_notification_get_connection (const EEwsNotification *notification)
 {
 	g_return_val_if_fail (E_IS_EWS_NOTIFICATION (notification), NULL);
-	g_return_val_if_fail (notification->priv == NULL, NULL);
+	g_return_val_if_fail (notification->priv != NULL, NULL);
 
 	return notification->priv->connection;
 }
@@ -311,10 +302,12 @@ e_ews_notification_subscribe_folder_sync (EEwsNotification *notification,
 	ESoapMessage *msg;
 	ESoapResponse *response;
 	ESoapParameter *param, *subparam;
+	CamelEwsSettings *settings;
 	GError *error = NULL;
 	GSList *l;
 	guint event_type;
 	xmlDoc *doc;
+	gint log_level = e_ews_debug_get_log_level ();
 
 	g_return_val_if_fail (notification != NULL, FALSE);
 	g_return_val_if_fail (notification->priv != NULL, FALSE);
@@ -323,7 +316,10 @@ e_ews_notification_subscribe_folder_sync (EEwsNotification *notification,
 	if (!notification->priv->connection)
 		return FALSE;
 
+	settings = e_ews_connection_ref_settings (notification->priv->connection);
+
 	msg = e_ews_message_new_with_header (
+		settings,
 		e_ews_connection_get_uri (notification->priv->connection),
 		e_ews_connection_get_impersonate_user (notification->priv->connection),
 		"Subscribe",
@@ -333,6 +329,13 @@ e_ews_notification_subscribe_folder_sync (EEwsNotification *notification,
 		E_EWS_EXCHANGE_2010_SP1,
 		FALSE,
 		FALSE);
+
+	g_clear_object (&settings);
+
+	if (!msg) {
+		g_warning ("%s: Failed to create Soup message for URI '%s'", G_STRFUNC, e_ews_connection_get_uri (notification->priv->connection));
+		return FALSE;
+	}
 
 	e_soap_message_start_element (msg, "StreamingSubscriptionRequest", "messages", NULL);
 
@@ -373,6 +376,10 @@ e_ews_notification_subscribe_folder_sync (EEwsNotification *notification,
 		return FALSE;
 	}
 
+	if (log_level >= 1 && log_level < 3) {
+		e_ews_debug_dump_raw_soup_request (SOUP_MESSAGE (msg));
+	}
+
 	soup_session_send_message (notification->priv->soup_session, SOUP_MESSAGE (msg));
 	if (!SOUP_STATUS_IS_SUCCESSFUL (SOUP_MESSAGE (msg)->status_code)) {
 		g_object_unref (msg);
@@ -385,6 +392,10 @@ e_ews_notification_subscribe_folder_sync (EEwsNotification *notification,
 		"response.xml", NULL, 0);
 
 	response = e_soap_response_new_from_xmldoc (doc);
+
+	if (log_level >= 1 && log_level < 3) {
+		e_ews_debug_dump_raw_soup_response (SOUP_MESSAGE (msg));
+	}
 	g_object_unref (msg);
 
 	param = e_soap_response_get_first_parameter_by_name (response, "ResponseMessages", &error);
@@ -434,6 +445,7 @@ e_ews_notification_unsubscribe_folder_sync (EEwsNotification *notification,
 	ESoapMessage *msg;
 	ESoapResponse *response;
 	ESoapParameter *param;
+	CamelEwsSettings *settings;
 	GError *error = NULL;
 	xmlDoc *doc;
 
@@ -444,7 +456,10 @@ e_ews_notification_unsubscribe_folder_sync (EEwsNotification *notification,
 	if (!notification->priv->connection)
 		return FALSE;
 
+	settings = e_ews_connection_ref_settings (notification->priv->connection);
+
 	msg = e_ews_message_new_with_header (
+		settings,
 		e_ews_connection_get_uri (notification->priv->connection),
 		e_ews_connection_get_impersonate_user (notification->priv->connection),
 		"Unsubscribe",
@@ -454,6 +469,13 @@ e_ews_notification_unsubscribe_folder_sync (EEwsNotification *notification,
 		E_EWS_EXCHANGE_2010_SP1,
 		FALSE,
 		FALSE);
+
+	g_clear_object (&settings);
+
+	if (!msg) {
+		g_warning ("%s: Failed to create Soup message for URI '%s'", G_STRFUNC, e_ews_connection_get_uri (notification->priv->connection));
+		return FALSE;
+	}
 
 	e_ews_message_write_string_parameter_with_attribute (
 		msg, "SubscriptionId", "messages", subscription_id, NULL, NULL);
@@ -579,7 +601,7 @@ ews_notification_handle_events_param (ESoapParameter *node,
 	*events = g_slist_reverse (*events);
 }
 
-static void
+static gboolean
 ews_notification_fire_events_from_response (EEwsNotification *notification,
 					    ESoapResponse *response)
 {
@@ -595,7 +617,7 @@ ews_notification_fire_events_from_response (EEwsNotification *notification,
 	if (error != NULL) {
 		g_warning (G_STRLOC ": %s\n", error->message);
 		g_error_free (error);
-		return;
+		return FALSE;
 	}
 
 	subparam = e_soap_parameter_get_first_child (param);
@@ -607,7 +629,7 @@ ews_notification_fire_events_from_response (EEwsNotification *notification,
 			g_warning (G_STRLOC ": %s\n", error->message);
 			g_error_free (error);
 			g_slist_free_full (events, (GDestroyNotify) e_ews_notification_event_free);
-			return;
+			return FALSE;
 		}
 
 		if (E_EWS_CONNECTION_UTILS_CHECK_ELEMENT (name, "GetStreamingEventsResponseMessage")) {
@@ -629,6 +651,28 @@ ews_notification_fire_events_from_response (EEwsNotification *notification,
 			g_signal_emit_by_name (notification->priv->connection, "server-notification", events);
 		g_slist_free_full (events, (GDestroyNotify) e_ews_notification_event_free);
 	}
+
+	return TRUE;
+}
+
+static gboolean
+ews_abort_session_idle_cb (gpointer user_data)
+{
+	SoupSession *session = user_data;
+
+	g_return_val_if_fail (SOUP_IS_SESSION (session), FALSE);
+
+	soup_session_abort (session);
+
+	return FALSE;
+}
+
+static void
+ews_notification_schedule_abort (SoupSession *session)
+{
+	g_return_if_fail (SOUP_IS_SESSION (session));
+
+	g_idle_add_full (G_PRIORITY_HIGH_IDLE, ews_abort_session_idle_cb, g_object_ref (session), g_object_unref);
 }
 
 static void
@@ -640,6 +684,7 @@ ews_notification_soup_got_chunk (SoupMessage *msg,
 	const gchar *chunk_str;
 	gsize chunk_len;
 	gboolean keep_parsing = TRUE;
+	gint log_level = e_ews_debug_get_log_level ();
 
 	/*
 	 * Here we receive, in chunks, "well-formed" messages that contain:
@@ -683,7 +728,17 @@ ews_notification_soup_got_chunk (SoupMessage *msg,
 		if (response == NULL)
 			break;
 
-		ews_notification_fire_events_from_response (notification, response);
+		if (log_level >= 1 && log_level < 3) {
+			e_ews_debug_dump_raw_soup_response (msg);
+			e_soap_response_dump_response (response, stdout);
+		}
+
+		if (!ews_notification_fire_events_from_response (notification, response)) {
+			ews_notification_schedule_abort (notification->priv->soup_session);
+
+			g_object_unref (response);
+			break;
+		}
 		g_object_unref (response);
 
 		notification->priv->chunk = g_byte_array_remove_range (notification->priv->chunk, 0, len);
@@ -698,8 +753,8 @@ ews_notification_soup_got_chunk (SoupMessage *msg,
 			keep_parsing = FALSE;
 
 			if (cancelled) {
-				/* Abort any pending operations */
-				soup_session_abort (notification->priv->soup_session);
+				/* Abort any pending operations, but not here, rather in another thread */
+				ews_notification_schedule_abort (notification->priv->soup_session);
 			}
 		}
 	} while (keep_parsing);
@@ -707,17 +762,27 @@ ews_notification_soup_got_chunk (SoupMessage *msg,
 
 static gboolean
 e_ews_notification_get_events_sync (EEwsNotification *notification,
-				    const gchar *subscription_id)
+				    const gchar *subscription_id,
+				    gboolean *out_fatal_error)
 {
 	ESoapMessage *msg;
+	CamelEwsSettings *settings;
 	gboolean ret;
 	gulong handler_id;
+	guint status_code;
 
-	g_return_val_if_fail (notification != NULL, SOUP_STATUS_CANCELLED);
-	g_return_val_if_fail (notification->priv != NULL, SOUP_STATUS_CANCELLED);
-	g_return_val_if_fail (notification->priv->connection != NULL, SOUP_STATUS_CANCELLED);
+	g_return_val_if_fail (out_fatal_error != NULL, FALSE);
+
+	*out_fatal_error = TRUE;
+
+	g_return_val_if_fail (notification != NULL, FALSE);
+	g_return_val_if_fail (notification->priv != NULL, FALSE);
+	g_return_val_if_fail (notification->priv->connection != NULL, FALSE);
+
+	settings = e_ews_connection_ref_settings (notification->priv->connection);
 
 	msg = e_ews_message_new_with_header (
+		settings,
 		e_ews_connection_get_uri (notification->priv->connection),
 		e_ews_connection_get_impersonate_user (notification->priv->connection),
 		"GetStreamingEvents",
@@ -727,6 +792,13 @@ e_ews_notification_get_events_sync (EEwsNotification *notification,
 		E_EWS_EXCHANGE_2010_SP1,
 		FALSE,
 		FALSE);
+
+	g_clear_object (&settings);
+
+	if (!msg) {
+		g_warning ("%s: Failed to create Soup message for URI '%s'", G_STRFUNC, e_ews_connection_get_uri (notification->priv->connection));
+		return FALSE;
+	}
 
 	e_soap_message_start_element (msg, "SubscriptionIds", "messages", NULL);
 	e_ews_message_write_string_parameter_with_attribute (msg, "SubscriptionId", NULL, subscription_id, NULL, NULL);
@@ -743,8 +815,10 @@ e_ews_notification_get_events_sync (EEwsNotification *notification,
 		SOUP_MESSAGE (msg), "got-chunk",
 		G_CALLBACK (ews_notification_soup_got_chunk), notification);
 
-	soup_session_send_message (notification->priv->soup_session, SOUP_MESSAGE (msg));
-	ret = SOUP_STATUS_IS_SUCCESSFUL (SOUP_MESSAGE (msg)->status_code);
+	status_code = soup_session_send_message (notification->priv->soup_session, SOUP_MESSAGE (msg));
+
+	ret = SOUP_STATUS_IS_SUCCESSFUL (status_code);
+	*out_fatal_error = SOUP_STATUS_IS_CLIENT_ERROR (status_code) || SOUP_STATUS_IS_SERVER_ERROR (status_code);
 
 	g_signal_handler_disconnect (msg, handler_id);
 	g_object_unref (msg);
@@ -752,12 +826,19 @@ e_ews_notification_get_events_sync (EEwsNotification *notification,
 	return ret;
 }
 
+static void
+ews_notification_cancelled_cb (GCancellable *cancellable,
+			       SoupSession *session)
+{
+	ews_notification_schedule_abort (session);
+}
+
 static gpointer
 e_ews_notification_get_events_thread (gpointer user_data)
 {
 	EEwsNotificationThreadData *td = user_data;
 	gchar *subscription_id = NULL;
-	gboolean ret;
+	gboolean ret, fatal_error = FALSE;
 
 	g_return_val_if_fail (td != NULL, NULL);
 	g_return_val_if_fail (td->notification != NULL, NULL);
@@ -767,14 +848,36 @@ e_ews_notification_get_events_thread (gpointer user_data)
 		goto exit;
 
 	do {
+		gulong handler_id;
+
 		if (g_cancellable_is_cancelled (td->cancellable))
 			goto exit;
 
-		ret = e_ews_notification_get_events_sync (
-				td->notification,
-				subscription_id);
-	} while (ret);
+		handler_id = g_cancellable_connect (td->cancellable, G_CALLBACK (ews_notification_cancelled_cb),
+			g_object_ref (td->notification->priv->soup_session), g_object_unref);
 
+		ret = e_ews_notification_get_events_sync (td->notification, subscription_id, &fatal_error);
+
+		if (handler_id > 0)
+			g_cancellable_disconnect (td->cancellable, handler_id);
+
+		if (!ret && !g_cancellable_is_cancelled (td->cancellable)) {
+			g_debug ("%s: Failed to get notification events (SubscriptionId: '%s')", G_STRFUNC, subscription_id);
+
+			e_ews_notification_unsubscribe_folder_sync (td->notification, subscription_id);
+			g_free (subscription_id);
+			subscription_id = NULL;
+
+			if (!fatal_error) {
+				ret = e_ews_notification_subscribe_folder_sync (td->notification, td->folders, &subscription_id, td->cancellable);
+				if (ret) {
+					g_debug ("%s: Re-subscribed to get notifications events (SubscriptionId: '%s')", G_STRFUNC, subscription_id);
+				} else {
+					g_debug ("%s: Failed to re-subscribed to get notifications events", G_STRFUNC);
+				}
+			}
+		}
+	} while (ret);
 
 exit:
 	if (subscription_id != NULL) {
